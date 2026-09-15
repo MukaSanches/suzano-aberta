@@ -1,8 +1,8 @@
-const CACHE = "suzano-aberta-shell-v2";
+const CACHE = "suzano-aberta-shell-v3";
 const SHELL = [
   "./", "./index.html", "./explorar.html", "./legislacao.html", "./norma.html", "./contratacoes.html",
   "./sobre.html", "./desenvolvedores.html", "./status.html", "./acessibilidade.html",
-  "./assets/styles.css", "./assets/portal-v2.css", "./assets/app.js", "./assets/portal-v2.js",
+  "./assets/styles.css", "./assets/portal-v2.css", "./assets/portal-v3.css", "./assets/app.js", "./assets/portal-v2.js", "./assets/portal-v3.js",
   "./assets/mark.svg", "./assets/favicon.svg", "./manifest.webmanifest"
 ];
 
@@ -26,8 +26,8 @@ self.addEventListener("fetch", event => {
     }).catch(() => caches.match(event.request)));
     return;
   }
-  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+  event.respondWith(fetch(event.request).then(response => {
     if (response.ok) caches.open(CACHE).then(cache => cache.put(event.request, response.clone()));
     return response;
-  })));
+  }).catch(() => caches.match(event.request)));
 });
