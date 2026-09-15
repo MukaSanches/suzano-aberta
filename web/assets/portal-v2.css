@@ -1,0 +1,266 @@
+/* Camada visual do portal v2: filtros roláveis, detalhes e coleções especializadas. */
+
+.filters {
+  max-height: calc(100dvh - 122px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: .85rem;
+}
+
+.filters > .button {
+  position: sticky;
+  bottom: -.1rem;
+  z-index: 3;
+  width: 100%;
+  box-shadow: 0 -10px 18px rgba(255,255,255,.94);
+}
+
+.filters::after {
+  content: "";
+  display: block;
+  height: .25rem;
+}
+
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.news-item {
+  border-top: 4px solid var(--green);
+  padding: 1rem 0 0;
+  min-width: 0;
+}
+
+.news-item h3 {
+  font-size: 1.04rem;
+  line-height: 1.28;
+  margin: .65rem 0 .45rem;
+}
+
+.news-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .88rem;
+}
+
+.detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, .55fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.detail-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 1.35rem;
+}
+
+.detail-panel + .detail-panel {
+  margin-top: 1rem;
+}
+
+.metadata-grid {
+  display: grid;
+  gap: .75rem;
+  margin: 0;
+}
+
+.metadata-grid > div {
+  padding-bottom: .7rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.metadata-grid > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.metadata-grid dt {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.metadata-grid dd {
+  margin: .18rem 0 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.official-reader {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.official-reader-head {
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.official-reader-head p {
+  margin: .3rem 0 0;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.official-frame {
+  display: block;
+  width: 100%;
+  height: min(76vh, 900px);
+  min-height: 560px;
+  border: 0;
+  background: #fff;
+}
+
+.legal-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #243b53;
+  line-height: 1.7;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.relation-list,
+.document-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.relation-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .75rem;
+  align-items: start;
+  padding: .9rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.relation-list li:last-child {
+  border-bottom: 0;
+}
+
+.relation-list a {
+  color: var(--ink);
+}
+
+.relation-list span:not(.tag) {
+  display: block;
+  margin-top: .2rem;
+  color: var(--muted);
+  font-size: .84rem;
+}
+
+.document-list li {
+  padding: .65rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.document-list li:last-child {
+  border-bottom: 0;
+}
+
+.procurement-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .65rem;
+  margin: 1rem 0 2rem;
+}
+
+.procurement-search input {
+  width: 100%;
+  border: 2px solid #8ba1b1;
+  border-radius: var(--radius-sm);
+  padding: .85rem 1rem;
+  color: var(--ink);
+  background: #fff;
+}
+
+.crosswalk {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.crosswalk-item {
+  padding: 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.crosswalk-item strong {
+  display: block;
+  color: var(--ink);
+  margin-bottom: .35rem;
+}
+
+.crosswalk-item span {
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+@media (max-width: 1100px) {
+  .news-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .crosswalk {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .filters {
+    position: static;
+    max-height: min(70dvh, 44rem);
+    overflow-y: auto;
+    border-width: 2px;
+  }
+
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .official-frame {
+    min-height: 65vh;
+  }
+}
+
+@media (max-width: 620px) {
+  .news-grid,
+  .crosswalk {
+    grid-template-columns: 1fr;
+  }
+
+  .filters {
+    max-height: 68dvh;
+    padding: 1rem .9rem;
+  }
+
+  .filters > .button {
+    bottom: 0;
+  }
+
+  .procurement-search {
+    grid-template-columns: 1fr;
+  }
+
+  .official-frame {
+    min-height: 70vh;
+  }
+}
