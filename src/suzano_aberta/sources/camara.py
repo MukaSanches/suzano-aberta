@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from collections.abc import Callable
 from hashlib import sha256
 from urllib.parse import parse_qs, urlparse
 
@@ -56,12 +57,13 @@ class CamaraSource(BaseSource):
                 records.extend(self.propositions(year=year, sessions=sessions))
             except Exception:
                 pass
-        for collector in (
+        collectors: tuple[Callable[[], list[PublicRecord]], ...] = (
             lambda: self.contracts(year=year),
             self.committees,
             lambda: self.attendance(year=year),
             lambda: self.diary(year=year, limit=250),
-        ):
+        )
+        for collector in collectors:
             try:
                 records.extend(collector())
             except Exception:
