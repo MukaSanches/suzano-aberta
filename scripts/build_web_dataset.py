@@ -86,6 +86,14 @@ def canonical_date(value: Any) -> str | None:
 
 
 def effective_date(payload: dict[str, Any], last_seen: str) -> tuple[str, str]:
+    """Resolve somente datas públicas comprováveis para ordenação cronológica.
+
+    ``last_seen`` continua no contrato da função porque a data de observação é
+    preservada em cada item publicado, mas ela nunca deve ser promovida a data
+    efetiva do fato. Isso evita que conteúdo histórico descoberto hoje pareça
+    ter sido publicado hoje.
+    """
+    _ = last_seen
     record_date = canonical_date(payload.get("date"))
     if record_date:
         return record_date, "record"
@@ -96,9 +104,7 @@ def effective_date(payload: dict[str, Any], last_seen: str) -> tuple[str, str]:
         year_value = 0
     if 1800 <= year_value <= 2200:
         return f"{year_value:04d}-01-01", "year"
-    source = payload.get("source") or {}
-    observed = canonical_date(source.get("collected_at")) or canonical_date(last_seen)
-    return (observed or "0001-01-01", "observed")
+    return "", "unknown"
 
 
 def shard_for(token: str) -> int:
@@ -202,9 +208,9 @@ def build(database: Path, output: Path, *, max_tokens_per_record: int = 1800) ->
             documents += 1
         if kind in LEGISLATION_KINDS:
             legislation += 1
-        if effective != "0001-01-01":
+        if effective:
             by_date[effective].append(item)
-        if len(latest) < 40:
+        if len(latest) < 40 and effective:
             latest.append({
                 "id": compact[0], "kind": compact[1], "title": compact[2], "date": compact[3],
                 "effective_date": effective, "date_basis": basis, "year": compact[4],
@@ -288,7 +294,7 @@ def build(database: Path, output: Path, *, max_tokens_per_record: int = 1800) ->
         "date_semantics": {
             "record": "data publicada pelo registro",
             "year": "ano conhecido, sem dia/mês disponível",
-            "observed": "data em que o registro foi observado pelo coletor",
+            "unknown": "data pública não informada; a data de observação permanece em last_seen",
         },
         "endpoints": {
             "stats": "./stats.json",
