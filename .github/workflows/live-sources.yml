@@ -1,0 +1,32 @@
+name: Live source smoke tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 11 * * 1,4"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-sources
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Check live sources
+        run: pytest -q tests_live

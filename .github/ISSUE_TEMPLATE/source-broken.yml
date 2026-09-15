@@ -1,0 +1,31 @@
+name: Fonte oficial mudou
+description: Relate uma fonte que deixou de ser coletada corretamente.
+title: "source: "
+labels: ["source-change"]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: URL oficial
+      placeholder: https://...
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Mudança observada
+      description: Explique o que mudou na página, CSV ou documento.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Comando e erro
+      render: shell
+  - type: checkboxes
+    id: public
+    attributes:
+      label: Confirmação
+      options:
+        - label: A URL é uma fonte pública e oficial relacionada ao município de Suzano.
+          required: true
