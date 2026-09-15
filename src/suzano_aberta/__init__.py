@@ -1,3 +1,4 @@
+from .client import SuzanoApiError, SuzanoClient
 from .core import Suzano, explain
 from .models import IntegrityFinding, IntegrityReport, PublicRecord, RefreshReport, SourceRef
 from .provenance import dcat_catalog, record_provenance
@@ -12,8 +13,10 @@ __all__ = [
     "SnapshotError",
     "SourceRef",
     "Suzano",
+    "SuzanoApiError",
+    "SuzanoClient",
     "dcat_catalog",
     "explain",
     "record_provenance",
 ]
-__version__ = "0.5.0"
+__version__ = "0.6.0"
