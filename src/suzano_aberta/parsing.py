@@ -4,6 +4,7 @@ import csv
 import io
 import re
 import unicodedata
+from contextlib import suppress
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -18,10 +19,8 @@ DATE_BR_RE = re.compile(r"\b(\d{2}/\d{2}/\d{4})\b")
 def decode_bytes(data: bytes, declared_encoding: str | None = None) -> str:
     """Decodifica páginas antigas sem esconder erro de charset."""
     if declared_encoding:
-        try:
+        with suppress(LookupError, UnicodeDecodeError):
             return data.decode(declared_encoding, errors="strict")
-        except (LookupError, UnicodeDecodeError):
-            pass
     match = from_bytes(data).best()
     if match is not None:
         return str(match)
