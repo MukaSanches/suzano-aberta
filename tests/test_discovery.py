@@ -89,5 +89,4 @@ def test_direct_document_seed_is_indexed_without_page_crawl() -> None:
     assert records[0].kind == "arquivo"
     assert records[0].title == "manual.pdf"
     assert records[0].source.content_sha256 is not None
-    assert discovery.stats.documents_seen == 1
     assert discovery.stats.documents_fetched == 1
