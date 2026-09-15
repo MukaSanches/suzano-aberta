@@ -7,7 +7,7 @@ import time
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, suppress
-from typing import Any
+from typing import Any, cast
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,7 +53,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
             return True
         try:
             with ApiRepository(resolved.database) as repository:
-                return int(repository.stats()["records"]) == 0
+                return cast(int, repository.stats()["records"]) == 0
         except (OSError, sqlite3.Error):
             return True
 
@@ -126,7 +126,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     async def observability(request: Request, call_next: Any) -> Response:
         request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
         started = time.perf_counter()
-        response = await call_next(request)
+        response = cast(Response, await call_next(request))
         elapsed_ms = (time.perf_counter() - started) * 1000
         response.headers["X-Request-ID"] = request_id
         response.headers["Server-Timing"] = f"app;dur={elapsed_ms:.2f}"
@@ -171,7 +171,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     def ready() -> Any:
         try:
             with ApiRepository(resolved.database) as repository:
-                total = int(repository.stats()["records"])
+                total = cast(int, repository.stats()["records"])
             if total < 1:
                 raise RuntimeError("índice vazio")
         except Exception as exc:
@@ -256,11 +256,11 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         base = repository.stats()
         response.headers["Cache-Control"] = "public, max-age=60"
         return StatsResponse(
-            records=int(base["records"]),
+            records=cast(int, base["records"]),
             first_seen=base["first_seen"] if isinstance(base["first_seen"], str) else None,
             last_seen=base["last_seen"] if isinstance(base["last_seen"], str) else None,
-            fts_enabled=bool(base["fts_enabled"]),
-            database_bytes=int(base["database_bytes"]),
+            fts_enabled=cast(bool, base["fts_enabled"]),
+            database_bytes=cast(int, base["database_bytes"]),
             sqlite_version=str(base["sqlite_version"]),
             kinds=repository.counts_by_kind(),
             top_sources=[
