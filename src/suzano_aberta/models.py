@@ -52,7 +52,13 @@ class PublicRecord(BaseModel):
     source: SourceRef
 
     def canonical_payload(self) -> dict[str, Any]:
-        """Payload sem metadados voláteis, usado para detectar alterações reais."""
+        """Payload estável usado para detectar alteração substantiva.
+
+        Metadados operacionais ou de catalogação da fonte ficam fora desta
+        impressão digital para que uma evolução de proveniência não reescreva o
+        histórico de milhares de registros como se o conteúdo público tivesse
+        mudado.
+        """
         return {
             "id": self.id,
             "kind": self.kind,
@@ -63,8 +69,6 @@ class PublicRecord(BaseModel):
             "attributes": self.attributes,
             "source_name": self.source.name,
             "source_url": self.source.url,
-            "source_authority": self.source.authority,
-            "source_category": self.source.category,
         }
 
     def fingerprint(self) -> str:
