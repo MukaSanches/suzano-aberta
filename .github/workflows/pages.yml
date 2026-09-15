@@ -19,6 +19,9 @@ on:
       - "scripts/render_web_config.py"
       - "scripts/check_web.py"
       - ".github/workflows/pages.yml"
+  workflow_run:
+    workflows: ["Daily autonomous index"]
+    types: [completed]
   schedule:
     - cron: "23 8 * * *"
   workflow_dispatch:
@@ -34,6 +37,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -67,10 +71,20 @@ jobs:
           conn = sqlite3.connect(target)
           check = conn.execute('PRAGMA quick_check').fetchone()[0]
           total = conn.execute('SELECT COUNT(*) FROM records WHERE active=1').fetchone()[0]
+          counts = dict(conn.execute(
+              'SELECT kind, COUNT(*) FROM records WHERE active=1 GROUP BY kind'
+          ).fetchall())
           conn.close()
-          if str(check).lower() != 'ok' or total < 1:
-              raise SystemExit(f'snapshot inválido: check={check} records={total}')
-          print(f'snapshot validado: {total} registros')
+          document_kinds = {
+              'arquivo', 'arquivo_historico', 'diario',
+              'documento_fiscal', 'documento_orcamentario'
+          }
+          documents = sum(int(counts.get(kind, 0)) for kind in document_kinds)
+          if str(check).lower() != 'ok' or total < 1 or documents < 1:
+              raise SystemExit(
+                  f'snapshot inválido: check={check} records={total} documents={documents}'
+              )
+          print(f'snapshot validado: {total} registros, {documents} documentos')
           PY
 
       - name: Build static search dataset
