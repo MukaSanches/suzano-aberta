@@ -4,6 +4,7 @@ import os
 import shutil
 import sqlite3
 import sys
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -129,7 +130,7 @@ def inspect_local_environment(
 
     try:
         uri = f"file:{path.resolve().as_posix()}?mode=ro"
-        with sqlite3.connect(uri, uri=True) as connection:
+        with closing(sqlite3.connect(uri, uri=True)) as connection:
             connection.execute("PRAGMA query_only=ON")
             records_table = _table_exists(connection, "records")
             if not records_table:
