@@ -7,7 +7,15 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path("web")
-PAGES = ["index.html", "explorar.html", "sobre.html", "desenvolvedores.html", "status.html", "acessibilidade.html", "404.html"]
+PAGES = [
+    "index.html",
+    "explorar.html",
+    "sobre.html",
+    "desenvolvedores.html",
+    "status.html",
+    "acessibilidade.html",
+    "404.html",
+]
 
 
 class Inspector(HTMLParser):
@@ -26,11 +34,16 @@ class Inspector(HTMLParser):
         if tag == "html":
             self._html_seen = True
             self.has_lang = bool(data.get("lang"))
-        if tag == "main": self.has_main = True
-        if tag == "h1": self.has_h1 = True
-        if tag == "a" and data.get("href"): self.links.append(str(data["href"]))
-        if tag == "img" and "alt" not in data: self.images_without_alt.append(str(data.get("src") or "<sem src>"))
-        if data.get("id"): self.ids.add(str(data["id"]))
+        if tag == "main":
+            self.has_main = True
+        if tag == "h1":
+            self.has_h1 = True
+        if tag == "a" and data.get("href"):
+            self.links.append(str(data["href"]))
+        if tag == "img" and "alt" not in data:
+            self.images_without_alt.append(str(data.get("src") or "<sem src>"))
+        if data.get("id"):
+            self.ids.add(str(data["id"]))
 
 
 def fail(message: str) -> None:
@@ -40,31 +53,56 @@ def fail(message: str) -> None:
 
 def inspect_page(path: Path) -> None:
     text = path.read_text(encoding="utf-8")
-    parser = Inspector(); parser.feed(text)
-    if not parser._html_seen or not parser.has_lang: fail(f"{path}: <html lang> ausente")
-    if not parser.has_main: fail(f"{path}: elemento <main> ausente")
-    if not parser.has_h1: fail(f"{path}: h1 ausente")
-    if parser.images_without_alt: fail(f"{path}: imagens sem alt: {parser.images_without_alt}")
-    if "javascript:" in text.casefold(): fail(f"{path}: javascript: inline não permitido")
-    if re.search(r"https?://(www\.)?(google-analytics|googletagmanager|facebook\.com/tr)", text, re.I): fail(f"{path}: rastreador externo detectado")
+    parser = Inspector()
+    parser.feed(text)
+    if not parser._html_seen or not parser.has_lang:
+        fail(f"{path}: <html lang> ausente")
+    if not parser.has_main:
+        fail(f"{path}: elemento <main> ausente")
+    if not parser.has_h1:
+        fail(f"{path}: h1 ausente")
+    if parser.images_without_alt:
+        fail(f"{path}: imagens sem alt: {parser.images_without_alt}")
+    if "javascript:" in text.casefold():
+        fail(f"{path}: javascript: inline não permitido")
+    if re.search(
+        r"https?://(www\.)?(google-analytics|googletagmanager|facebook\.com/tr)",
+        text,
+        re.I,
+    ):
+        fail(f"{path}: rastreador externo detectado")
     for href in parser.links:
-        if href.startswith(("http://", "https://", "mailto:", "#")): continue
+        if href.startswith(("http://", "https://", "mailto:", "#")):
+            continue
         clean = href.split("?", 1)[0].split("#", 1)[0]
-        if not clean: continue
+        if not clean:
+            continue
         target = (path.parent / clean).resolve()
-        if not target.exists(): fail(f"{path}: link local quebrado {href}")
+        if not target.exists():
+            fail(f"{path}: link local quebrado {href}")
 
 
 def main() -> None:
     for name in PAGES:
         path = ROOT / name
-        if not path.exists(): fail(f"página ausente: {path}")
+        if not path.exists():
+            fail(f"página ausente: {path}")
         inspect_page(path)
+
     manifest = ROOT / "data" / "manifest.json"
     if manifest.exists():
         json.loads(manifest.read_text(encoding="utf-8"))
-    for required in [ROOT / "assets/styles.css", ROOT / "assets/app.js", ROOT / "assets/search-worker.js", ROOT / "manifest.webmanifest"]:
-        if not required.exists(): fail(f"asset ausente: {required}")
+
+    required_assets = [
+        ROOT / "assets/styles.css",
+        ROOT / "assets/app.js",
+        ROOT / "assets/search-worker.js",
+        ROOT / "manifest.webmanifest",
+    ]
+    for required in required_assets:
+        if not required.exists():
+            fail(f"asset ausente: {required}")
+
     print("Portal estático validado.")
 
 
