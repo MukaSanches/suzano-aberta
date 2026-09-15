@@ -17,6 +17,8 @@ def test_diagnostics_explains_missing_database(tmp_path: Path) -> None:
     assert report.records == 0
     assert report.database_bytes == 0
     assert not report.fts_enabled
+    assert report.environment_ok
+    assert not report.healthy
     assert any(check.name == "Banco local" and check.status == "warning" for check in report.checks)
 
 
@@ -37,6 +39,7 @@ def test_diagnostics_reads_valid_database_without_mutating_it(tmp_path: Path) ->
 
     assert report.records == 1
     assert report.fts_enabled
+    assert report.environment_ok
     assert report.healthy
     assert before == after
     assert any(check.name == "Integridade SQLite" and check.status == "ok" for check in report.checks)
