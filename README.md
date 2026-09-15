@@ -11,7 +11,7 @@
   <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Licença Apache 2.0" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-102A43"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-0B6E4F">
-  <img alt="Biblioteca 0.5.0" src="https://img.shields.io/badge/library-0.5.0-102A43">
+  <img alt="Biblioteca 0.6.0" src="https://img.shields.io/badge/library-0.6.0-102A43">
   <img alt="API 1.2" src="https://img.shields.io/badge/API-1.2-0B6E4F">
 </p>
 
@@ -145,6 +145,8 @@ GET /metrics
 
 A API mantém **versão do pacote, versão do contrato HTTP, versão do schema e versão do dataset separadas**. Erros são serializados como `application/problem+json`; respostas consultivas usam request ID, cache HTTP/ETag quando aplicável e headers de versão. Proveniência e catálogo possuem representações JSON-LD inspiradas em W3C PROV e DCAT.
 
+A paginação da API informa `total`, `limit`, `offset`, `next_offset`, `previous_offset`, `returned` e `has_more`, permitindo construir clientes sem recriar a lógica de navegação.
+
 ### Grandes volumes: use o snapshot
 
 A API não deve ser usada para baixar o acervo inteiro página por página. Para jornalismo de dados, pesquisa acadêmica ou processamento em massa, use a release rolling `data-latest`:
@@ -159,19 +161,48 @@ A sincronização verifica SHA-256, cabeçalho SQLite e `PRAGMA quick_check` ant
 
 ## Uso como biblioteca Python
 
+A biblioteca 0.6.0 separa claramente três responsabilidades.
+
+### Coleta e atualização: `Suzano`
+
 ```python
-from suzano_aberta import Suzano, record_provenance
+from suzano_aberta import Suzano
 
 with Suzano(database="suzano.sqlite3") as suzano:
     resultados = suzano.search("mobilidade")
 
 for item in resultados[:5]:
-    print(item.title)
-    print(item.source.url)
-    print(record_provenance(item)["source_class"])
+    print(item.title, item.source.url)
 ```
 
-A biblioteca 0.5.0 trata URLs e respostas de fontes externas como entrada não confiável: aplica timeout, limite de tamanho, redirects limitados e validados, retry apenas em falhas transitórias conhecidas e rejeita destinos literais locais/privados por padrão.
+### Consulta local tipada: `SuzanoIndex`
+
+```python
+from suzano_aberta import SuzanoIndex
+
+with SuzanoIndex("suzano.sqlite3") as index:
+    pagina = index.search("educação", year=2026, limit=25)
+    print(pagina.total)
+    for item in pagina.items:
+        print(item.title)
+```
+
+`SuzanoIndex` reutiliza a camada SQLite somente leitura da API. Isso mantém filtros, ordenação, paginação e busca consistentes sem exigir um servidor HTTP.
+
+### Consumo da API: `SuzanoClient`
+
+```python
+from suzano_aberta import SuzanoClient
+
+with SuzanoClient("http://127.0.0.1:8000") as client:
+    pagina = client.search("transporte escolar", year=2026)
+    for item in pagina.items:
+        print(item.id, item.source.url)
+```
+
+O cliente HTTP converte as respostas em modelos tipados, trata Problem Details como `SuzanoApiError` e possui iteradores de paginação automática.
+
+A biblioteca 0.6.0 trata URLs e respostas de fontes externas como entrada não confiável: aplica timeout, limite de tamanho, redirects limitados e validados, retry apenas em falhas transitórias conhecidas e rejeita destinos literais locais/privados por padrão.
 
 ## Atualização autônoma
 
@@ -264,6 +295,7 @@ python -m build
 - [Arquitetura](docs/arquitetura.md)
 - [Autonomia e busca](docs/autonomia-e-busca.md)
 - [API pública](docs/api.md)
+- [Interfaces Python](docs/python-client.md)
 - [Contrato da API](docs/API-CONTRACT.md)
 - [Governança da API](docs/api-governance.md)
 - [Fronteiras de segurança](docs/SECURITY-BOUNDARIES.md)
