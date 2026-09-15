@@ -64,6 +64,8 @@ jobs:
           from datetime import UTC, datetime
 
           db = sqlite3.connect("suzano-aberta.sqlite3")
+          # Materializa todas as páginas WAL no arquivo principal antes de compactar.
+          db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
           check = db.execute("PRAGMA quick_check").fetchone()[0]
           if str(check).lower() != "ok":
               raise SystemExit(f"quick_check failed: {check}")
