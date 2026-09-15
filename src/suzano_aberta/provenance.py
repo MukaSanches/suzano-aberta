@@ -7,10 +7,9 @@ from urllib.parse import urlsplit
 
 from .models import PublicRecord
 
-PROV_CONTEXT = "https://www.w3.org/ns/prov.jsonld"
-DCAT_CONTEXT = "https://www.w3.org/ns/dcat.jsonld"
 PROJECT_URL = "https://github.com/MukaSanches/suzano-aberta"
 PORTAL_URL = "https://mukasanches.github.io/suzano-aberta/"
+NAMESPACE_URL = f"{PORTAL_URL}ns#"
 
 
 def source_host(url: str) -> str:
@@ -36,7 +35,8 @@ def source_class(url: str) -> str:
 def record_provenance(record: PublicRecord) -> dict[str, Any]:
     entity_id = f"urn:suzano-aberta:record:{record.id}"
     source_url = record.source.url
-    activity_id = f"urn:suzano-aberta:collection:{sha256((record.id + str(record.source.collected_at)).encode()).hexdigest()[:24]}"
+    activity_seed = f"{record.id}|{record.source.collected_at.isoformat()}"
+    activity_id = f"urn:suzano-aberta:collection:{sha256(activity_seed.encode()).hexdigest()[:24]}"
     agent_id = f"urn:suzano-aberta:source:{sha256(source_host(source_url).encode()).hexdigest()[:20]}"
 
     entity: dict[str, Any] = {
@@ -58,7 +58,7 @@ def record_provenance(record: PublicRecord) -> dict[str, Any]:
         "@context": {
             "prov": "http://www.w3.org/ns/prov#",
             "dct": "http://purl.org/dc/terms/",
-            "suzano": "https://mukasanches.github.io/suzano-aberta/ns#",
+            "suzano": NAMESPACE_URL,
         },
         "record": record.id,
         "source_class": source_class(source_url),
@@ -79,6 +79,10 @@ def record_provenance(record: PublicRecord) -> dict[str, Any]:
         "source": {
             "url": source_url,
             "name": record.source.name,
+            "authority": record.source.authority,
+            "category": record.source.category,
+            "retrieval_method": record.source.retrieval_method,
+            "media_type": record.source.media_type,
             "collected_at": record.source.collected_at.astimezone(UTC).isoformat(),
             "content_sha256": record.source.content_sha256,
         },
@@ -93,6 +97,7 @@ def dcat_catalog(*, stats: dict[str, object], distributions: list[dict[str, str]
             "dct": "http://purl.org/dc/terms/",
             "foaf": "http://xmlns.com/foaf/0.1/",
             "prov": "http://www.w3.org/ns/prov#",
+            "suzano": NAMESPACE_URL,
         },
         "@id": f"{PORTAL_URL}catalog",
         "@type": "dcat:Catalog",
@@ -111,6 +116,7 @@ def dcat_catalog(*, stats: dict[str, object], distributions: list[dict[str, str]
             "suzano:records": stats.get("records", 0),
             "suzano:documents": stats.get("documents", 0),
             "suzano:legislation": stats.get("legislation", 0),
+            "suzano:procurements": stats.get("procurements", 0),
             "dcat:distribution": distributions,
         },
     }
