@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import json
 import re
 import sys
@@ -11,6 +12,8 @@ PAGES = [
     "index.html",
     "explorar.html",
     "legislacao.html",
+    "norma.html",
+    "contratacoes.html",
     "sobre.html",
     "desenvolvedores.html",
     "status.html",
@@ -94,6 +97,7 @@ def validate_generated_data_api() -> None:
         api_root / "v1" / "records.json.gz",
         api_root / "v1" / "documentos.json.gz",
         api_root / "v1" / "legislacao.json.gz",
+        api_root / "v1" / "contratacoes.json.gz",
     ]
     for path in required:
         if not path.exists() or path.stat().st_size == 0:
@@ -105,6 +109,33 @@ def validate_generated_data_api() -> None:
         fail("Data API não pode ser publicada com zero documentos")
     if int(ready.get("legislation", 0)) < 1:
         fail("Data API não pode ser publicada sem leis, decretos ou proposições")
+
+    with gzip.open(api_root / "v1" / "contratacoes.json.gz", "rt", encoding="utf-8") as handle:
+        procurement = json.load(handle)
+    if not isinstance(procurement.get("items"), list):
+        fail("Coleção de contratações não possui lista de itens")
+
+
+def validate_portal_v2_data() -> None:
+    data_root = ROOT / "data"
+    news = data_root / "news.json"
+    enrichment = data_root / "enrichment.json"
+    if not news.exists() or not enrichment.exists():
+        return
+
+    feed = json.loads(news.read_text(encoding="utf-8"))
+    if feed.get("count") != 5 or len(feed.get("items", [])) != 5:
+        fail("O feed público deve conter exatamente cinco notícias")
+
+    summary = json.loads(enrichment.read_text(encoding="utf-8"))
+    if summary.get("detail_shards") != 16 or summary.get("relation_shards") != 16:
+        fail("Camada de detalhes e relações está incompleta")
+
+    for folder in ("details", "relations"):
+        for shard in "0123456789abcdef":
+            path = data_root / folder / f"{shard}.json.gz"
+            if not path.exists() or path.stat().st_size == 0:
+                fail(f"Shard ausente: {path}")
 
 
 def main() -> None:
@@ -120,7 +151,9 @@ def main() -> None:
 
     required_assets = [
         ROOT / "assets/styles.css",
+        ROOT / "assets/portal-v2.css",
         ROOT / "assets/app.js",
+        ROOT / "assets/portal-v2.js",
         ROOT / "assets/search-worker.js",
         ROOT / "manifest.webmanifest",
     ]
@@ -129,7 +162,8 @@ def main() -> None:
             fail(f"asset ausente: {required}")
 
     validate_generated_data_api()
-    print("Portal estático e Data API validados.")
+    validate_portal_v2_data()
+    print("Portal estático, detalhes, relações e Data API validados.")
 
 
 if __name__ == "__main__":
