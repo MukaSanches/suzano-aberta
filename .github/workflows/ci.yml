@@ -58,6 +58,7 @@ jobs:
           suzano doctor --help
           suzano integridade --help
           suzano atualizar --help
+          suzano acervo-maximo --help
           suzano sincronizar --help
           suzano reindexar --help
           suzano buscar --help
@@ -86,5 +87,5 @@ jobs:
         run: |
           python -m pip install dist/*.whl
           python -m pip check
-          python -c "import suzano_aberta; assert suzano_aberta.__version__ == '0.2.0'"
+          python -c "import suzano_aberta; assert suzano_aberta.__version__ == '0.3.0'"
           suzano --help

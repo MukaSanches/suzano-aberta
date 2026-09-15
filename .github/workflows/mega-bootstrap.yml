@@ -1,0 +1,128 @@
+name: Mega archive bootstrap
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/mega-bootstrap.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: suzano-mega-archive-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  build-largest-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install library
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip check
+
+      - name: Restore current rolling archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz
+          if gh release view data-latest >/dev/null 2>&1; then
+            if gh release download data-latest --pattern "suzano-aberta.sqlite3.gz" --clobber; then
+              gzip -t suzano-aberta.sqlite3.gz
+              gzip -dc suzano-aberta.sqlite3.gz > suzano-aberta.sqlite3
+            fi
+          fi
+          rm -f suzano-aberta.sqlite3.gz
+
+      - name: Build maximum current and historical collection
+        run: |
+          suzano acervo-maximo \
+            --max-paginas 6000 \
+            --profundidade 6 \
+            --max-arquivos 1800 \
+            --max-historicos 40000 \
+            --colecoes-common-crawl 12
+
+      - name: Validate and describe expanded index
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import sqlite3
+          from datetime import UTC, datetime
+
+          db = sqlite3.connect("suzano-aberta.sqlite3")
+          db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+          check = db.execute("PRAGMA quick_check").fetchone()[0]
+          if str(check).lower() != "ok":
+              raise SystemExit(f"quick_check failed: {check}")
+
+          total = db.execute("SELECT COUNT(*) FROM records WHERE active=1").fetchone()[0]
+          if total < 2852:
+              raise SystemExit(f"expanded archive unexpectedly shrank: {total}")
+          fts = db.execute("SELECT COUNT(*) FROM records_fts").fetchone()[0]
+          if fts != total:
+              raise SystemExit(f"FTS mismatch: {fts} != {total}")
+
+          counts = dict(db.execute(
+              "SELECT kind, COUNT(*) FROM records WHERE active=1 GROUP BY kind ORDER BY kind"
+          ).fetchall())
+          extracted = db.execute(
+              "SELECT COUNT(*) FROM records WHERE kind='arquivo' AND payload_json LIKE '%\"texto_extraido\":true%'"
+          ).fetchone()[0]
+          metadata = {
+              "generated_at": datetime.now(UTC).isoformat(),
+              "records": total,
+              "fts_rows": fts,
+              "counts_by_kind": counts,
+              "documents_with_extracted_text": extracted,
+              "schema": 3,
+              "profile": "acervo-maximo",
+          }
+          db.close()
+          with open("data-latest.json", "w", encoding="utf-8") as handle:
+              json.dump(metadata, handle, ensure_ascii=False, indent=2)
+          print(json.dumps(metadata, ensure_ascii=False))
+          PY
+
+      - name: Compress and checksum snapshot
+        shell: bash
+        run: |
+          gzip -9 -n -c suzano-aberta.sqlite3 > suzano-aberta.sqlite3.gz
+          sha256sum suzano-aberta.sqlite3.gz > suzano-aberta.sqlite3.gz.sha256
+          ls -lh suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz data-latest.json
+
+      - name: Publish expanded rolling archive
+        shell: bash
+        run: |
+          if gh release view data-latest >/dev/null 2>&1; then
+            gh release upload data-latest \
+              suzano-aberta.sqlite3.gz \
+              suzano-aberta.sqlite3.gz.sha256 \
+              data-latest.json \
+              --clobber
+          else
+            gh release create data-latest \
+              suzano-aberta.sqlite3.gz \
+              suzano-aberta.sqlite3.gz.sha256 \
+              data-latest.json \
+              --title "Suzano Aberta — índice público" \
+              --notes "Índice rolling de páginas, documentos e referências históricas públicas sobre Suzano." \
+              --prerelease
+          fi

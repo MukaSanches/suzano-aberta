@@ -22,6 +22,8 @@ RecordKind = Literal[
     "ato_oficial",
     "noticia",
     "pagina_web",
+    "arquivo",
+    "arquivo_historico",
 ]
 
 
