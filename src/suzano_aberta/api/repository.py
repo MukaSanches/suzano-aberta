@@ -5,7 +5,7 @@ import sqlite3
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal, TypedDict, cast
 
 from ..models import Change, PublicRecord, RecordKind
 
@@ -25,19 +25,20 @@ LEGISLATION_KINDS: tuple[RecordKind, ...] = ("lei", "decreto", "proposicao")
 PROCUREMENT_KINDS: tuple[RecordKind, ...] = ("licitacao", "contrato", "ata")
 
 
+class SourceCatalogRow(TypedDict):
+    name: str
+    records: int
+    first_seen: str | None
+    last_seen: str | None
+
+
 def _fts_query(query: str) -> str:
     tokens = re.findall(r"\w+", query.casefold(), flags=re.UNICODE)
     return " AND ".join(f'"{token.replace(chr(34), chr(34) * 2)}"*' for token in tokens)
 
 
 class ApiRepository:
-    """Camada de leitura da API.
-
-    A conexão abre o snapshot SQLite em modo somente leitura e trata o arquivo
-    publicado como imutável durante a vida daquela conexão. Cada requisição abre
-    sua própria conexão, então uma troca atômica do snapshot passa a valer nas
-    requisições seguintes sem permitir mutação acidental pela API.
-    """
+    """Camada de leitura da API sobre snapshot SQLite imutável."""
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -188,15 +189,7 @@ class ApiRepository:
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[PublicRecord], int]:
-        clauses, params = self._filters(
-            kind=kind,
-            kinds=kinds,
-            year=year,
-            source=source,
-            date_from=date_from,
-            date_to=date_to,
-            date_mode=date_mode,
-        )
+        clauses, params = self._filters(kind=kind, kinds=kinds, year=year, source=source, date_from=date_from, date_to=date_to, date_mode=date_mode)
         where = " AND ".join(clauses)
         total = int(self._conn.execute(f"SELECT COUNT(*) FROM records WHERE {where}", params).fetchone()[0])
         order_by = self._order_by(sort, date_mode=date_mode, with_rank=False)
@@ -223,38 +216,17 @@ class ApiRepository:
     ) -> tuple[list[PublicRecord], int]:
         clean_query = query.strip()
         if not clean_query:
-            return self.list_records(
-                kind=kind,
-                kinds=kinds,
-                year=year,
-                source=source,
-                date_from=date_from,
-                date_to=date_to,
-                date_mode=date_mode,
-                sort=sort,
-                limit=limit,
-                offset=offset,
-            )
-        clauses, params = self._filters(
-            kind=kind,
-            kinds=kinds,
-            year=year,
-            source=source,
-            date_from=date_from,
-            date_to=date_to,
-            date_mode=date_mode,
-        )
+            return self.list_records(kind=kind, kinds=kinds, year=year, source=source, date_from=date_from, date_to=date_to, date_mode=date_mode, sort=sort, limit=limit, offset=offset)
+        clauses, params = self._filters(kind=kind, kinds=kinds, year=year, source=source, date_from=date_from, date_to=date_to, date_mode=date_mode)
         where = " AND ".join(clauses)
         match = _fts_query(clean_query)
 
         if self._fts_enabled and match:
             try:
-                total = int(
-                    self._conn.execute(
-                        f"SELECT COUNT(*) FROM records_fts JOIN records ON records.id=records_fts.id WHERE records_fts MATCH ? AND {where}",
-                        [match, *params],
-                    ).fetchone()[0]
-                )
+                total = int(self._conn.execute(
+                    f"SELECT COUNT(*) FROM records_fts JOIN records ON records.id=records_fts.id WHERE records_fts MATCH ? AND {where}",
+                    [match, *params],
+                ).fetchone()[0])
                 if total:
                     order_by = self._order_by(sort, date_mode=date_mode, with_rank=True)
                     rows = self._conn.execute(
@@ -277,96 +249,22 @@ class ApiRepository:
         ).fetchall()
         return self._decode(rows), total
 
-    def documents(
-        self,
-        query: str = "",
-        *,
-        year: int | None = None,
-        source: str | None = None,
-        date_from: str | None = None,
-        date_to: str | None = None,
-        date_mode: DateMode = "effective",
-        sort: SortMode = "date_desc",
-        limit: int = 50,
-        offset: int = 0,
-    ) -> tuple[list[PublicRecord], int]:
-        return self.search(
-            query,
-            kinds=DOCUMENT_KINDS,
-            year=year,
-            source=source,
-            date_from=date_from,
-            date_to=date_to,
-            date_mode=date_mode,
-            sort=sort,
-            limit=limit,
-            offset=offset,
-        )
+    def documents(self, query: str = "", **kwargs: object) -> tuple[list[PublicRecord], int]:
+        return self.search(query, kinds=DOCUMENT_KINDS, **kwargs)  # type: ignore[arg-type]
 
-    def legislation(
-        self,
-        query: str = "",
-        *,
-        year: int | None = None,
-        source: str | None = None,
-        date_from: str | None = None,
-        date_to: str | None = None,
-        date_mode: DateMode = "effective",
-        sort: SortMode = "date_desc",
-        limit: int = 50,
-        offset: int = 0,
-    ) -> tuple[list[PublicRecord], int]:
-        return self.search(
-            query,
-            kinds=LEGISLATION_KINDS,
-            year=year,
-            source=source,
-            date_from=date_from,
-            date_to=date_to,
-            date_mode=date_mode,
-            sort=sort,
-            limit=limit,
-            offset=offset,
-        )
+    def legislation(self, query: str = "", **kwargs: object) -> tuple[list[PublicRecord], int]:
+        return self.search(query, kinds=LEGISLATION_KINDS, **kwargs)  # type: ignore[arg-type]
 
-    def procurements(
-        self,
-        query: str = "",
-        *,
-        year: int | None = None,
-        source: str | None = None,
-        date_from: str | None = None,
-        date_to: str | None = None,
-        date_mode: DateMode = "effective",
-        sort: SortMode = "date_desc",
-        limit: int = 50,
-        offset: int = 0,
-    ) -> tuple[list[PublicRecord], int]:
-        return self.search(
-            query,
-            kinds=PROCUREMENT_KINDS,
-            year=year,
-            source=source,
-            date_from=date_from,
-            date_to=date_to,
-            date_mode=date_mode,
-            sort=sort,
-            limit=limit,
-            offset=offset,
-        )
+    def procurements(self, query: str = "", **kwargs: object) -> tuple[list[PublicRecord], int]:
+        return self.search(query, kinds=PROCUREMENT_KINDS, **kwargs)  # type: ignore[arg-type]
 
     def counts_by_kind(self) -> dict[str, int]:
-        rows = self._conn.execute(
-            "SELECT kind, COUNT(*) AS total FROM records WHERE active=1 GROUP BY kind ORDER BY kind"
-        ).fetchall()
+        rows = self._conn.execute("SELECT kind, COUNT(*) AS total FROM records WHERE active=1 GROUP BY kind ORDER BY kind").fetchall()
         return {str(row["kind"]): int(row["total"]) for row in rows}
 
     def count_kinds(self, kinds: tuple[RecordKind, ...]) -> int:
         placeholders = ",".join("?" for _ in kinds)
-        row = self._conn.execute(
-            f"SELECT COUNT(*) FROM records WHERE active=1 AND kind IN ({placeholders})",
-            kinds,
-        ).fetchone()
+        row = self._conn.execute(f"SELECT COUNT(*) FROM records WHERE active=1 AND kind IN ({placeholders})", kinds).fetchone()
         return int(row[0]) if row else 0
 
     def source_counts(self, *, limit: int = 50) -> list[tuple[str, int]]:
@@ -376,7 +274,7 @@ class ApiRepository:
         ).fetchall()
         return [(str(row["source_name"]), int(row["total"])) for row in rows]
 
-    def source_catalog(self, *, limit: int = 200) -> list[dict[str, object]]:
+    def source_catalog(self, *, limit: int = 200) -> list[SourceCatalogRow]:
         rows = self._conn.execute(
             """
             SELECT source_name, COUNT(*) AS total,
@@ -390,12 +288,12 @@ class ApiRepository:
             (limit,),
         ).fetchall()
         return [
-            {
-                "name": str(row["source_name"]),
-                "records": int(row["total"]),
-                "first_seen": str(row["first_seen"]) if row["first_seen"] else None,
-                "last_seen": str(row["last_seen"]) if row["last_seen"] else None,
-            }
+            SourceCatalogRow(
+                name=str(row["source_name"]),
+                records=int(row["total"]),
+                first_seen=str(row["first_seen"]) if row["first_seen"] else None,
+                last_seen=str(row["last_seen"]) if row["last_seen"] else None,
+            )
             for row in rows
         ]
 
@@ -417,25 +315,14 @@ class ApiRepository:
 
     def dataset_version(self) -> str:
         stats = self.stats()
-        raw = "|".join(
-            [
-                str(stats.get("records", 0)),
-                str(stats.get("documents", 0)),
-                str(stats.get("legislation", 0)),
-                str(stats.get("procurements", 0)),
-                str(stats.get("last_seen") or ""),
-                str(stats.get("database_bytes", 0)),
-            ]
-        )
+        raw = "|".join([
+            str(stats.get("records", 0)), str(stats.get("documents", 0)),
+            str(stats.get("legislation", 0)), str(stats.get("procurements", 0)),
+            str(stats.get("last_seen") or ""), str(stats.get("database_bytes", 0)),
+        ])
         return sha256(raw.encode("utf-8")).hexdigest()[:24]
 
-    def changes(
-        self,
-        *,
-        kind: str | None = None,
-        limit: int = 50,
-        offset: int = 0,
-    ) -> tuple[list[Change], int]:
+    def changes(self, *, kind: str | None = None, limit: int = 50, offset: int = 0) -> tuple[list[Change], int]:
         clauses: list[str] = []
         params: list[object] = []
         if kind:
@@ -449,8 +336,7 @@ class ApiRepository:
         ).fetchall()
         items = [
             Change(
-                record_id=str(row["record_id"]),
-                kind=str(row["kind"]),
+                record_id=str(row["record_id"]), kind=str(row["kind"]),
                 change_type=cast(Literal["novo", "alterado", "ausente"], str(row["change_type"])),
                 observed_at=datetime.fromisoformat(str(row["observed_at"])),
                 previous_hash=str(row["previous_hash"]) if row["previous_hash"] else None,
