@@ -101,6 +101,8 @@ class Suzano:
                     ("PNCP / contratos", lambda: self.pncp.contracts(year=year)),
                     ("PNCP / atas de registro de preços", lambda: self.pncp.atas(year=year)),
                     ("Compras.gov.br / contratações", lambda: self.comprasgov.procurements(year=year)),
+                    ("Compras.gov.br / contratos", lambda: self.comprasgov.contracts(year=year)),
+                    ("Compras.gov.br / atas de registro de preços", lambda: self.comprasgov.atas(year=year)),
                     ("Prefeitura / secretarias", self.prefeitura.secretariats),
                     (
                         "Prefeitura / contas públicas",
