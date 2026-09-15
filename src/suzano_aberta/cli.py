@@ -13,6 +13,8 @@ from .catalog import SOURCES
 from .core import Profile, Suzano, explain
 from .store import Store
 
+DEFAULT_DATABASE = Path("suzano-aberta.sqlite3")
+
 app = typer.Typer(
     name="suzano",
     help="Consulta e preserva dados públicos oficiais do município de Suzano.",
@@ -40,16 +42,20 @@ def sources() -> None:
 
 @app.command("coletar")
 def collect(
-    year: Annotated[int, typer.Option("--ano", "-a", help="Ano de referência.")] = _default_year(),
-    profile: Annotated[str, typer.Option("--perfil", "-p", help="completo, legislativo ou executivo")] = "completo",
-    database: Annotated[Path, typer.Option("--db", help="Arquivo SQLite local.")] = Path("suzano-aberta.sqlite3"),
+    year: Annotated[int | None, typer.Option("--ano", "-a", help="Ano de referência.")] = None,
+    profile: Annotated[
+        str,
+        typer.Option("--perfil", "-p", help="completo, legislativo ou executivo"),
+    ] = "completo",
+    database: Annotated[Path, typer.Option("--db", help="Arquivo SQLite local.")] = DEFAULT_DATABASE,
 ) -> None:
     """Coleta fontes oficiais e atualiza o histórico local."""
     if profile not in {"completo", "legislativo", "executivo"}:
         raise typer.BadParameter("Use: completo, legislativo ou executivo")
+    resolved_year = year if year is not None else _default_year()
     with Suzano(database=database) as suzano:
-        report = suzano.collect(year=year, profile=cast(Profile, profile))
-    table = Table(title=f"Coleta {year}")
+        report = suzano.collect(year=resolved_year, profile=cast(Profile, profile))
+    table = Table(title=f"Coleta {resolved_year}")
     table.add_column("Métrica")
     table.add_column("Valor", justify="right")
     for key, value in (
@@ -70,7 +76,7 @@ def collect(
 @app.command("buscar")
 def search(
     query: Annotated[str, typer.Argument(help="Palavra ou expressão para procurar.")],
-    database: Annotated[Path, typer.Option("--db")] = Path("suzano-aberta.sqlite3"),
+    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
     limit: Annotated[int, typer.Option("--limite", "-n")] = 30,
 ) -> None:
     """Pesquisa o banco local preservando o link da fonte original."""
@@ -89,7 +95,7 @@ def search(
 @app.command("ver")
 def show(
     record_id: Annotated[str, typer.Argument(help="ID interno do registro.")],
-    database: Annotated[Path, typer.Option("--db")] = Path("suzano-aberta.sqlite3"),
+    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
 ) -> None:
     """Exibe um registro em linguagem simples e a sua fonte."""
     with Store(database) as store:
@@ -103,7 +109,7 @@ def show(
 
 @app.command("panorama")
 def snapshot(
-    database: Annotated[Path, typer.Option("--db")] = Path("suzano-aberta.sqlite3"),
+    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
 ) -> None:
     """Mostra um retrato do que já foi coletado."""
     with Suzano(database=database) as suzano:
@@ -118,7 +124,7 @@ def snapshot(
 
 @app.command("mudancas")
 def changes(
-    database: Annotated[Path, typer.Option("--db")] = Path("suzano-aberta.sqlite3"),
+    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
     limit: Annotated[int, typer.Option("--limite", "-n")] = 30,
 ) -> None:
     """Mostra registros novos ou alterados detectados entre coletas."""
@@ -130,7 +136,12 @@ def changes(
     table.add_column("Registro")
     table.add_column("Evento")
     for item in items:
-        table.add_row(item.observed_at.isoformat(timespec="seconds"), item.kind, item.record_id, item.change_type)
+        table.add_row(
+            item.observed_at.isoformat(timespec="seconds"),
+            item.kind,
+            item.record_id,
+            item.change_type,
+        )
     console.print(table)
 
 
@@ -142,7 +153,8 @@ def doctor(
     with Suzano() as suzano:
         statuses = suzano.doctor()
     if as_json:
-        console.print_json(json.dumps([item.model_dump(mode="json") for item in statuses], ensure_ascii=False))
+        payload = [item.model_dump(mode="json") for item in statuses]
+        console.print_json(json.dumps(payload, ensure_ascii=False))
     else:
         table = Table(title="Saúde das fontes")
         table.add_column("Fonte")
@@ -150,7 +162,12 @@ def doctor(
         table.add_column("Tempo", justify="right")
         table.add_column("Estado")
         for item in statuses:
-            table.add_row(item.source, str(item.status_code or "—"), f"{item.elapsed_ms or 0} ms", "OK" if item.ok else "FALHA")
+            table.add_row(
+                item.source,
+                str(item.status_code or "—"),
+                f"{item.elapsed_ms or 0} ms",
+                "OK" if item.ok else "FALHA",
+            )
         console.print(table)
     if any(not item.ok for item in statuses):
         raise typer.Exit(code=2)
@@ -159,7 +176,7 @@ def doctor(
 @app.command("exportar")
 def export_data(
     output: Annotated[Path, typer.Argument(help="Arquivo .json de destino.")],
-    database: Annotated[Path, typer.Option("--db")] = Path("suzano-aberta.sqlite3"),
+    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
 ) -> None:
     """Exporta todos os registros preservados para JSON."""
     with Store(database) as store:
