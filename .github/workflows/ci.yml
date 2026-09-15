@@ -43,7 +43,15 @@ jobs:
         run: python -m compileall -q src tests
 
       - name: Static correctness checks
-        run: ruff check --select E,F .
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          ruff check --select E,F . 2>&1 | tee ruff.txt
+          status=${PIPESTATUS[0]}
+          echo "$status" > ruff.status
+          exit "$status"
 
       - name: Tests
         run: pytest --cov=suzano_aberta --cov-report=term-missing
@@ -53,6 +61,24 @@ jobs:
           suzano --help
           suzano fontes --help
           suzano doctor --help
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-python-${{ matrix.python-version }}
+          path: |
+            ruff.txt
+            ruff.status
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Enforce static checks
+        if: always()
+        shell: bash
+        run: |
+          test -f ruff.status
+          test "$(cat ruff.status)" = "0"
 
   package:
     name: Build package
