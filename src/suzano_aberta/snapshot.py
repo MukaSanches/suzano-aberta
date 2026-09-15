@@ -57,7 +57,11 @@ def sync_latest_snapshot(
         extracted = temp_root / "snapshot.sqlite3"
         checksum_file = temp_root / "snapshot.sha256"
 
-        actual_checksum = _download(url, compressed, timeout=timeout)
+        try:
+            actual_checksum = _download(url, compressed, timeout=timeout)
+        except (httpx.HTTPError, OSError) as exc:
+            raise SnapshotError(f"Não foi possível baixar o snapshot: {exc}") from exc
+
         try:
             _download(f"{url}.sha256", checksum_file, timeout=timeout)
             expected_checksum = checksum_file.read_text(encoding="utf-8").strip().split()[0]
@@ -74,8 +78,9 @@ def sync_latest_snapshot(
         except (OSError, EOFError) as exc:
             raise SnapshotError("Snapshot compactado inválido.") from exc
 
-        if extracted.read_bytes()[:16] != b"SQLite format 3\x00":
-            raise SnapshotError("O snapshot baixado não é um banco SQLite válido.")
+        with extracted.open("rb") as handle:
+            if handle.read(16) != b"SQLite format 3\x00":
+                raise SnapshotError("O snapshot baixado não é um banco SQLite válido.")
 
         try:
             connection = sqlite3.connect(f"file:{extracted}?mode=ro", uri=True)
