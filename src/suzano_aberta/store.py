@@ -251,6 +251,14 @@ class Store:
                 )
         return changes
 
+    def get(self, record_id: str) -> PublicRecord | None:
+        row = self._conn.execute(
+            "SELECT payload_json FROM records WHERE id=? AND active=1", (record_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return PublicRecord.model_validate_json(str(row["payload_json"]))
+
     def search(self, query: str, *, limit: int = 50) -> list[PublicRecord]:
         clean_query = query.strip()
         if not clean_query:
@@ -271,10 +279,11 @@ class Store:
                         """,
                         (match, limit),
                     ).fetchall()
-                    return [
-                        PublicRecord.model_validate_json(str(row["payload_json"]))
-                        for row in rows
-                    ]
+                    if rows:
+                        return [
+                            PublicRecord.model_validate_json(str(row["payload_json"]))
+                            for row in rows
+                        ]
                 except sqlite3.OperationalError:
                     pass
 
@@ -289,6 +298,20 @@ class Store:
             (needle, needle, limit),
         ).fetchall()
         return [PublicRecord.model_validate_json(str(row["payload_json"])) for row in rows]
+
+    def web_seed_urls(self, *, limit: int = 5000) -> list[str]:
+        """Retorna páginas previamente descobertas para o próximo ciclo continuar de onde parou."""
+        rows = self._conn.execute(
+            """
+            SELECT source_url
+            FROM records
+            WHERE active=1 AND kind='pagina_web' AND source_name LIKE 'Web pública — %'
+            ORDER BY last_seen ASC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return [str(row["source_url"]) for row in rows]
 
     def latest_changes(self, *, limit: int = 50) -> list[Change]:
         rows = self._conn.execute(
