@@ -77,6 +77,29 @@ class SourceStatus(BaseModel):
     detail: str | None = None
 
 
+class IntegrityFinding(BaseModel):
+    check: Literal["dominio_externo_nao_reconhecido"]
+    severity: Literal["attention"]
+    source_url: str
+    target_url: str
+    host: str
+    evidence: str | None = None
+    message: str
+
+
+class IntegrityReport(BaseModel):
+    checked_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    source_url: str
+    status_code: int
+    elapsed_ms: int
+    external_hosts: list[str] = Field(default_factory=list)
+    findings: list[IntegrityFinding] = Field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return not self.findings
+
+
 class Change(BaseModel):
     record_id: str
     kind: str
