@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from .integrity import TRANSPARENCIA_URL
 from .sources.base import SourceDefinition
 from .sources.camara import CAMARA, COMISSOES_URL, CONTRATOS_DADOS_URL, DIARIO_URL, SESSOES_URL, VEREADORES_URL
 from .sources.camara_v2 import DISPENSAS_YEAR_URL, LICITACOES_ABERTAS_URL
+from .sources.comprasgov import COMPRAS_DADOS
 from .sources.legislacao import ROOT as LEGISLACAO_CAMARA_URL
+from .sources.pncp import PNCP_PORTAL
 from .sources.prefeitura import CONTAS_URL, IMPRENSA_URL, LEIS_DECRETOS_URL, LICITACOES_URL, ORCAMENTO_URL, PREFEITURA, SECRETARIAS_URL
 from .sources.prefeitura_v2 import NOTICIAS_URL_V2
+
+CURRENT_YEAR = datetime.now(UTC).year
 
 
 SOURCES: tuple[SourceDefinition, ...] = (
@@ -16,7 +22,7 @@ SOURCES: tuple[SourceDefinition, ...] = (
     SourceDefinition("camara-sessoes", "Sessões ordinárias", SESSOES_URL, "Câmara Municipal de Suzano", "legislativo", "Pautas, presença e identificadores de sessões."),
     SourceDefinition("camara-contratos", "Dados estruturados de contratos", CONTRATOS_DADOS_URL, "Câmara Municipal de Suzano", "contratos", "Índice oficial com CSV de contratos."),
     SourceDefinition("camara-licitacoes", "Licitações abertas", LICITACOES_ABERTAS_URL, "Câmara Municipal de Suzano", "compras-publicas", "Certames, editais e arquivos da Câmara."),
-    SourceDefinition("camara-dispensas", "Dispensas de licitação", DISPENSAS_YEAR_URL.format(year=2026), "Câmara Municipal de Suzano", "compras-publicas", "Índice anual de dispensas, com situação e páginas de detalhe."),
+    SourceDefinition("camara-dispensas", "Dispensas de licitação", DISPENSAS_YEAR_URL.format(year=CURRENT_YEAR), "Câmara Municipal de Suzano", "compras-publicas", "Índice anual de dispensas, com situação e páginas de detalhe."),
     SourceDefinition("camara-comissoes", "Comissões permanentes", COMISSOES_URL, "Câmara Municipal de Suzano", "legislativo", "Pautas das reuniões das comissões."),
     SourceDefinition("camara-diario", "Diário Oficial do Legislativo", DIARIO_URL, "Câmara Municipal de Suzano", "diario", "Índice das edições oficiais."),
     SourceDefinition("prefeitura-home", "Prefeitura Municipal", PREFEITURA, "Prefeitura Municipal de Suzano", "institucional", "Página principal."),
@@ -28,6 +34,8 @@ SOURCES: tuple[SourceDefinition, ...] = (
     SourceDefinition("prefeitura-imprensa", "Imprensa Oficial", IMPRENSA_URL, "Prefeitura Municipal de Suzano", "diario", "Edições da Imprensa Oficial do Executivo."),
     SourceDefinition("prefeitura-leis", "Leis e decretos", LEIS_DECRETOS_URL, "Prefeitura Municipal de Suzano", "legislacao", "Documentos publicados na área oficial de legislação do Executivo."),
     SourceDefinition("prefeitura-noticias", "Notícias institucionais", NOTICIAS_URL_V2, "Prefeitura Municipal de Suzano", "noticias", "Publicações institucionais recentes."),
+    SourceDefinition("pncp", "Portal Nacional de Contratações Públicas", PNCP_PORTAL, "Governo Federal / PNCP", "compras-publicas", "Fonte nacional estruturada para contratações, contratos e atas relacionadas ao CNPJ municipal."),
+    SourceDefinition("comprasgov", "Compras.gov.br — Dados Abertos", f"{COMPRAS_DADOS}/", "Governo Federal / Compras.gov.br", "compras-publicas", "Fonte nacional complementar para contratações públicas sob a Lei 14.133."),
 )
 
 
