@@ -1,5 +1,7 @@
 # Suzano Aberta
 
+[![CI](https://github.com/MukaSanches/suzano-aberta/actions/workflows/ci.yml/badge.svg)](https://github.com/MukaSanches/suzano-aberta/actions/workflows/ci.yml)
+
 Infraestrutura aberta para coletar, organizar e rastrear dados públicos do município de Suzano, em São Paulo.
 
 O projeto transforma informações espalhadas entre páginas, tabelas, arquivos CSV e documentos oficiais em registros pesquisáveis, sem perder o vínculo com a fonte original.
@@ -35,21 +37,21 @@ A fonte oficial continua sendo a referência. A biblioteca existe para tornar a 
 
 ## O que a versão 0.1 entrega
 
-A primeira versão já inclui coleta real e rastreável de fontes públicas oficiais, armazenamento local e ferramentas de inspeção.
+A primeira versão inclui coleta real e rastreável de fontes públicas oficiais, armazenamento local e ferramentas de inspeção.
 
 | Área | O que é coletado |
 | --- | --- |
-| Câmara | sessões ordinárias e seus identificadores |
-| Produção legislativa | proposições apresentadas nas sessões disponíveis |
+| Câmara | vereadores da legislatura atual e sessões ordinárias |
+| Produção legislativa | proposições publicadas nas sessões disponíveis |
 | Contratos da Câmara | CSV oficial quando publicado, com fallback para tabela pública |
-| Comissões | pauta das reuniões das comissões permanentes |
+| Comissões | pautas das reuniões das comissões permanentes |
 | Presenças | consolidação de presença, ausência e licença por vereador |
 | Diário Legislativo | índice de edições oficiais em PDF |
 | Licitações da Prefeitura | publicações do índice oficial de editais e licitações |
 | Estrutura administrativa | secretarias e dados publicados no portal municipal |
 | Contas públicas | documentos fiscais e relatórios disponibilizados pela Prefeitura |
 | Orçamento | PPA, LDO, LOA e documentos relacionados publicados no portal |
-| Imprensa Oficial | documentos públicos do Diário Oficial do Executivo |
+| Imprensa Oficial | edições públicas do Diário Oficial do Executivo |
 | Leis e decretos | documentos publicados na área oficial de legislação do Executivo |
 | Notícias institucionais | publicações recentes do portal municipal |
 
@@ -178,7 +180,7 @@ O projeto não envia telemetria.
 
 ## Confiabilidade
 
-A v0.1 segue algumas regras simples:
+A v0.1 segue regras conservadoras:
 
 - prioriza fontes institucionais de primeira parte;
 - prefere CSV e dados estruturados quando o órgão os fornece;
@@ -187,7 +189,9 @@ A v0.1 segue algumas regras simples:
 - usa timeout e número de tentativas explícitos;
 - separa parsers por órgão;
 - possui testes para normalização, persistência e parsers críticos;
-- mantém um comando de diagnóstico das fontes.
+- mantém um comando de diagnóstico das fontes;
+- executa CI em Python 3.11, 3.12 e 3.13;
+- executa smoke tests separados contra fontes públicas reais.
 
 As páginas dos órgãos públicos podem mudar sem aviso. Quando isso acontecer, o comportamento desejado é uma falha observável e corrigível, não a criação silenciosa de dados incorretos.
 
@@ -203,7 +207,7 @@ O inventário completo está em [`docs/fontes.md`](docs/fontes.md). Entre as fon
 - Editais e licitações: https://suzano.sp.gov.br/editais-licitacoes/
 - Contas públicas: https://suzano.sp.gov.br/transparencia/contas-publicas/
 - Leis orçamentárias: https://suzano.sp.gov.br/transparencia/leis-orcamentarias/
-- Imprensa Oficial: https://suzano.sp.gov.br/transparencia/imprensa-oficial/
+- Imprensa Oficial: https://suzano.sp.gov.br/imprensa-oficial/
 
 ## Documentação técnica
 
@@ -211,6 +215,7 @@ O inventário completo está em [`docs/fontes.md`](docs/fontes.md). Entre as fon
 - [Fontes oficiais](docs/fontes.md)
 - [Metodologia de coleta](docs/metodologia.md)
 - [Modelo de dados](docs/modelo-de-dados.md)
+- [Limitações conhecidas](docs/limitacoes.md)
 - [Roteiro de demonstração institucional](docs/demo-institucional.md)
 
 ## Desenvolvimento
@@ -225,11 +230,12 @@ Execute a verificação local:
 
 ```bash
 ruff check .
-pytest
 mypy src/suzano_aberta
+pytest
+python -m build
 ```
 
-Testes marcados como `live` acessam sites públicos reais e ficam fora do conjunto padrão de CI.
+Testes determinísticos ficam em `tests/`. Verificações que acessam sites públicos reais ficam em `tests_live/` e são executadas em workflow separado para não tornar o CI principal dependente da disponibilidade momentânea dos portais.
 
 ## Escopo e responsabilidade
 
