@@ -20,7 +20,7 @@ from .models import (
     SourceStatus,
 )
 from .snapshot import SnapshotError, sync_latest_snapshot
-from .sources import CamaraSource, LegislacaoSource, PrefeituraSource
+from .sources import CamaraSource, ComprasGovSource, LegislacaoSource, PncpSource, PrefeituraSource
 from .store import Store
 
 
@@ -44,6 +44,8 @@ class Suzano:
         self.camara = CamaraSource(self.http)
         self.legislacao = LegislacaoSource(self.http)
         self.prefeitura = PrefeituraSource(self.http)
+        self.pncp = PncpSource(self.http)
+        self.comprasgov = ComprasGovSource(self.http)
         self.auto_sync = auto_sync
         self.last_bootstrap_error: str | None = None
 
@@ -95,6 +97,10 @@ class Suzano:
             collectors.extend(
                 [
                     ("Prefeitura / licitações", lambda: self.prefeitura.tenders(year=year)),
+                    ("PNCP / contratações", lambda: self.pncp.procurements(year=year)),
+                    ("PNCP / contratos", lambda: self.pncp.contracts(year=year)),
+                    ("PNCP / atas de registro de preços", lambda: self.pncp.atas(year=year)),
+                    ("Compras.gov.br / contratações", lambda: self.comprasgov.procurements(year=year)),
                     ("Prefeitura / secretarias", self.prefeitura.secretariats),
                     (
                         "Prefeitura / contas públicas",
