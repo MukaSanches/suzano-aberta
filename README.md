@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Infraestrutura aberta, local-first e rastreável para descobrir, preservar, pesquisar e reutilizar informação pública relacionada a Suzano, SP.</strong>
+  <strong>Uma infraestrutura cívica local-first para encontrar, preservar, pesquisar e reutilizar informação pública relacionada a Suzano, SP — sempre mantendo o caminho de volta à fonte.</strong>
 </p>
 
 <p align="center">
@@ -11,139 +11,131 @@
   <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Licença Apache 2.0" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-102A43"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-0B6E4F">
-  <img alt="Biblioteca 0.7.0" src="https://img.shields.io/badge/library-0.7.0-102A43">
+  <img alt="Biblioteca 0.8.0" src="https://img.shields.io/badge/library-0.8.0-102A43">
   <img alt="API 1.2" src="https://img.shields.io/badge/API-1.2-0B6E4F">
-  <img alt="Windows CMD" src="https://img.shields.io/badge/Windows-CMD-102A43">
+  <img alt="SQLite local-first" src="https://img.shields.io/badge/storage-SQLite-102A43">
+  <img alt="Windows CMD" src="https://img.shields.io/badge/Windows-CMD-0B6E4F">
 </p>
 
 > **Projeto cívico independente.** O Suzano Aberta não é um portal oficial da Prefeitura Municipal de Suzano, da Câmara Municipal de Suzano ou de qualquer mandato, partido ou candidatura. Em caso de divergência, a publicação da fonte responsável é a referência.
 
-## O que é
+## A ideia em 20 segundos
 
-Informações públicas relevantes para Suzano estão espalhadas por páginas institucionais, portais de transparência, diários, documentos, APIs nacionais e arquivos históricos. O Suzano Aberta cria uma camada técnica comum sobre esse material: coleta o que é publicamente acessível, normaliza registros, preserva a origem, indexa o conteúdo e oferece várias formas de consulta.
+Informação pública existe, mas normalmente está separada entre portais, páginas, PDFs, diários, sistemas de contratação e APIs. O Suzano Aberta cria uma camada técnica comum sobre esse material: descobre, coleta, normaliza, preserva, indexa e disponibiliza os registros por terminal, Python, HTTP e web.
 
-O mesmo acervo pode ser usado por uma pessoa no CMD, por scripts Python, por uma aplicação via API HTTP ou pelo portal web. O projeto não precisa de IA para coletar ou pesquisar e não transforma correlação em acusação.
+O projeto não tenta substituir a fonte oficial. Ele faz o oposto: **cada registro deve continuar apontando para ela**.
 
 ```text
-Câmara + Prefeitura + PNCP + Compras.gov.br + web/arquivos públicos
-                              │
-                              ▼
-                 coleta / descoberta responsável
-                              │
-                              ▼
-                    PublicRecord + SourceRef
-                              │
-                   ┌──────────┴──────────┐
-                   ▼                     ▼
-             SQLite + histórico      documentos
-                   │
-                   ▼
-                FTS5 / busca
-                   │
-        ┌──────────┼───────────┬─────────────┐
-        ▼          ▼           ▼             ▼
-      CLI/CMD   Python SDK   API HTTP     portal web
+┌──────────────────────────────── FONTES PÚBLICAS ────────────────────────────────┐
+│ Câmara · Prefeitura · PNCP · Compras.gov.br · páginas · documentos · arquivos │
+└──────────────────────────────────────┬──────────────────────────────────────────┘
+                                       │
+                                       ▼
+                         coleta + descoberta responsável
+                                       │
+                                       ▼
+                           PublicRecord + SourceRef
+                                       │
+                     ┌─────────────────┴─────────────────┐
+                     ▼                                   ▼
+             SQLite + histórico                  documentos/arquivos
+                     │
+                     ▼
+              FTS5 + ranking BM25
+                     │
+        ┌────────────┼────────────┬───────────────┬──────────────┐
+        ▼            ▼            ▼               ▼              ▼
+   Windows/CMD      CLI       Python SDK       API HTTP       Portal web
+        │            │            │               │              │
+        └────────────┴────────────┴───────┬───────┴──────────────┘
+                                          ▼
+                              mesma origem rastreável
 ```
 
-## Para que serve
+## Experimente primeiro, leia depois
 
-O projeto permite pesquisar publicações por texto, consultar registros preservando a URL de origem, acompanhar mudanças observadas entre coletas, consultar leis/proposições/documentos/contratações, trabalhar com snapshots locais, criar aplicações sobre uma API somente leitura, analisar entidades por identificadores verificáveis e medir propriedades técnicas do conjunto de dados.
+No Windows, dentro da pasta do projeto:
 
-Ele pode ser útil para cidadãos, jornalistas, pesquisadores, universidades, desenvolvedores, organizações civis, equipes técnicas e órgãos que precisem reutilizar informação pública sem construir cada integração do zero.
+```cmd
+instalar-windows.cmd
+suzano.cmd
+```
 
-## O que existe hoje
+Na primeira tela, o programa mostra o estado real do ambiente local. Depois:
 
-- coletores estruturados para Câmara e Prefeitura;
-- integração com PNCP e Compras.gov.br;
-- descoberta de páginas e documentos públicos;
-- referências históricas via índices públicos de preservação;
-- extração pesquisável de formatos documentais suportados;
-- modelo normalizado `PublicRecord` + `SourceRef`;
-- SQLite local-first com trilha de mudanças;
-- busca FTS5 Unicode, prefixos e ranking BM25;
-- snapshot rolling com SHA-256 e validação SQLite;
-- CLI tradicional em português;
-- console interativo para Windows/CMD;
-- instalador e launcher `.cmd`;
-- API HTTP v1.2 somente leitura com OpenAPI;
-- `SuzanoClient` para HTTP e `SuzanoIndex` para SQLite local;
-- portal público com estratégia API-first e fallback estático;
-- proveniência por registro e catálogo interoperável;
-- entidades canônicas determinísticas;
-- reconhecimento conservador de órgão de origem e CNPJ explicitamente publicado;
-- métricas técnicas de qualidade de dados;
-- Docker para a API;
-- CI em Python 3.11, 3.12 e 3.13;
-- build de pacote, container, CodeQL, Dependabot e smoke tests de fontes reais.
+```text
+suzano› sincronizar
+suzano› diagnostico
+suzano› recentes
+suzano› educação
+```
+
+Uma busca produz resultados numerados. Você pode abrir o primeiro apenas digitando:
+
+```text
+suzano› 1
+```
+
+E consultar ou abrir a fonte pública original:
+
+```text
+suzano› fonte 1
+suzano› abrir 1
+```
+
+Não é necessário decorar a sintaxe de busca: no console, texto que não corresponde a um comando conhecido é tratado como consulta.
 
 ---
 
-# Comece aqui
+# O que a versão 0.8 entrega
 
-## Windows — forma mais fácil
+| Camada | Capacidade |
+| --- | --- |
+| Coleta | adaptadores independentes para fontes municipais e nacionais |
+| Descoberta | páginas, sitemaps, documentos e referências históricas públicas |
+| Normalização | `PublicRecord` + `SourceRef` com origem preservada |
+| Persistência | SQLite local-first com histórico e fingerprints determinísticos |
+| Busca | FTS5 Unicode, remoção de diacríticos, prefixos e BM25 |
+| Snapshot | distribuição rolling validada por checksum e integridade SQLite |
+| Windows | instalador verificado, launcher UTF-8, console navegável e autorreparo |
+| Diagnóstico | inspeção local de Python, disco, SQLite, FTS5, JSON1 e `quick_check` |
+| Python | `Suzano`, `SuzanoIndex`, `SuzanoClient` e modelos tipados |
+| HTTP | API v1.2 somente leitura com OpenAPI e Problem Details |
+| Proveniência | metadados por registro e representação interoperável |
+| Entidades | IDs canônicos determinísticos e menções com evidência |
+| Qualidade | métricas técnicas reproduzíveis sobre conjuntos de registros |
+| Portal | interface pública API-first com fallback estático |
+| Engenharia | CI multi-Python, mypy strict, testes, build, container e CodeQL |
 
-Requer **Python 3.11 ou superior**.
+O núcleo de coleta e consulta não depende de IA. O objetivo é que resultados importantes possam ser reproduzidos e auditados com regras explícitas.
 
-Clone ou baixe o repositório e, dentro da pasta, execute:
+---
+
+# Instalação
+
+## Windows — experiência recomendada
+
+Requer Python 3.11, 3.12 ou 3.13.
 
 ```cmd
 instalar-windows.cmd
 ```
 
-O instalador verifica o Python, cria um ambiente virtual isolado, instala as dependências, executa verificações e abre o programa somente quando a preparação termina corretamente.
+O instalador procura uma versão compatível do Python, cria um ambiente virtual isolado, atualiza `pip`, instala as dependências declaradas, executa `pip check`, compila o pacote e roda smoke tests. Ele interrompe o processo se uma etapa falhar.
 
-Nas próximas vezes:
+Depois:
 
 ```cmd
 suzano.cmd
 ```
 
-Você verá um prompt persistente:
-
-```text
-suzano>
-```
-
-Primeiro uso recomendado:
-
-```text
-suzano> sincronizar
-suzano> status
-suzano> buscar educação
-suzano> buscar "transporte escolar"
-suzano> panorama
-suzano> ajuda
-```
-
-O comando `buscar` mostra o ID de cada resultado. Para abrir um item:
-
-```text
-suzano> ver <ID>
-```
-
-Guia completo: [Windows e CMD](docs/windows-cmd.md).
-
-## Windows — comandos diretos
-
-Sem entrar no console interativo:
+Se o ambiente virtual ficar corrompido, o reparo recria somente `.venv` e preserva o banco:
 
 ```cmd
-suzano.cmd fontes
-suzano.cmd sincronizar
-suzano.cmd buscar "educação"
-suzano.cmd panorama
-suzano.cmd mudancas --limite 20
-suzano.cmd doctor
-suzano.cmd integridade
-suzano.cmd atualizar
-suzano.cmd exportar dados.json
+suzano.cmd reparar
 ```
 
-Depois que o pacote está instalado, o console também possui entrypoint próprio:
-
-```cmd
-suzano-console
-```
+Guia detalhado: [Windows e CMD](docs/windows-cmd.md).
 
 ## Linux e macOS
 
@@ -155,7 +147,7 @@ source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install -e .
 suzano sincronizar
-suzano buscar "educação"
+suzano inicio
 ```
 
 ## Instalação manual no Windows
@@ -163,7 +155,7 @@ suzano buscar "educação"
 ```powershell
 git clone https://github.com/MukaSanches/suzano-aberta.git
 cd suzano-aberta
-py -3 -m venv .venv
+py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
 python -m pip install -e .
@@ -172,11 +164,47 @@ suzano sincronizar
 
 ---
 
-# CLI
+# Console interativo
 
-Os comandos operacionais principais são:
+O console 0.8 mantém estado apenas durante a sessão para facilitar navegação. A última lista de resultados pode ser referenciada por posição, sem alterar o ID real do registro.
 
 ```text
+suzano› ajuda
+suzano› status
+suzano› diagnostico
+suzano› recentes 20
+suzano› transporte escolar
+suzano› 2
+suzano› fonte 2
+suzano› abrir 2
+suzano› panorama
+suzano› mudancas 20
+suzano› fontes
+suzano› sobre
+suzano› sair
+```
+
+Atalhos:
+
+```text
+b = buscar       v = ver          r = recentes
+p = panorama     m = mudancas     f = fontes
+diag = diagnostico               q = sair
+```
+
+A abertura do navegador é sempre explícita. Uma busca normal não abre páginas externas automaticamente.
+
+---
+
+# CLI
+
+O CLI continua adequado para scripts, automação e uso técnico.
+
+```text
+suzano inicio
+suzano diagnostico
+suzano recentes
+suzano console
 suzano fontes
 suzano doctor
 suzano integridade
@@ -192,80 +220,127 @@ suzano mudancas
 suzano exportar
 ```
 
-Descubra opções sem consultar documentação externa:
+Exemplos:
 
 ```bash
-suzano --help
-suzano buscar --help
-suzano atualizar --help
-suzano acervo-maximo --help
-```
-
-### Exemplos
-
-```bash
+suzano inicio
+suzano diagnostico --json
+suzano recentes --limite 25
 suzano coletar --ano 2026
 suzano atualizar --anos 2024,2025,2026
 suzano atualizar --max-paginas 1500 --profundidade 4
 suzano buscar "educação"
 suzano buscar "transporte escolar" --limite 10
+suzano ver <id-exato>
 suzano panorama --json
 suzano mudancas --limite 50
 suzano integridade --json
 suzano exportar acervo.json
 ```
 
-`acervo-maximo` aumenta os limites de descoberta e inclui índices históricos. É uma operação mais pesada que a atualização normal.
+`ver` usa o ID exato do registro. `acervo-maximo` amplia os limites de descoberta e inclui índices históricos; é propositalmente mais pesado que a atualização normal.
 
 ---
 
-# Como os dados funcionam
+# Diagnóstico local 0.8
 
-## PublicRecord
+O projeto diferencia problemas da máquina local de problemas das fontes na internet.
 
-`PublicRecord` é a unidade normalizada. Os campos comuns incluem ID estável, tipo, título, resumo, data, ano, atributos específicos e referência à fonte.
+```bash
+suzano diagnostico
+```
 
-Tipos atuais incluem sessões, vereadores, proposições, leis, decretos, contratos, atas, comissões, presenças, diários, licitações, secretarias, documentos fiscais/orçamentários, atos oficiais, notícias, páginas web, arquivos e referências históricas.
+A inspeção local verifica:
 
-## SourceRef
+- Python suportado;
+- existência e permissão de escrita do diretório de dados;
+- espaço livre;
+- abertura do banco SQLite;
+- presença da tabela de registros;
+- quantidade de registros ativos;
+- FTS5;
+- `PRAGMA quick_check` no modo profundo;
+- extensão JSON1 utilizada por consultas estruturadas.
 
-Cada registro conserva sua origem. `SourceRef` pode incluir nome, URL, instante de coleta, hash, autoridade, categoria, método de recuperação e media type. O objetivo é permitir que o consumidor volte à publicação original.
+Para automação:
 
-## Histórico
+```bash
+suzano diagnostico --json
+```
 
-O SQLite mantém a versão mais recente observada de cada ID e uma tabela de mudanças. Fingerprints SHA-256 determinísticos identificam alteração substantiva sem considerar metadados operacionais voláteis.
+A função também está disponível na biblioteca:
 
-O desaparecimento temporário de uma página não é automaticamente interpretado como revogação, cancelamento ou exclusão.
+```python
+from suzano_aberta import inspect_local_environment
+
+report = inspect_local_environment("suzano-aberta.sqlite3", deep=True)
+print(report.healthy)
+for check in report.checks:
+    print(check.status, check.name, check.detail)
+```
+
+O diagnóstico abre o snapshot para leitura e não executa coleta, reindexação ou mutação do acervo.
 
 ---
 
-# Busca
+# Modelo de dados
 
-FTS5 é o caminho principal da pesquisa textual. A tokenização Unicode remove diacríticos para pesquisa, então consultas como `educacao` podem encontrar `Educação`. Prefixos e BM25 ajudam a ordenar resultados.
+## `PublicRecord`
 
-Quando FTS5 não está disponível, existe fallback compatível. O banco utiliza ajustes locais de SQLite voltados à consulta e manutenção do índice sem exigir Elasticsearch, servidor proprietário ou serviço externo.
+É a unidade normalizada do acervo. Campos compartilhados incluem:
 
-A busca normal pode instalar automaticamente o snapshot quando o banco ainda não está preparado. Se não houver resultado local, o modo tradicional pode tentar descoberta recente na web, salvo quando `--sem-web` é usado.
+```text
+id
+kind
+title
+summary
+date
+year
+attributes
+source
+```
+
+Os tipos atuais abrangem sessões, vereadores, proposições, leis, decretos, contratos, atas, comissões, presenças, diários, licitações, secretarias, documentos fiscais/orçamentários, atos oficiais, notícias, páginas web, arquivos e referências históricas.
+
+## `SourceRef`
+
+Preserva nome e URL da origem, instante de coleta e, quando disponível, hash, autoridade, categoria, método de recuperação e media type.
+
+Um hash é uma ferramenta técnica de rastreabilidade; não equivale a assinatura digital ou autenticação jurídica da publicação.
+
+## Fingerprint e mudanças
+
+Cada registro possui uma impressão determinística sobre campos substantivos. Se o mesmo ID reaparece com conteúdo canônico diferente, a observação pode gerar um evento `alterado`.
+
+O desaparecimento temporário de um item não é automaticamente convertido em revogação, exclusão ou cancelamento, porque uma fonte pública pode estar incompleta ou indisponível.
+
+---
+
+# Busca local
+
+O caminho principal usa SQLite FTS5 com tokenização Unicode e remoção de diacríticos. Assim, `educacao` pode encontrar `Educação`, e prefixos ajudam a localizar variações do termo.
+
+O ranking BM25 dá pesos diferentes para título, resumo, atributos e fonte. Se FTS5 não estiver disponível, existe fallback compatível de pesquisa.
+
+O mesmo snapshot alimenta diferentes interfaces; a ideia é evitar que o portal, o CLI e a biblioteca tenham definições conflitantes de pesquisa.
 
 ---
 
 # Fontes e cobertura
 
-O catálogo inclui publicações da **Câmara Municipal de Suzano**, **Prefeitura Municipal de Suzano**, **Portal Nacional de Contratações Públicas (PNCP)** e **Compras.gov.br Dados Abertos**, além de mecanismos de descoberta de documentos e referências históricas.
+O catálogo inclui fontes da Câmara Municipal de Suzano, Prefeitura Municipal de Suzano, Portal Nacional de Contratações Públicas (PNCP) e Compras.gov.br Dados Abertos, além de mecanismos de descoberta de páginas, documentos e referências históricas.
 
-Entre os materiais municipais catalogados estão vereadores, sessões, proposições, contratos, comissões, diário legislativo, licitações, secretarias, contas públicas, orçamento, imprensa oficial, leis/decretos e notícias.
+Entre os materiais municipais coletados ou descobertos estão sessões, proposições, contratos, comissões, diário legislativo, licitações, secretarias, contas públicas, orçamento, imprensa oficial, atos normativos e notícias.
 
-A cobertura depende do que cada fonte publica e de sua disponibilidade. Uma fonte indisponível reduz a observação daquela execução; o software não preenche lacunas por suposição.
+A cobertura nunca é apresentada como absoluta. Ela depende do que as fontes publicam, da estrutura disponível e da disponibilidade observada. Uma falha em uma fonte não autoriza preencher lacunas por suposição.
 
-Política detalhada: [Fontes](docs/fontes.md), [Metodologia](docs/metodologia.md) e [Política upstream](docs/UPSTREAM-SOURCES.md).
+Leitura recomendada: [Fontes](docs/fontes.md), [Metodologia](docs/metodologia.md) e [Política de fontes upstream](docs/UPSTREAM-SOURCES.md).
 
 ---
 
 # Snapshot
 
-O projeto separa coleta pesada de pesquisa rápida. Workflows podem produzir um snapshot SQLite já indexado e publicá-lo como conjunto rolling.
-
-Arquivos principais:
+Coletar é mais caro que pesquisar. Por isso, o projeto pode publicar um snapshot SQLite já indexado:
 
 ```text
 suzano-aberta.sqlite3.gz
@@ -273,15 +348,21 @@ suzano-aberta.sqlite3.gz.sha256
 data-latest.json
 ```
 
-`sincronizar` baixa o snapshot e valida checksum quando disponível, cabeçalho SQLite e integridade antes da instalação. Um snapshot inválido não deve substituir silenciosamente um banco local válido.
+O comando:
 
-Para consumo em massa, prefira o snapshot a paginar todo o acervo pela API.
+```bash
+suzano sincronizar
+```
+
+baixa a geração publicada e valida checksum quando disponível, cabeçalho SQLite e integridade antes de instalar o arquivo local. A instalação é feita de forma a evitar que uma geração inválida substitua silenciosamente um banco válido.
+
+Para processamento do corpus inteiro, o snapshot é preferível a paginar milhares de respostas pela API.
 
 ---
 
-# Biblioteca Python
+# Python
 
-## Suzano — operações locais
+## `Suzano` — coleta e operação
 
 ```python
 from suzano_aberta import Suzano
@@ -306,9 +387,7 @@ with Suzano(auto_sync=False) as suzano:
     print(relatorio.indexed_records)
 ```
 
-## SuzanoIndex — consulta local somente leitura
-
-Quando você já possui o SQLite:
+## `SuzanoIndex` — snapshot local somente leitura
 
 ```python
 from suzano_aberta import SuzanoIndex
@@ -319,9 +398,9 @@ with SuzanoIndex("suzano-aberta.sqlite3") as index:
         print(registro.id, registro.title)
 ```
 
-`SuzanoIndex` oferece consulta de registros, busca, documentos, legislação, contratações, mudanças, estatísticas e iteração paginada sem precisar subir servidor HTTP.
+`SuzanoIndex` compartilha a camada de consulta da API e oferece `record`, `records`, `search`, `documents`, `legislation`, `procurements`, `changes`, `stats` e iteração paginada.
 
-## SuzanoClient — cliente HTTP tipado
+## `SuzanoClient` — HTTP tipado
 
 ```python
 from suzano_aberta import SuzanoClient
@@ -332,7 +411,7 @@ with SuzanoClient("http://127.0.0.1:8000") as client:
         print(registro.title)
 ```
 
-Erros HTTP estruturados são representados por `SuzanoApiError`.
+Falhas HTTP estruturadas são representadas por `SuzanoApiError`.
 
 Guia: [Interfaces Python](docs/python-client.md).
 
@@ -340,7 +419,7 @@ Guia: [Interfaces Python](docs/python-client.md).
 
 # Entidades e relações
 
-A versão 0.7 adiciona uma camada derivada de entidades sem substituir os registros originais.
+A camada de entidades é derivada; ela não substitui o registro original.
 
 ```python
 from suzano_aberta import SuzanoIndex, build_entity_graph
@@ -350,12 +429,12 @@ with SuzanoIndex("suzano-aberta.sqlite3") as index:
 
 grafo = build_entity_graph(pagina.items)
 for entidade in grafo.entities:
-    print(entidade.id, entidade.kind, entidade.name, entidade.records)
+    print(entidade.id, entidade.kind, entidade.identifier, entidade.records)
 ```
 
-IDs canônicos são determinísticos. Quando existe identificador forte, ele tem precedência sobre semelhança de nomes. A geração atual reconhece o órgão declarado pela fonte e CNPJ explicitamente presente em registros.
+IDs canônicos são determinísticos. Quando um identificador forte está disponível, ele tem precedência sobre semelhança vaga de nomes. A geração atual reconhece o órgão declarado pela fonte e CNPJ explicitamente publicado.
 
-A presença de uma entidade em um registro significa que existe evidência daquela menção; não significa automaticamente pagamento, propriedade, irregularidade, sociedade, responsabilidade ou vínculo político.
+Uma menção de CNPJ significa que aquele identificador foi observado no registro. Sozinha, ela não prova pagamento, propriedade, responsabilidade, irregularidade, sociedade empresarial ou qualquer vínculo político.
 
 Detalhes: [Entidades e relações](docs/entidades-e-relacoes.md).
 
@@ -374,7 +453,7 @@ print(relatorio.completeness)
 print(relatorio.uniqueness)
 ```
 
-`QualityReport` mede propriedades técnicas reproduzíveis como presença de título/URL e unicidade de IDs. Não é uma nota de governo, órgão, agente público, política ou legalidade.
+`QualityReport` mede propriedades técnicas com definição reproduzível, como presença de título/URL e unicidade de IDs. Não é uma nota sobre governo, órgão, agente público, política ou legalidade.
 
 Detalhes: [Qualidade de dados](docs/qualidade-de-dados.md).
 
@@ -388,7 +467,7 @@ Inicie:
 suzano-api
 ```
 
-Por padrão:
+Padrão local:
 
 ```text
 http://127.0.0.1:8000
@@ -402,7 +481,7 @@ Documentação automática:
 /openapi.json
 ```
 
-Rotas principais:
+Superfície principal:
 
 ```text
 GET /v1/search
@@ -423,11 +502,13 @@ GET /health/ready
 GET /metrics
 ```
 
-A API é **somente leitura**. Ela não possui endpoint público para disparar crawler, alterar registros, apagar dados ou reindexar o banco.
+A API é deliberadamente **somente leitura**. Não existem endpoints públicos para disparar crawlers, alterar registros, apagar dados ou reindexar o banco.
 
-Recursos incluem paginação limitada, filtros, ordenação, `ETag`, cache HTTP, request ID, `Server-Timing`, Problem Details, proveniência JSON-LD e catálogo inspirado em DCAT.
+Ela inclui limites de paginação, filtros, ordenação, `ETag`, cache HTTP, request ID, `Server-Timing`, erros compatíveis com Problem Details, proveniência JSON-LD e catálogo orientado a interoperabilidade.
 
-Guia completo: [API pública](docs/api.md) e [Governança da API](docs/api-governance.md).
+A versão do pacote (`0.8.0`) e a versão do contrato HTTP (`1.2.0`) são independentes.
+
+Detalhes: [API pública](docs/api.md), [Contrato](docs/API-CONTRACT.md) e [Governança da API](docs/api-governance.md).
 
 ---
 
@@ -444,76 +525,68 @@ docker build -t suzano-aberta-api .
 docker run --rm -p 8000:8000 -v suzano-data:/data suzano-aberta-api
 ```
 
-A imagem da API usa usuário não privilegiado. A camada de serviço abre o snapshot como somente leitura com controles SQLite apropriados.
+A imagem da API usa usuário não privilegiado. A camada de serviço abre o snapshot em modo somente leitura e aplica controles SQLite voltados a esse limite de confiança.
 
 ---
 
 # Portal web
 
-O portal é uma camada de leitura e não executa coletores. Quando uma API pública está configurada, usa a API v1; caso contrário, pode usar índice estático derivado do snapshot em Web Worker.
+O portal em GitHub Pages é uma interface pública de leitura. Ele não dispara coletores e não altera o acervo.
 
-A publicação do portal valida o snapshot antes de gerar os artefatos. A interface foi desenhada para acessibilidade, funcionamento responsivo e ausência de analytics de terceiros no núcleo do projeto.
+Quando uma API pública está configurada, usa a API v1. Sem ela, pode trabalhar com um índice estático derivado do snapshot em Web Worker. A publicação valida o banco antes de gerar o artefato.
+
+A implementação prioriza navegação responsiva, acessibilidade, origem visível e ausência de analytics de terceiros no núcleo.
+
+Portal: https://mukasanches.github.io/suzano-aberta/
 
 Detalhes: [Portal web](docs/portal-web.md).
 
 ---
 
-# Integridade e saúde das fontes
+# Saúde, integridade e segurança
 
-Duas perguntas são tratadas separadamente:
+Há três perguntas diferentes:
 
-```bash
-suzano doctor
-suzano integridade
+```text
+suzano diagnostico  -> minha instalação local está funcional?
+suzano doctor       -> as fontes catalogadas estão acessíveis agora?
+suzano integridade  -> uma verificação específica encontrou referência externa inesperada?
 ```
 
-`doctor` verifica acessibilidade básica das fontes catalogadas. `integridade` procura referências externas não reconhecidas em verificações específicas.
+Esses sinais não são misturados. Um domínio externo inesperado, por exemplo, é um item para revisão humana e não uma conclusão automática sobre invasão, fraude, autoria ou irregularidade.
 
-Um achado de integridade é um sinal técnico para revisão. Ele não é prova automática de invasão, fraude, autoria ou irregularidade.
+Conteúdo remoto é tratado como entrada não confiável. A camada HTTP usa timeout, limites de resposta, redirects controlados e retries restritos. O crawler possui fronteiras de host e respeita `robots.txt` onde aplicável.
 
-Para automação:
+O repositório usa CI, mypy em modo estrito, testes determinísticos, build de pacote, build de container, CodeQL, Dependabot e Actions fixadas por SHA nos workflows mantidos.
 
-```bash
-suzano integridade --json
-suzano integridade --falhar-se-encontrar
-```
+O projeto não afirma certificação formal de segurança. Uma implantação pública continua precisando de TLS, rate limiting, política de rede, logs, backups e observabilidade compatíveis com o ambiente.
 
-Detalhes: [Integridade](docs/integridade.md).
+Leia [SECURITY.md](SECURITY.md), [Integridade](docs/integridade.md) e [Fronteiras de segurança](docs/SECURITY-BOUNDARIES.md).
 
 ---
 
-# Segurança
+# Princípios de engenharia
 
-O projeto trata conteúdo remoto como entrada não confiável, mesmo quando publicado por uma fonte legítima. A camada HTTP aplica limites, redirects controlados, timeouts e retries restritos. O crawler respeita fronteiras configuradas e `robots.txt` onde aplicável.
-
-A cadeia de desenvolvimento inclui CI, mypy, ruff, testes, CodeQL, Dependabot e Actions fixadas por SHA nos workflows mantidos.
-
-O projeto não afirma certificação formal de segurança. Implantações públicas continuam precisando de TLS, rate limiting, política de rede, logs, backups e monitoramento adequados ao ambiente.
-
-Leia [SECURITY.md](SECURITY.md) e [Fronteiras de segurança](docs/SECURITY-BOUNDARIES.md).
-
----
-
-# Confiabilidade e princípios
-
-1. **Fonte antes da interpretação.** Todo registro deve manter o caminho até a origem.
-2. **Dado ausente é melhor que dado inventado.** Parsers não devem completar campos por adivinhação.
-3. **Falhar sem destruir.** Uma coleta quebrada não deve apagar o último acervo válido.
-4. **Relações exigem evidência.** Similaridade textual não basta para criar um vínculo factual.
-5. **IDs estáveis antes de heurísticas.** Identificadores verificáveis têm precedência.
-6. **Métricas precisam de definição reproduzível.** Qualidade técnica não é julgamento político.
-7. **Local-first.** SQLite funciona sem infraestrutura obrigatória de servidor.
-8. **API pública somente leitura.** Ingestão e serviço ficam separados.
-9. **Mudanças importantes precisam de testes.** Parsers e regras relacionais devem ter regressão coberta.
-10. **A fonte original permanece soberana.** O índice facilita acesso; não substitui o documento oficial.
+1. **Fonte antes da interpretação.** O caminho até a publicação original faz parte do dado.
+2. **Dado ausente é melhor que dado inventado.** Parsers não completam campos por conveniência.
+3. **Falhar sem destruir.** Uma atualização quebrada não deve eliminar o último acervo válido.
+4. **Relações exigem evidência.** Similaridade de texto, sozinha, não vira vínculo factual.
+5. **Identificadores fortes têm precedência.** Chaves públicas estáveis superam heurísticas vagas.
+6. **Métricas precisam ser reproduzíveis.** Qualidade técnica não é avaliação política.
+7. **Local-first por padrão.** Uma pesquisa deve poder existir sem uma plataforma externa obrigatória.
+8. **Ingestão e serviço são separados.** A API pública continua somente leitura.
+9. **Regressões importantes precisam de teste.** Parsers, busca, versões e contratos são verificáveis.
+10. **A fonte responsável permanece a referência.** O projeto melhora acesso, não substitui autoridade documental.
 
 ---
 
-# O que o projeto não faz
+# Limitações deliberadas
 
-O Suzano Aberta não garante cobertura absoluta de toda informação pública existente, não contorna autenticação ou bloqueios para fingir que uma fonte é pública, não executa OCR automático de todo PDF digitalizado, não fornece parecer jurídico, não atribui culpa, não classifica desempenho político e não trata correlação como prova.
+O Suzano Aberta não garante uma cópia completa de toda informação pública existente; não contorna autenticação ou bloqueios para fingir que um serviço é aberto; não faz OCR automático de todo PDF digitalizado; não fornece parecer jurídico; não infere intenção; não transforma ausência temporária em revogação; e não trata correlação como prova.
 
-A série `0.x` continua em evolução. Interfaces podem mudar de maneira documentada no changelog.
+A série `0.x` continua permitindo evolução de interface. Mudanças relevantes devem ser registradas no [Changelog](CHANGELOG.md).
+
+Detalhes: [Limitações](docs/limitacoes.md).
 
 ---
 
@@ -523,24 +596,25 @@ A série `0.x` continua em evolução. Interfaces podem mudar de maneira documen
 suzano-aberta/
 ├── src/suzano_aberta/
 │   ├── api/               API HTTP somente leitura
-│   ├── sources/           adaptadores de fontes
-│   ├── cli.py             CLI tradicional
-│   ├── console.py         console interativo
-│   ├── core.py            fachada de coleta/operação
-│   ├── store.py           persistência e FTS5
+│   ├── sources/           adaptadores de fontes públicas
+│   ├── cli.py             CLI para uso direto e automação
+│   ├── console.py         experiência interativa navegável
+│   ├── diagnostics.py     saúde local reproduzível
+│   ├── core.py            coleta e operações principais
+│   ├── store.py           persistência, histórico e FTS5
 │   ├── index.py           consulta SQLite tipada
 │   ├── client.py          cliente HTTP tipado
-│   ├── entities.py        entidades e menções
+│   ├── entities.py        entidades e menções auditáveis
 │   ├── provenance.py      proveniência e catálogo
 │   └── quality.py         métricas técnicas
 ├── web/                   portal público
 ├── docs/                  documentação técnica
 ├── tests/                 testes determinísticos
-├── tests_live/            verificações contra fontes reais
-├── scripts/               build, validação e geração
+├── tests_live/            verificações separadas contra fontes reais
+├── scripts/               geração, build e validação
 ├── brand/                 identidade visual
 ├── .github/workflows/     CI, segurança, coleta e publicação
-├── instalar-windows.cmd   instalador Windows
+├── instalar-windows.cmd   instalação/reparo Windows
 └── suzano.cmd             launcher Windows
 ```
 
@@ -548,8 +622,16 @@ suzano-aberta/
 
 # Desenvolvimento
 
+Prepare o ambiente:
+
 ```bash
 python -m pip install -e ".[dev]"
+```
+
+Execute a mesma família de verificações esperada pelo projeto:
+
+```bash
+python -m compileall -q src tests
 ruff check .
 mypy src/suzano_aberta
 pytest
@@ -557,7 +639,9 @@ python scripts/check_web.py
 python -m build
 ```
 
-O CI repete verificações em Python 3.11, 3.12 e 3.13, constrói o pacote e o container e executa smoke tests das interfaces principais. Testes unitários não devem depender da internet; verificações contra fontes reais ficam separadas.
+O CI testa Python 3.11, 3.12 e 3.13, instala as dependências declaradas, executa verificação estática, type checking, testes, smoke tests das superfícies públicas, constrói wheel/sdist e constrói o container da API.
+
+Testes unitários não devem depender da internet. Verificações de fontes reais permanecem isoladas em `tests_live/` para que uma indisponibilidade externa não torne o teste determinístico imprevisível.
 
 Leia [CONTRIBUTING.md](CONTRIBUTING.md) antes de alterar parsers ou fontes.
 
@@ -591,8 +675,8 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md) antes de alterar parsers ou fontes.
 
 ---
 
-# Licença
+# Licença e citação
 
-O código é distribuído sob **Apache License 2.0**. Dados, páginas e documentos acessados pelo projeto continuam sujeitos às regras, licenças, direitos e condições das respectivas fontes originais.
+O código é distribuído sob **Apache License 2.0**. Dados, páginas e documentos acessados pelo projeto permanecem sujeitos às regras, licenças, direitos e condições das respectivas fontes originais.
 
-Se utilizar o software em pesquisa ou análise reproduzível, registre também a versão do pacote e, quando relevante, a versão/data do snapshot consultado.
+Se utilizar o software em pesquisa ou análise reproduzível, registre a versão do pacote e, quando relevante, a versão/data do snapshot. Metadados de citação estão em [CITATION.cff](CITATION.cff).
