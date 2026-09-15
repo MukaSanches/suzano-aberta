@@ -1,0 +1,110 @@
+name: Portal público
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "brand/**"
+      - "scripts/build_web_dataset.py"
+      - "scripts/render_web_config.py"
+      - "scripts/check_web.py"
+      - ".github/workflows/pages.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "brand/**"
+      - "scripts/build_web_dataset.py"
+      - "scripts/render_web_config.py"
+      - "scripts/check_web.py"
+      - ".github/workflows/pages.yml"
+  schedule:
+    - cron: "23 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Download validated rolling snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 \
+            -o /tmp/suzano-aberta.sqlite3.gz \
+            https://github.com/MukaSanches/suzano-aberta/releases/download/data-latest/suzano-aberta.sqlite3.gz
+          curl --fail --location --retry 3 --retry-delay 2 \
+            -o /tmp/suzano-aberta.sqlite3.gz.sha256 \
+            https://github.com/MukaSanches/suzano-aberta/releases/download/data-latest/suzano-aberta.sqlite3.gz.sha256
+          python - <<'PY'
+          import gzip, hashlib, pathlib, sqlite3
+          compressed = pathlib.Path('/tmp/suzano-aberta.sqlite3.gz')
+          checksum = pathlib.Path('/tmp/suzano-aberta.sqlite3.gz.sha256').read_text().split()[0]
+          actual = hashlib.sha256(compressed.read_bytes()).hexdigest()
+          if actual.casefold() != checksum.casefold():
+              raise SystemExit('checksum do snapshot não confere')
+          target = pathlib.Path('/tmp/suzano-aberta.sqlite3')
+          target.write_bytes(gzip.decompress(compressed.read_bytes()))
+          conn = sqlite3.connect(target)
+          check = conn.execute('PRAGMA quick_check').fetchone()[0]
+          total = conn.execute('SELECT COUNT(*) FROM records WHERE active=1').fetchone()[0]
+          conn.close()
+          if str(check).lower() != 'ok' or total < 1:
+              raise SystemExit(f'snapshot inválido: check={check} records={total}')
+          print(f'snapshot validado: {total} registros')
+          PY
+
+      - name: Build static search dataset
+        run: python scripts/build_web_dataset.py --database /tmp/suzano-aberta.sqlite3 --output web/data
+
+      - name: Render runtime configuration
+        env:
+          SUZANO_API_BASE: ${{ vars.SUZANO_API_BASE }}
+        run: python scripts/render_web_config.py --api-base "$SUZANO_API_BASE"
+
+      - name: Validate portal
+        run: |
+          python scripts/check_web.py
+          python -m compileall -q scripts
+
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: web
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

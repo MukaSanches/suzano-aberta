@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Pesquise o acervo público indexado pelo Suzano Aberta."><meta name="theme-color" content="#102A43">
+  <title>Explorar o acervo — Suzano Aberta</title><link rel="icon" href="./assets/favicon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./assets/styles.css"><script defer src="./assets/app.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#conteudo">Ir para o conteúdo</a><div class="independence-banner"><div class="wrap"><span class="banner-dot" aria-hidden="true"></span><span><strong>Projeto cívico independente.</strong> Resultados sempre devem ser conferidos na fonte indicada.</span></div></div>
+<header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav" aria-label="Navegação principal"><a aria-current="page" href="./explorar.html">Explorar</a><a href="./sobre.html">Sobre</a><a href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
+<main id="conteudo">
+<section class="page-hero"><div class="wrap"><span class="eyebrow">Pesquisa</span><h1>Explorar o acervo</h1><p class="lead">Pesquise por assunto. Quando a API estiver disponível, o portal usa o índice FTS completo; se ela falhar, recua para o índice estático publicado no GitHub Pages.</p></div></section>
+<section class="section"><div class="wrap results-shell">
+  <form class="filters" data-search-form data-explore-form role="search">
+    <div class="field"><label for="q">Termos de busca</label><input id="q" name="q" type="search" required maxlength="200" placeholder="Ex.: transporte escolar"></div>
+    <div class="field"><label for="kind">Tipo</label><select id="kind" name="kind"><option value="">Todos os tipos</option><option value="arquivo">Arquivo</option><option value="arquivo_historico">Arquivo histórico</option><option value="ato_oficial">Ato oficial</option><option value="contrato">Contrato</option><option value="diario">Diário</option><option value="licitacao">Licitação</option><option value="noticia">Notícia</option><option value="pagina_web">Página web</option><option value="proposicao">Proposição</option><option value="sessao">Sessão</option><option value="vereador">Vereador</option></select></div>
+    <div class="field"><label for="year">Ano</label><input id="year" name="year" type="number" min="1900" max="2100" inputmode="numeric" placeholder="2026"></div>
+    <button class="button" type="submit">Pesquisar</button>
+  </form>
+  <div>
+    <div class="section-head"><div><p class="result-count" data-result-count>Digite algo para pesquisar</p><p class="search-help">Motor atual: <strong data-search-mode>seleção automática</strong></p></div></div>
+    <div data-results aria-live="polite"><div class="empty"><strong>Comece com uma palavra ou expressão.</strong><p>Exemplos: “educação”, “Santa Casa”, “licitação”, “Jardim Colorado”.</p></div></div>
+  </div>
+</div></section>
+</main>
+<footer class="footer"><div class="wrap"><div class="footer-small">Suzano Aberta é independente e não substitui a fonte oficial. <a href="./sobre.html">Entenda a metodologia.</a></div></div></footer>
+</body></html>
