@@ -31,4 +31,5 @@ def test_integrity_flags_only_unknown_external_hosts() -> None:
     assert finding.host == "unexpected.example"
     assert finding.evidence == "conteúdo inesperado"
     assert finding.check == "dominio_externo_nao_reconhecido"
-    assert "grp.suzano.sp.gov.br" in report.external_hosts
+    assert "grp.suzano.sp.gov.br" not in report.external_hosts
+    assert "radardatransparencia.atricon.org.br" in report.external_hosts
