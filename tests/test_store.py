@@ -16,6 +16,19 @@ def make_record(summary: str = "Objeto original") -> PublicRecord:
     )
 
 
+def make_web_record() -> PublicRecord:
+    return PublicRecord(
+        id="web:abc123",
+        kind="pagina_web",
+        title="Portal municipal descoberto",
+        summary="Página descoberta automaticamente pelo rastreador.",
+        source=SourceRef(
+            name="Web pública — example.test",
+            url="https://example.test/descoberta",
+        ),
+    )
+
+
 def test_store_detects_new_and_changed_records(tmp_path: Path) -> None:
     database = tmp_path / "test.sqlite3"
     with Store(database) as store:
@@ -36,6 +49,15 @@ def test_store_fts_searches_accents_prefixes_and_attributes(tmp_path: Path) -> N
 
         assert [item.id for item in store.search("educacao")] == [make_record().id]
         assert [item.id for item in store.search("reform escol")] == [make_record().id]
+        assert [item.id for item in store.search(make_record().id)] == [make_record().id]
+        assert store.get(make_record().id) is not None
         assert store.rebuild_search_index() == 1
         store.optimize()
         assert store.count_records() == 1
+
+
+def test_store_remembers_discovered_pages_as_future_crawl_seeds(tmp_path: Path) -> None:
+    database = tmp_path / "seeds.sqlite3"
+    with Store(database) as store:
+        store.upsert_many([make_web_record(), make_record()])
+        assert store.web_seed_urls() == ["https://example.test/descoberta"]
