@@ -63,7 +63,7 @@ jobs:
           suzano reindexar --help
           suzano buscar --help
           suzano-api --help
-          python -c "from suzano_aberta.api import app; assert app.openapi()['info']['version'] == '1.0.0'"
+          python -c "from suzano_aberta.api import app; schema=app.openapi(); assert schema['info']['version'] == '1.1.0'; assert '/v1/documents' in schema['paths']; assert '/v1/legislation' in schema['paths']"
 
   package:
     name: Build package
@@ -90,7 +90,7 @@ jobs:
           python -m pip install dist/*.whl
           python -m pip check
           python -c "import suzano_aberta; assert suzano_aberta.__version__ == '0.4.0'"
-          python -c "from suzano_aberta.api import app; assert '/v1/search' in app.openapi()['paths']"
+          python -c "from suzano_aberta.api import app; schema=app.openapi(); assert '/v1/search' in schema['paths']; assert '/v1/documents' in schema['paths']; assert '/v1/legislation' in schema['paths']"
           suzano --help
           suzano-api --help
 

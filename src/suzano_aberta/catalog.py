@@ -3,11 +3,13 @@ from __future__ import annotations
 from .integrity import TRANSPARENCIA_URL
 from .sources.base import SourceDefinition
 from .sources.camara import CAMARA, COMISSOES_URL, CONTRATOS_DADOS_URL, DIARIO_URL, SESSOES_URL, VEREADORES_URL
+from .sources.legislacao import ROOT as LEGISLACAO_CAMARA_URL
 from .sources.prefeitura import CONTAS_URL, IMPRENSA_URL, LEIS_DECRETOS_URL, LICITACOES_URL, NOTICIAS_URL, ORCAMENTO_URL, PREFEITURA, SECRETARIAS_URL
 
 
 SOURCES: tuple[SourceDefinition, ...] = (
     SourceDefinition("camara-home", "Câmara Municipal", CAMARA, "Câmara Municipal de Suzano", "institucional", "Página principal."),
+    SourceDefinition("camara-legislacao", "Legislação Municipal Consolidada", LEGISLACAO_CAMARA_URL, "Câmara Municipal de Suzano", "legislacao", "Sistema oficial com leis municipais, leis complementares e páginas individuais das normas."),
     SourceDefinition("camara-vereadores", "Vereadores da 19ª Legislatura", VEREADORES_URL, "Câmara Municipal de Suzano", "legislativo", "Relação oficial da legislatura atual."),
     SourceDefinition("camara-sessoes", "Sessões ordinárias", SESSOES_URL, "Câmara Municipal de Suzano", "legislativo", "Pautas, presença e identificadores de sessões."),
     SourceDefinition("camara-contratos", "Dados estruturados de contratos", CONTRATOS_DADOS_URL, "Câmara Municipal de Suzano", "contratos", "Índice oficial com CSV de contratos."),
@@ -50,4 +52,5 @@ EXPANSION_SEEDS: tuple[str, ...] = (
     "https://www.camarasuzano.sp.gov.br/",
     "https://www.camarasuzano.sp.gov.br/transparencia/",
     "https://www.camarasuzano.sp.gov.br/doel/",
+    "https://leis.camarasuzano.sp.gov.br/szn/legislacao/",
 )

@@ -12,6 +12,7 @@ def main() -> None:
     args = parser.parse_args()
     payload = {
         "api_base": args.api_base.strip().rstrip("/"),
+        "static_api_base": "./api",
         "repository": "https://github.com/MukaSanches/suzano-aberta",
         "snapshot": "https://github.com/MukaSanches/suzano-aberta/releases/tag/data-latest",
     }

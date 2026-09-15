@@ -7,6 +7,7 @@ import time
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, suppress
+from datetime import date
 from typing import Any, cast
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
@@ -17,7 +18,7 @@ from fastapi.responses import JSONResponse
 
 from ..models import PublicRecord, RecordKind
 from ..snapshot import LATEST_SNAPSHOT_URL
-from .repository import ApiRepository
+from .repository import ApiRepository, DateMode, SortMode
 from .schemas import (
     ChangesResponse,
     HealthResponse,
@@ -30,7 +31,7 @@ from .schemas import (
 )
 from .settings import ApiSettings
 
-API_VERSION = "1.0.0"
+API_VERSION = "1.1.0"
 
 
 def _package_version() -> str:
@@ -43,6 +44,15 @@ def _package_version() -> str:
 def _page(total: int, *, limit: int, offset: int) -> PageInfo:
     next_offset = offset + limit if offset + limit < total else None
     return PageInfo(total=total, limit=limit, offset=offset, next_offset=next_offset)
+
+
+def _date_value(value: date | None) -> str | None:
+    return value.isoformat() if value is not None else None
+
+
+def _validate_range(date_from: date | None, date_to: date | None) -> None:
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(status_code=422, detail="date_from não pode ser posterior a date_to.")
 
 
 def create_app(settings: ApiSettings | None = None) -> FastAPI:
@@ -92,7 +102,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         summary="API pública de consulta ao acervo digital do município de Suzano.",
         description=(
             "Camada HTTP somente leitura sobre o índice Suzano Aberta. "
-            "Todos os registros preservam a fonte pública de origem."
+            "Todos os registros preservam a fonte pública de origem e podem ser consultados cronologicamente."
         ),
         version=API_VERSION,
         docs_url="/docs",
@@ -103,7 +113,9 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         license_info={"name": "Apache-2.0"},
         openapi_tags=[
             {"name": "sistema", "description": "Estado e metadados da API."},
-            {"name": "acervo", "description": "Pesquisa e leitura do acervo público."},
+            {"name": "acervo", "description": "Pesquisa e leitura de todo o acervo público."},
+            {"name": "documentos", "description": "Documentos e arquivos públicos, de qualquer formato indexado."},
+            {"name": "legislacao", "description": "Leis, decretos e proposições municipais."},
             {"name": "historico", "description": "Mudanças observadas entre coletas."},
         ],
     )
@@ -150,12 +162,14 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
             name="Suzano Aberta API",
             api_version=API_VERSION,
             package_version=_package_version(),
-            description="Consulta pública, rápida e rastreável ao acervo digital de Suzano.",
+            description="Consulta pública, cronológica e rastreável ao acervo digital de Suzano.",
             documentation="/docs",
             openapi="/openapi.json",
             endpoints={
-                "search": "/v1/search?q=educacao",
-                "records": "/v1/records",
+                "search": "/v1/search?q=educacao&sort=date_desc",
+                "records": "/v1/records?date_from=2026-01-01&date_to=2026-12-31",
+                "documents": "/v1/documents?date_from=2026-01-01",
+                "legislation": "/v1/legislation?sort=date_desc",
                 "record": "/v1/records/{id}",
                 "stats": "/v1/stats",
                 "changes": "/v1/changes",
@@ -171,14 +185,27 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     def ready() -> Any:
         try:
             with ApiRepository(resolved.database) as repository:
-                total = cast(int, repository.stats()["records"])
+                base = repository.stats()
+                total = cast(int, base["records"])
+                documents = cast(int, base["documents"])
+                legislation = cast(int, base["legislation"])
             if total < 1:
                 raise RuntimeError("índice vazio")
+            if documents < 1:
+                raise RuntimeError("índice sem documentos")
+            if legislation < 1:
+                raise RuntimeError("índice sem legislação/proposições")
         except Exception as exc:
             detail = getattr(app.state, "last_sync_error", None) or str(exc)
             payload = HealthResponse(status="degraded", ready=False, detail=detail)
             return JSONResponse(status_code=503, content=payload.model_dump(mode="json"))
-        return HealthResponse(status="ok", ready=True, records=total)
+        return HealthResponse(
+            status="ok",
+            ready=True,
+            records=total,
+            documents=documents,
+            legislation=legislation,
+        )
 
     @app.get("/v1/search", response_model=RecordsResponse, tags=["acervo"])
     def search(
@@ -187,22 +214,39 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         kind: RecordKind | None = Query(default=None, description="Filtra pelo tipo de registro."),
         year: int | None = Query(default=None, ge=1900, le=2100),
         source: str | None = Query(default=None, min_length=2, max_length=120),
+        date_from: date | None = Query(default=None, description="Data inicial inclusiva, YYYY-MM-DD."),
+        date_to: date | None = Query(default=None, description="Data final inclusiva, YYYY-MM-DD."),
+        date_mode: DateMode = Query(default="effective", description="effective, record ou observed."),
+        sort: SortMode = Query(default="date_desc", description="date_desc, date_asc ou relevance."),
         limit: int = Query(default=30, ge=1, le=100),
         offset: int = Query(default=0, ge=0, le=100_000),
         repository: ApiRepository = Depends(repository_dependency),
     ) -> RecordsResponse:
+        _validate_range(date_from, date_to)
         items, total = repository.search(
             q,
             kind=kind,
             year=year,
             source=source,
+            date_from=_date_value(date_from),
+            date_to=_date_value(date_to),
+            date_mode=date_mode,
+            sort=sort,
             limit=limit,
             offset=offset,
         )
         response.headers["Cache-Control"] = "public, max-age=30"
         return RecordsResponse(
             query=q,
-            filters={"kind": kind, "year": year, "source": source},
+            filters={
+                "kind": kind,
+                "year": year,
+                "source": source,
+                "date_from": _date_value(date_from),
+                "date_to": _date_value(date_to),
+                "date_mode": date_mode,
+                "sort": sort,
+            },
             page=_page(total, limit=limit, offset=offset),
             items=items,
         )
@@ -213,20 +257,135 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         kind: RecordKind | None = Query(default=None),
         year: int | None = Query(default=None, ge=1900, le=2100),
         source: str | None = Query(default=None, min_length=2, max_length=120),
+        date_from: date | None = Query(default=None),
+        date_to: date | None = Query(default=None),
+        date_mode: DateMode = Query(default="effective"),
+        sort: SortMode = Query(default="date_desc"),
         limit: int = Query(default=50, ge=1, le=100),
         offset: int = Query(default=0, ge=0, le=100_000),
         repository: ApiRepository = Depends(repository_dependency),
     ) -> RecordsResponse:
+        _validate_range(date_from, date_to)
         items, total = repository.list_records(
             kind=kind,
             year=year,
             source=source,
+            date_from=_date_value(date_from),
+            date_to=_date_value(date_to),
+            date_mode=date_mode,
+            sort=sort,
             limit=limit,
             offset=offset,
         )
         response.headers["Cache-Control"] = "public, max-age=60"
         return RecordsResponse(
-            filters={"kind": kind, "year": year, "source": source},
+            filters={
+                "kind": kind,
+                "year": year,
+                "source": source,
+                "date_from": _date_value(date_from),
+                "date_to": _date_value(date_to),
+                "date_mode": date_mode,
+                "sort": sort,
+            },
+            page=_page(total, limit=limit, offset=offset),
+            items=items,
+        )
+
+    @app.get("/v1/documents", response_model=RecordsResponse, tags=["documentos"])
+    def documents(
+        response: Response,
+        q: str = Query(default="", max_length=200),
+        year: int | None = Query(default=None, ge=1900, le=2100),
+        source: str | None = Query(default=None, min_length=2, max_length=120),
+        date_from: date | None = Query(default=None),
+        date_to: date | None = Query(default=None),
+        date_mode: DateMode = Query(default="effective"),
+        sort: SortMode = Query(default="date_desc"),
+        limit: int = Query(default=50, ge=1, le=100),
+        offset: int = Query(default=0, ge=0, le=100_000),
+        repository: ApiRepository = Depends(repository_dependency),
+    ) -> RecordsResponse:
+        _validate_range(date_from, date_to)
+        items, total = repository.documents(
+            q,
+            year=year,
+            source=source,
+            date_from=_date_value(date_from),
+            date_to=_date_value(date_to),
+            date_mode=date_mode,
+            sort=sort,
+            limit=limit,
+            offset=offset,
+        )
+        response.headers["Cache-Control"] = "public, max-age=60"
+        return RecordsResponse(
+            query=q or None,
+            filters={
+                "scope": "documents",
+                "year": year,
+                "source": source,
+                "date_from": _date_value(date_from),
+                "date_to": _date_value(date_to),
+                "date_mode": date_mode,
+                "sort": sort,
+            },
+            page=_page(total, limit=limit, offset=offset),
+            items=items,
+        )
+
+    @app.get("/v1/legislation", response_model=RecordsResponse, tags=["legislacao"])
+    def legislation(
+        response: Response,
+        q: str = Query(default="", max_length=200),
+        kind: RecordKind | None = Query(default=None, description="Use lei, decreto ou proposicao."),
+        year: int | None = Query(default=None, ge=1900, le=2100),
+        date_from: date | None = Query(default=None),
+        date_to: date | None = Query(default=None),
+        date_mode: DateMode = Query(default="effective"),
+        sort: SortMode = Query(default="date_desc"),
+        limit: int = Query(default=50, ge=1, le=100),
+        offset: int = Query(default=0, ge=0, le=100_000),
+        repository: ApiRepository = Depends(repository_dependency),
+    ) -> RecordsResponse:
+        _validate_range(date_from, date_to)
+        if kind is not None and kind not in {"lei", "decreto", "proposicao"}:
+            raise HTTPException(status_code=422, detail="kind deve ser lei, decreto ou proposicao neste endpoint.")
+        if kind is None:
+            items, total = repository.legislation(
+                q,
+                year=year,
+                date_from=_date_value(date_from),
+                date_to=_date_value(date_to),
+                date_mode=date_mode,
+                sort=sort,
+                limit=limit,
+                offset=offset,
+            )
+        else:
+            items, total = repository.search(
+                q,
+                kind=kind,
+                year=year,
+                date_from=_date_value(date_from),
+                date_to=_date_value(date_to),
+                date_mode=date_mode,
+                sort=sort,
+                limit=limit,
+                offset=offset,
+            )
+        response.headers["Cache-Control"] = "public, max-age=60"
+        return RecordsResponse(
+            query=q or None,
+            filters={
+                "scope": "legislation",
+                "kind": kind,
+                "year": year,
+                "date_from": _date_value(date_from),
+                "date_to": _date_value(date_to),
+                "date_mode": date_mode,
+                "sort": sort,
+            },
             page=_page(total, limit=limit, offset=offset),
             items=items,
         )
@@ -257,16 +416,15 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         response.headers["Cache-Control"] = "public, max-age=60"
         return StatsResponse(
             records=cast(int, base["records"]),
+            documents=cast(int, base["documents"]),
+            legislation=cast(int, base["legislation"]),
             first_seen=base["first_seen"] if isinstance(base["first_seen"], str) else None,
             last_seen=base["last_seen"] if isinstance(base["last_seen"], str) else None,
             fts_enabled=cast(bool, base["fts_enabled"]),
             database_bytes=cast(int, base["database_bytes"]),
             sqlite_version=str(base["sqlite_version"]),
             kinds=repository.counts_by_kind(),
-            top_sources=[
-                SourceCount(name=name, records=count)
-                for name, count in repository.source_counts(limit=50)
-            ],
+            top_sources=[SourceCount(name=name, records=count) for name, count in repository.source_counts(limit=50)],
         )
 
     @app.get("/v1/changes", response_model=ChangesResponse, tags=["historico"])

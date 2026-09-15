@@ -20,7 +20,7 @@ from .models import (
     SourceStatus,
 )
 from .snapshot import SnapshotError, sync_latest_snapshot
-from .sources import CamaraSource, PrefeituraSource
+from .sources import CamaraSource, LegislacaoSource, PrefeituraSource
 from .store import Store
 
 
@@ -42,6 +42,7 @@ class Suzano:
         self.database = Path(database)
         self.http = PoliteHttpClient(timeout=timeout, min_interval=min_interval)
         self.camara = CamaraSource(self.http)
+        self.legislacao = LegislacaoSource(self.http)
         self.prefeitura = PrefeituraSource(self.http)
         self.auto_sync = auto_sync
         self.last_bootstrap_error: str | None = None
@@ -80,6 +81,7 @@ class Suzano:
         if profile in {"completo", "legislativo"}:
             collectors.extend(
                 [
+                    ("Câmara / legislação consolidada", lambda: self.legislacao.collect(year=year)),
                     ("Câmara / vereadores", self.camara.councilors),
                     ("Câmara / sessões", sessions),
                     ("Câmara / proposições", propositions),
