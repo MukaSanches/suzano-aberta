@@ -6,7 +6,8 @@ from pathlib import Path
 from types import TracebackType
 from typing import Literal
 
-from .catalog import SOURCES
+from .archive import ArchiveDiscovery
+from .catalog import EXPANSION_SEEDS, SOURCES
 from .discovery import WebDiscovery
 from .http import PoliteHttpClient
 from .integrity import check_transparency_integrity
@@ -148,8 +149,12 @@ class Suzano:
         include_news: bool = True,
         max_pages: int = 750,
         max_depth: int = 3,
+        max_documents: int = 250,
+        include_history: bool = False,
+        max_historical_records: int = 10_000,
+        common_crawl_collections: int = 8,
     ) -> RefreshReport:
-        """Atualiza dados oficiais, descobre páginas e otimiza o índice local."""
+        """Atualiza fontes, páginas, arquivos públicos e, opcionalmente, índices históricos."""
         started = datetime.now(UTC)
         current_year = started.year
         resolved_years = sorted(
@@ -170,26 +175,27 @@ class Suzano:
             failed += report.sources_failed
             errors.extend(report.errors)
 
+        discovered: list[PublicRecord] = []
         if discover:
             discovery = WebDiscovery(self.http)
-            discovered: list[PublicRecord] = []
             official_seeds = [source.url for source in SOURCES]
-            # No máximo ~1/3 do orçamento revisita páginas antigas; o restante fica
-            # reservado para sitemaps, links novos e expansão real do acervo.
             prior_seed_limit = max(100, max_pages // 3)
             with Store(self.database) as store:
                 prior_seeds = store.web_seed_urls(limit=prior_seed_limit)
-            crawl_seeds = list(dict.fromkeys([*official_seeds, *prior_seeds]))
+            crawl_seeds = list(
+                dict.fromkeys([*official_seeds, *EXPANSION_SEEDS, *prior_seeds])
+            )
             try:
                 discovered.extend(
                     discovery.discover(
                         crawl_seeds,
                         max_pages=max_pages,
                         max_depth=max_depth,
+                        max_documents=max_documents,
                     )
                 )
             except Exception as exc:
-                errors.append(f"Descoberta web: {type(exc).__name__}: {exc}")
+                errors.append(f"Descoberta web/arquivos: {type(exc).__name__}: {exc}")
                 failed += 1
             if include_news:
                 try:
@@ -197,15 +203,29 @@ class Suzano:
                 except Exception as exc:
                     errors.append(f"Descoberta de notícias: {type(exc).__name__}: {exc}")
                     failed += 1
-
-            unique = {record.id: record for record in discovered}
-            discovered_seen = len(unique)
-            if unique:
-                with Store(self.database) as store:
-                    web_changes = store.upsert_many(unique.values())
-                new_records += sum(item.change_type == "novo" for item in web_changes)
-                changed_records += sum(item.change_type == "alterado" for item in web_changes)
             failed += discovery.stats.failed
+
+        if include_history and max_historical_records > 0:
+            archive = ArchiveDiscovery(self.http)
+            try:
+                discovered.extend(
+                    archive.discover(
+                        max_records=max_historical_records,
+                        common_crawl_collections=common_crawl_collections,
+                    )
+                )
+            except Exception as exc:
+                errors.append(f"Acervo histórico: {type(exc).__name__}: {exc}")
+                failed += 1
+            failed += archive.stats.failed
+
+        unique = {record.id: record for record in discovered}
+        discovered_seen = len(unique)
+        if unique:
+            with Store(self.database) as store:
+                web_changes = store.upsert_many(unique.values())
+            new_records += sum(item.change_type == "novo" for item in web_changes)
+            changed_records += sum(item.change_type == "alterado" for item in web_changes)
 
         with Store(self.database) as store:
             store.optimize()
@@ -222,6 +242,28 @@ class Suzano:
             indexed_records=indexed_records,
             sources_failed=failed,
             errors=errors,
+        )
+
+    def max_archive(
+        self,
+        *,
+        max_pages: int = 6_000,
+        max_depth: int = 6,
+        max_documents: int = 1_800,
+        max_historical_records: int = 40_000,
+        common_crawl_collections: int = 12,
+    ) -> RefreshReport:
+        """Executa uma expansão pesada do acervo, pensada para bootstrap institucional."""
+        return self.refresh(
+            profile="completo",
+            discover=True,
+            include_news=True,
+            max_pages=max_pages,
+            max_depth=max_depth,
+            max_documents=max_documents,
+            include_history=True,
+            max_historical_records=max_historical_records,
+            common_crawl_collections=common_crawl_collections,
         )
 
     def sync(self) -> int:
