@@ -64,7 +64,13 @@ class ApiRepository:
     @staticmethod
     def _record_date_expr(prefix: str = "records") -> str:
         payload = f"{prefix}.payload_json"
-        raw = f"json_extract({payload}, '$.date')"
+        sessions = f"json_extract({payload}, '$.attributes.sessions')"
+        session_min = (
+            "(SELECT MIN(json_extract(session.value, '$.session_date')) "
+            f"FROM json_each({sessions}) AS session "
+            "WHERE json_extract(session.value, '$.session_date') IS NOT NULL)"
+        )
+        raw = f"COALESCE(json_extract({payload}, '$.date'), {session_min})"
         year = f"CAST(json_extract({payload}, '$.year') AS INTEGER)"
         return (
             "CASE "
@@ -248,11 +254,57 @@ class ApiRepository:
         ).fetchall()
         return self._decode(rows), total
 
-    def documents(self, query: str = "", **kwargs: object) -> tuple[list[PublicRecord], int]:
-        return self.search(query, kinds=DOCUMENT_KINDS, **kwargs)  # type: ignore[arg-type]
+    def documents(
+        self,
+        query: str = "",
+        *,
+        year: int | None = None,
+        source: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        date_mode: DateMode = "effective",
+        sort: SortMode = "date_desc",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[PublicRecord], int]:
+        return self.search(
+            query,
+            kinds=DOCUMENT_KINDS,
+            year=year,
+            source=source,
+            date_from=date_from,
+            date_to=date_to,
+            date_mode=date_mode,
+            sort=sort,
+            limit=limit,
+            offset=offset,
+        )
 
-    def legislation(self, query: str = "", **kwargs: object) -> tuple[list[PublicRecord], int]:
-        return self.search(query, kinds=LEGISLATION_KINDS, **kwargs)  # type: ignore[arg-type]
+    def legislation(
+        self,
+        query: str = "",
+        *,
+        year: int | None = None,
+        source: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        date_mode: DateMode = "effective",
+        sort: SortMode = "date_desc",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[PublicRecord], int]:
+        return self.search(
+            query,
+            kinds=LEGISLATION_KINDS,
+            year=year,
+            source=source,
+            date_from=date_from,
+            date_to=date_to,
+            date_mode=date_mode,
+            sort=sort,
+            limit=limit,
+            offset=offset,
+        )
 
     def counts_by_kind(self) -> dict[str, int]:
         rows = self._conn.execute(
