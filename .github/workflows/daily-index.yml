@@ -8,7 +8,8 @@ on:
       - ".github/workflows/daily-index.yml"
       - "scripts/bootstrap_documents.py"
       - "scripts/bootstrap_legislation.py"
-      - "src/suzano_aberta/sources/legislacao.py"
+      - "src/suzano_aberta/catalog.py"
+      - "src/suzano_aberta/sources/**"
   schedule:
     - cron: "17 07 * * *"
 
