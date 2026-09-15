@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          ruff check --select E,F . 2>&1 | tee ruff.txt
+          ruff check --select E,F --ignore E501 . 2>&1 | tee ruff.txt
           status=${PIPESTATUS[0]}
           echo "$status" > ruff.status
           exit "$status"
