@@ -358,7 +358,7 @@ class WebDiscovery:
 
     def _date(self, soup: BeautifulSoup) -> tuple[str | None, int | None]:
         node = soup.find("time")
-        if node is None:
+        if not isinstance(node, Tag):
             return None, None
         value = str(node.get("datetime") or node.get_text(" ", strip=True)).strip()
         match = re.search(r"\b(19|20)\d{2}\b", value)
