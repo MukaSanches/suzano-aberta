@@ -45,6 +45,9 @@ jobs:
       - name: Static correctness checks
         run: ruff check --select E,F --ignore E501 .
 
+      - name: Type check
+        run: mypy src/suzano_aberta
+
       - name: Tests
         run: pytest --cov=suzano_aberta --cov-report=term-missing
 
