@@ -39,7 +39,7 @@ class PrefeituraSource(BaseSource):
             lambda: self.fiscal_documents(year=year, limit=400),
             lambda: self.budget_documents(year=year, limit=250),
             lambda: self.official_gazette(year=year, limit=300),
-            lambda: self.legal_acts(year=year, limit=300),
+            lambda: self.legal_acts(year=year, limit=500),
             lambda: self.news(year=year, limit=100),
         )
         for collector in collectors:
@@ -158,15 +158,62 @@ class PrefeituraSource(BaseSource):
                 break
         return records
 
-    def legal_acts(self, *, year: int, limit: int = 300) -> list[PublicRecord]:
-        return self._document_index(
-            url=LEIS_DECRETOS_URL,
-            year=year,
-            kind="ato_oficial",
-            id_prefix="prefeitura:ato",
-            limit=limit,
-            source_name="Leis e Decretos — Prefeitura de Suzano",
-        )
+    def legal_acts(self, *, year: int, limit: int = 500) -> list[PublicRecord]:
+        """Lê a página oficial de Leis e Decretos e preserva o tipo jurídico."""
+        page = self.http.get(LEIS_DECRETOS_URL)
+        soup = BeautifulSoup(page.text, "html.parser")
+        records: list[PublicRecord] = []
+        seen: set[str] = set()
+        extensions = (".pdf", ".doc", ".docx", ".odt", ".rtf")
+        for anchor in soup.find_all("a", href=True):
+            href = str(anchor.get("href", ""))
+            document_url = absolute_url(LEIS_DECRETOS_URL, href)
+            if not document_url.lower().split("?", 1)[0].endswith(extensions) or document_url in seen:
+                continue
+            title = clean_text(anchor.get_text(" ", strip=True))
+            context = clean_text(anchor.parent.get_text(" ", strip=True) if anchor.parent else title)
+            combined = clean_text(f"{title} {context}")
+            date = parse_br_date(f"{combined} {document_url}")
+            if not self._belongs_to_year(f"{combined} {document_url}", date, year):
+                continue
+
+            folded = combined.casefold()
+            kind: RecordKind
+            norm_type = "ato oficial"
+            if re.search(r"\blei\s+complementar\b", folded):
+                kind = "lei"
+                norm_type = "lei complementar"
+            elif re.search(r"\blei\b", folded):
+                kind = "lei"
+                norm_type = "lei"
+            elif re.search(r"\bdecreto\b", folded):
+                kind = "decreto"
+                norm_type = "decreto"
+            else:
+                kind = "ato_oficial"
+
+            identifier = self._extract_identifier(combined)
+            stable = identifier or sha256(document_url.encode()).hexdigest()[:16]
+            seen.add(document_url)
+            records.append(
+                PublicRecord(
+                    id=f"prefeitura:{kind}:{stable}",
+                    kind=kind,
+                    title=title or combined or f"{norm_type.title()} de {year}",
+                    summary=context if context and context != title else None,
+                    date=date,
+                    year=year,
+                    attributes={
+                        "document_url": document_url,
+                        "norma_tipo": norm_type,
+                        "identifier": identifier,
+                    },
+                    source=SourceRef(name="Leis e Decretos — Prefeitura de Suzano", url=document_url),
+                )
+            )
+            if len(records) >= limit:
+                break
+        return records
 
     def news(self, *, year: int, limit: int = 100) -> list[PublicRecord]:
         page = self.http.get(NOTICIAS_URL)
