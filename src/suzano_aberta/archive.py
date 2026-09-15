@@ -198,7 +198,7 @@ class ArchiveDiscovery:
                             "mime": mime,
                             "captura": timestamp,
                             "indice": collection_id,
-                            "digest": item.get("digest"),
+                            "digest_arquivo": item.get("digest"),
                             "tamanho": item.get("length"),
                             "warc": item.get("filename"),
                             "offset": item.get("offset"),
@@ -207,7 +207,6 @@ class ArchiveDiscovery:
                         source=SourceRef(
                             name=f"Common Crawl — {collection_id}",
                             url=normalized,
-                            content_sha256=str(item.get("digest")) if item.get("digest") else None,
                         ),
                     )
                     records[key] = record
@@ -272,7 +271,7 @@ class ArchiveDiscovery:
                         "arquivo": _looks_like_document(normalized, mime),
                         "mime": mime,
                         "captura": timestamp,
-                        "digest": values.get("digest"),
+                        "digest_arquivo": values.get("digest"),
                         "tamanho": values.get("length"),
                         "origem_catalogo": "wayback-cdx",
                     },
@@ -316,7 +315,7 @@ class ArchiveDiscovery:
             identifier = str(item.get("identifier") or "").strip()
             if not identifier:
                 continue
-            details_url = f"https://archive.org/details/{quote(identifier, safe='') }"
+            details_url = f"https://archive.org/details/{quote(identifier, safe='')}"
             title = str(item.get("title") or identifier)
             date = str(item.get("date") or item.get("year") or "") or None
             year = _year_from_timestamp(date)
