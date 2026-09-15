@@ -2,6 +2,35 @@
 
 Todas as mudanças relevantes do projeto são registradas aqui. O formato segue a ideia de Keep a Changelog e o versionamento segue SemVer enquanto compatível com a fase inicial do projeto.
 
+## [0.4.0] - 2026-09-15
+
+### API HTTP
+
+- adicionada a Suzano Aberta API v1, baseada em FastAPI e OpenAPI;
+- rotas versionadas em `/v1` para busca, listagem, leitura individual, estatísticas, histórico de mudanças e descoberta do snapshot completo;
+- documentação automática em `/docs`, `/redoc` e `/openapi.json`;
+- camada de acesso SQLite exclusivamente em modo leitura, sem endpoints capazes de alterar, reindexar ou disparar coletores;
+- filtros por tipo, ano e fonte, com paginação limitada e total de resultados;
+- busca FTS5 reaproveita o mesmo índice local usado pela biblioteca e preserva o fallback compatível;
+- `ETag` e suporte a `If-None-Match` em registros individuais;
+- cabeçalhos de cache, request ID e `Server-Timing`;
+- health checks separados em liveness e readiness;
+- CORS e hosts aceitos configuráveis por variáveis de ambiente;
+- bootstrap opcional do snapshot quando a API inicia sem banco local;
+- sincronização periódica opcional para processos de longa duração;
+- comando `suzano-api` para execução local ou em servidor;
+- imagem Docker sem root, volume persistente e health check;
+- arquivo `compose.yaml` para subida local simplificada;
+- testes determinísticos da API e build do contêiner incorporados ao CI.
+
+### Contrato e segurança
+
+- API v1 é deliberadamente read-only;
+- limites máximos de consulta e paginação reduzem consultas sem teto;
+- cargas em massa são direcionadas ao snapshot rolling em vez de usar paginação extensa;
+- CORS permanece desativado até configuração explícita;
+- a API não substitui um gateway de borda: TLS, rate limiting global e proteção contra abuso continuam responsabilidades da camada de implantação.
+
 ## [0.3.0] - 2026-09-15
 
 ### Adicionado

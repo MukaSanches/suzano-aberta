@@ -51,7 +51,7 @@ jobs:
       - name: Tests
         run: pytest --cov=suzano_aberta --cov-report=term-missing
 
-      - name: CLI smoke test
+      - name: CLI and API smoke tests
         run: |
           suzano --help
           suzano fontes --help
@@ -62,6 +62,8 @@ jobs:
           suzano sincronizar --help
           suzano reindexar --help
           suzano buscar --help
+          suzano-api --help
+          python -c "from suzano_aberta.api import app; assert app.openapi()['info']['version'] == '1.0.0'"
 
   package:
     name: Build package
@@ -87,5 +89,22 @@ jobs:
         run: |
           python -m pip install dist/*.whl
           python -m pip check
-          python -c "import suzano_aberta; assert suzano_aberta.__version__ == '0.3.0'"
+          python -c "import suzano_aberta; assert suzano_aberta.__version__ == '0.4.0'"
+          python -c "from suzano_aberta.api import app; assert '/v1/search' in app.openapi()['paths']"
           suzano --help
+          suzano-api --help
+
+  container:
+    name: Build API container
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build image
+        run: docker build -t suzano-aberta-api:ci .
+
+      - name: Container CLI smoke test
+        run: docker run --rm suzano-aberta-api:ci suzano-api --help

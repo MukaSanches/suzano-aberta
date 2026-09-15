@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      SUZANO_API_DATABASE: /data/suzano-aberta.sqlite3
+      SUZANO_API_AUTO_SYNC: "true"
+      SUZANO_API_SYNC_INTERVAL_SECONDS: "3600"
+    volumes:
+      - suzano-data:/data
+    restart: unless-stopped
+
+volumes:
+  suzano-data:
