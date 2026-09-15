@@ -43,6 +43,29 @@ def _parse_years(value: str | None) -> list[int] | None:
     return years
 
 
+def _print_refresh_report(title: str, report: object) -> None:
+    from .models import RefreshReport
+
+    if not isinstance(report, RefreshReport):
+        raise TypeError("Relatório inesperado")
+    table = Table(title=title)
+    table.add_column("Métrica")
+    table.add_column("Valor", justify="right")
+    for key, value in (
+        ("Anos", ", ".join(str(item) for item in report.years)),
+        ("Registros oficiais observados", report.official_records_seen),
+        ("Páginas/arquivos/históricos", report.discovered_records_seen),
+        ("Novos registros", report.new_records),
+        ("Registros alterados", report.changed_records),
+        ("Total no índice", report.indexed_records),
+        ("Falhas toleradas", report.sources_failed),
+    ):
+        table.add_row(key, str(value))
+    console.print(table)
+    for error in report.errors:
+        console.print(f"[yellow]{error}[/yellow]")
+
+
 @app.command("fontes")
 def sources() -> None:
     """Lista as fontes públicas conhecidas pela biblioteca."""
@@ -105,12 +128,24 @@ def refresh(
     database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
     max_pages: Annotated[
         int,
-        typer.Option("--max-paginas", help="Máximo de páginas web novas visitadas por execução."),
+        typer.Option("--max-paginas", help="Máximo de páginas web visitadas por execução."),
     ] = 750,
     max_depth: Annotated[
         int,
         typer.Option("--profundidade", help="Profundidade máxima do rastreador de links."),
     ] = 3,
+    max_documents: Annotated[
+        int,
+        typer.Option("--max-arquivos", help="Máximo de arquivos cujo conteúdo será extraído nesta execução."),
+    ] = 250,
+    include_history: Annotated[
+        bool,
+        typer.Option("--historico", help="Consulta também índices públicos de preservação histórica da web."),
+    ] = False,
+    max_historical: Annotated[
+        int,
+        typer.Option("--max-historicos", help="Teto de registros históricos descobertos."),
+    ] = 10_000,
     no_discovery: Annotated[
         bool,
         typer.Option("--sem-descoberta", help="Atualiza só os coletores oficiais."),
@@ -120,11 +155,11 @@ def refresh(
         typer.Option("--sem-noticias-web", help="Não consulta o feed público de notícias da web."),
     ] = False,
 ) -> None:
-    """Executa a atualização autônoma completa e otimiza o índice de busca."""
+    """Executa atualização autônoma de páginas, documentos e, opcionalmente, histórico."""
     if profile not in {"completo", "legislativo", "executivo"}:
         raise typer.BadParameter("Use: completo, legislativo ou executivo")
-    if max_pages < 0 or max_depth < 0:
-        raise typer.BadParameter("--max-paginas e --profundidade não podem ser negativos")
+    if min(max_pages, max_depth, max_documents, max_historical) < 0:
+        raise typer.BadParameter("Os limites de coleta não podem ser negativos")
 
     with Suzano(database=database, auto_sync=False) as suzano:
         report = suzano.refresh(
@@ -134,24 +169,57 @@ def refresh(
             include_news=not no_news,
             max_pages=max_pages,
             max_depth=max_depth,
+            max_documents=max_documents,
+            include_history=include_history,
+            max_historical_records=max_historical,
         )
 
-    table = Table(title="Atualização autônoma — Suzano Aberta")
-    table.add_column("Métrica")
-    table.add_column("Valor", justify="right")
-    for key, value in (
-        ("Anos", ", ".join(str(item) for item in report.years)),
-        ("Registros oficiais observados", report.official_records_seen),
-        ("Páginas/menções descobertas", report.discovered_records_seen),
-        ("Novos registros", report.new_records),
-        ("Registros alterados", report.changed_records),
-        ("Total no índice", report.indexed_records),
-        ("Falhas toleradas", report.sources_failed),
-    ):
-        table.add_row(key, str(value))
-    console.print(table)
-    for error in report.errors:
-        console.print(f"[yellow]{error}[/yellow]")
+    _print_refresh_report("Atualização autônoma — Suzano Aberta", report)
+
+
+@app.command("acervo-maximo")
+def maximum_archive(
+    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
+    max_pages: Annotated[
+        int,
+        typer.Option("--max-paginas", help="Orçamento de páginas para o rastreamento profundo."),
+    ] = 6_000,
+    max_depth: Annotated[
+        int,
+        typer.Option("--profundidade", help="Profundidade máxima do rastreamento profundo."),
+    ] = 6,
+    max_documents: Annotated[
+        int,
+        typer.Option("--max-arquivos", help="Arquivos públicos a baixar e transformar em texto pesquisável."),
+    ] = 1_800,
+    max_historical: Annotated[
+        int,
+        typer.Option("--max-historicos", help="Registros de arquivos/URLs históricas a incorporar."),
+    ] = 40_000,
+    common_crawl_collections: Annotated[
+        int,
+        typer.Option("--colecoes-common-crawl", help="Quantidade de índices recentes do Common Crawl a consultar."),
+    ] = 12,
+) -> None:
+    """Expande agressivamente o acervo usando web atual, documentos e arquivos históricos."""
+    if min(
+        max_pages,
+        max_depth,
+        max_documents,
+        max_historical,
+        common_crawl_collections,
+    ) < 0:
+        raise typer.BadParameter("Os limites de coleta não podem ser negativos")
+
+    with Suzano(database=database, auto_sync=False) as suzano:
+        report = suzano.max_archive(
+            max_pages=max_pages,
+            max_depth=max_depth,
+            max_documents=max_documents,
+            max_historical_records=max_historical,
+            common_crawl_collections=common_crawl_collections,
+        )
+    _print_refresh_report("Acervo máximo — Suzano Aberta", report)
 
 
 @app.command("sincronizar")
