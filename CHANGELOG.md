@@ -2,6 +2,28 @@
 
 Todas as mudanças relevantes do projeto são registradas aqui. O formato segue a ideia de Keep a Changelog e o versionamento segue SemVer enquanto compatível com a fase inicial do projeto.
 
+## [0.3.0] - 2026-09-15
+
+### Adicionado
+
+- catálogo de arquivos públicos descobertos durante o rastreamento, incluindo PDF, DOCX, XLSX, CSV, XML, TXT e outros formatos comuns;
+- extração local de texto pesquisável de PDF e formatos Office/OpenDocument baseados em ZIP/XML, sem depender de IA ou serviço externo;
+- registros `arquivo` e `arquivo_historico`, ambos integrados ao mesmo FTS5 usado pela busca instantânea;
+- descoberta histórica por índices públicos do Common Crawl, Wayback Machine e catálogo do Internet Archive;
+- sementes adicionais para áreas profundas do Portal da Transparência, terceiro setor, concursos, transferências, financiamento, SIAFIC, Santa Casa, Covid-19 e parcerias;
+- comando `suzano acervo-maximo` para uma expansão pesada e auditável do acervo;
+- opções `--max-arquivos`, `--historico` e `--max-historicos` no ciclo normal de atualização;
+- workflow one-shot `Mega archive bootstrap`, que reaproveita o snapshot existente, executa uma coleta profunda, valida SQLite/FTS e publica o acervo expandido em `data-latest`;
+- testes determinísticos para extração de documentos e reconhecimento de arquivos históricos.
+
+### Estratégia de acervo
+
+- páginas atuais continuam sendo rastreadas respeitando `robots.txt`;
+- arquivos ligados por páginas e sitemaps deixam de ser descartados e passam a ser catalogados;
+- bloqueios atuais do portal não são contornados: cobertura histórica é ampliada por índices públicos independentes de preservação;
+- URLs históricas são deduplicadas por identidade normalizada e mantêm metadados de captura, tipo, tamanho e origem do catálogo quando disponíveis;
+- documentos acima do limite seguro continuam catalogados, mesmo quando a extração integral de texto é omitida.
+
 ## [0.2.0] - 2026-09-15
 
 ### Adicionado
