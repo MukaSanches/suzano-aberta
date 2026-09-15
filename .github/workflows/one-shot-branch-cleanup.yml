@@ -2,14 +2,14 @@ name: One-shot branch cleanup
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   cleanup:
-    if: startsWith(github.event.head_commit.message, 'chore: run one-shot branch cleanup')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Delete obsolete merged branches
+      - name: Delete obsolete branches
         shell: bash
         run: |
           set -euo pipefail
