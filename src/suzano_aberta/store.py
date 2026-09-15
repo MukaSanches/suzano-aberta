@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections.abc import Iterable
 from datetime import UTC, datetime
@@ -13,6 +14,10 @@ from .models import Change, PublicRecord
 
 SCHEMA = """
 PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+PRAGMA temp_store=MEMORY;
+PRAGMA cache_size=-65536;
+PRAGMA mmap_size=268435456;
 CREATE TABLE IF NOT EXISTS records (
     id TEXT PRIMARY KEY,
     kind TEXT NOT NULL,
@@ -27,6 +32,7 @@ CREATE TABLE IF NOT EXISTS records (
 );
 CREATE INDEX IF NOT EXISTS idx_records_kind ON records(kind);
 CREATE INDEX IF NOT EXISTS idx_records_last_seen ON records(last_seen);
+CREATE INDEX IF NOT EXISTS idx_records_source_name ON records(source_name);
 CREATE TABLE IF NOT EXISTS changes (
     seq INTEGER PRIMARY KEY AUTOINCREMENT,
     record_id TEXT NOT NULL,
@@ -39,13 +45,43 @@ CREATE TABLE IF NOT EXISTS changes (
 CREATE INDEX IF NOT EXISTS idx_changes_observed_at ON changes(observed_at);
 """
 
+FTS_SCHEMA = """
+CREATE VIRTUAL TABLE IF NOT EXISTS records_fts USING fts5(
+    id UNINDEXED,
+    title,
+    summary,
+    attributes,
+    source_name,
+    tokenize='unicode61 remove_diacritics 2'
+);
+"""
+
+
+def _flatten(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return " ".join(f"{key} {_flatten(item)}" for key, item in value.items())
+    if isinstance(value, (list, tuple, set)):
+        return " ".join(_flatten(item) for item in value)
+    return str(value)
+
+
+def _fts_query(query: str) -> str:
+    tokens = re.findall(r"\w+", query.casefold(), flags=re.UNICODE)
+    return " AND ".join(f'"{token.replace(chr(34), chr(34) * 2)}"*' for token in tokens)
+
 
 class Store:
     def __init__(self, path: str | Path = "suzano-aberta.sqlite3") -> None:
         self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(self.path)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(SCHEMA)
+        self._fts_enabled = self._initialize_fts()
 
     def close(self) -> None:
         self._conn.close()
@@ -60,6 +96,68 @@ class Store:
         traceback: TracebackType | None,
     ) -> None:
         self.close()
+
+    @property
+    def fts_enabled(self) -> bool:
+        return self._fts_enabled
+
+    def _initialize_fts(self) -> bool:
+        try:
+            self._conn.executescript(FTS_SCHEMA)
+        except sqlite3.OperationalError:
+            return False
+
+        indexed = int(self._conn.execute("SELECT COUNT(*) FROM records_fts").fetchone()[0])
+        total = self.count_records()
+        if indexed != total:
+            self.rebuild_search_index()
+        return True
+
+    def _index_record(self, record: PublicRecord) -> None:
+        if not self._fts_enabled:
+            return
+        self._conn.execute("DELETE FROM records_fts WHERE id = ?", (record.id,))
+        self._conn.execute(
+            """
+            INSERT INTO records_fts(id, title, summary, attributes, source_name)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                record.id,
+                record.title,
+                record.summary or "",
+                _flatten(record.attributes),
+                record.source.name,
+            ),
+        )
+
+    def rebuild_search_index(self) -> int:
+        try:
+            self._conn.executescript(FTS_SCHEMA)
+        except sqlite3.OperationalError:
+            self._fts_enabled = False
+            return 0
+
+        rows = self._conn.execute("SELECT payload_json FROM records WHERE active=1").fetchall()
+        with self._conn:
+            self._conn.execute("DELETE FROM records_fts")
+            for row in rows:
+                record = PublicRecord.model_validate_json(str(row["payload_json"]))
+                self._conn.execute(
+                    """
+                    INSERT INTO records_fts(id, title, summary, attributes, source_name)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        record.id,
+                        record.title,
+                        record.summary or "",
+                        _flatten(record.attributes),
+                        record.source.name,
+                    ),
+                )
+        self._fts_enabled = True
+        return len(rows)
 
     def upsert_many(self, records: Iterable[PublicRecord]) -> list[Change]:
         now = datetime.now(UTC)
@@ -91,6 +189,7 @@ class Store:
                             payload,
                         ),
                     )
+                    self._index_record(record)
                     changes.append(
                         Change(
                             record_id=record.id,
@@ -122,6 +221,7 @@ class Store:
                         record.id,
                     ),
                 )
+                self._index_record(record)
                 if changed:
                     changes.append(
                         Change(
@@ -152,11 +252,37 @@ class Store:
         return changes
 
     def search(self, query: str, *, limit: int = 50) -> list[PublicRecord]:
-        needle = f"%{query.casefold()}%"
+        clean_query = query.strip()
+        if not clean_query:
+            return []
+
+        if self._fts_enabled:
+            match = _fts_query(clean_query)
+            if match:
+                try:
+                    rows = self._conn.execute(
+                        """
+                        SELECT records.payload_json
+                        FROM records_fts
+                        JOIN records ON records.id = records_fts.id
+                        WHERE records_fts MATCH ? AND records.active=1
+                        ORDER BY bm25(records_fts, 8.0, 4.0, 2.0, 1.0), records.last_seen DESC
+                        LIMIT ?
+                        """,
+                        (match, limit),
+                    ).fetchall()
+                    return [
+                        PublicRecord.model_validate_json(str(row["payload_json"]))
+                        for row in rows
+                    ]
+                except sqlite3.OperationalError:
+                    pass
+
+        needle = f"%{clean_query.casefold()}%"
         rows = self._conn.execute(
             """
             SELECT payload_json FROM records
-            WHERE lower(title) LIKE ? OR lower(payload_json) LIKE ?
+            WHERE active=1 AND (lower(title) LIKE ? OR lower(payload_json) LIKE ?)
             ORDER BY last_seen DESC
             LIMIT ?
             """,
@@ -192,6 +318,15 @@ class Store:
             "SELECT kind, COUNT(*) AS total FROM records WHERE active=1 GROUP BY kind ORDER BY kind"
         ).fetchall()
         return {str(row["kind"]): int(row["total"]) for row in rows}
+
+    def count_records(self) -> int:
+        row = self._conn.execute("SELECT COUNT(*) AS total FROM records WHERE active=1").fetchone()
+        return int(row["total"]) if row is not None else 0
+
+    def optimize(self) -> None:
+        if self._fts_enabled:
+            self._conn.execute("INSERT INTO records_fts(records_fts) VALUES('optimize')")
+        self._conn.execute("PRAGMA optimize")
 
     def export_json(self, path: str | Path) -> int:
         rows = self._conn.execute(
