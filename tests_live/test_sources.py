@@ -30,3 +30,11 @@ def test_current_executive_sources_return_plausible_data() -> None:
     assert tenders
     assert gazette
     assert all(item.source.url.startswith("https://suzano.sp.gov.br") for item in gazette)
+
+
+def test_transparency_integrity_check_executes_against_live_source() -> None:
+    with Suzano(timeout=30.0, min_interval=0.3) as suzano:
+        report = suzano.integrity()
+    assert report.status_code == 200
+    assert report.source_url == "https://suzano.sp.gov.br/transparencia/"
+    assert isinstance(report.findings, list)
