@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from datetime import date
 from pathlib import Path
 from types import TracebackType
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, Field
 
@@ -248,15 +248,17 @@ class SuzanoIndex:
 
     def stats(self) -> LocalStats:
         raw = self._repository.stats()
+        first_seen = raw["first_seen"]
+        last_seen = raw["last_seen"]
         return LocalStats(
-            records=int(raw["records"]),
-            documents=int(raw["documents"]),
-            legislation=int(raw["legislation"]),
-            procurements=int(raw["procurements"]),
-            first_seen=str(raw["first_seen"]) if raw["first_seen"] else None,
-            last_seen=str(raw["last_seen"]) if raw["last_seen"] else None,
-            fts_enabled=bool(raw["fts_enabled"]),
-            database_bytes=int(raw["database_bytes"]),
+            records=cast(int, raw["records"]),
+            documents=cast(int, raw["documents"]),
+            legislation=cast(int, raw["legislation"]),
+            procurements=cast(int, raw["procurements"]),
+            first_seen=first_seen if isinstance(first_seen, str) else None,
+            last_seen=last_seen if isinstance(last_seen, str) else None,
+            fts_enabled=cast(bool, raw["fts_enabled"]),
+            database_bytes=cast(int, raw["database_bytes"]),
             sqlite_version=str(raw["sqlite_version"]),
             dataset_version=self._repository.dataset_version(),
             kinds=self._repository.counts_by_kind(),
