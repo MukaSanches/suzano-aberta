@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "suzano-aberta"
-version = "0.5.0"
+version = "0.6.0"
 description = "Infraestrutura autônoma para descoberta, preservação, indexação, busca e API de dados, documentos e arquivos públicos sobre Suzano, SP."
 readme = "README.md"
 requires-python = ">=3.11"
