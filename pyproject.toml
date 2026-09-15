@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "suzano-aberta"
-version = "0.7.0"
-description = "Infraestrutura autônoma para descoberta, preservação, indexação, busca e API de dados, documentos e arquivos públicos sobre Suzano, SP."
+version = "0.8.0"
+description = "Infraestrutura cívica local-first para descoberta, preservação, busca, diagnóstico e reutilização de dados e documentos públicos relacionados a Suzano, SP."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "MukaSanches"}]
-keywords = ["suzano", "dados-abertos", "transparencia", "governo-aberto", "civico", "legislativo", "busca", "fts5", "crawler", "arquivo", "documentos", "common-crawl", "internet-archive", "api", "openapi", "proveniencia", "dcat", "entidades", "qualidade-de-dados", "cli", "windows"]
+keywords = ["suzano", "dados-abertos", "transparencia", "governo-aberto", "civic-tech", "legislativo", "busca", "fts5", "crawler", "arquivo", "documentos", "common-crawl", "internet-archive", "api", "openapi", "proveniencia", "dcat", "entidades", "qualidade-de-dados", "cli", "windows", "sqlite"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -52,8 +52,9 @@ suzano-console = "suzano_aberta.console:main"
 suzano-api = "suzano_aberta.api.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/MukaSanches/suzano-aberta"
+Homepage = "https://mukasanches.github.io/suzano-aberta/"
 Repository = "https://github.com/MukaSanches/suzano-aberta"
+Documentation = "https://github.com/MukaSanches/suzano-aberta#readme"
 Issues = "https://github.com/MukaSanches/suzano-aberta/issues"
 Changelog = "https://github.com/MukaSanches/suzano-aberta/blob/main/CHANGELOG.md"
 
