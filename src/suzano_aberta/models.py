@@ -119,3 +119,16 @@ class CollectionReport(BaseModel):
     new_records: int
     changed_records: int
     errors: list[str] = Field(default_factory=list)
+
+
+class RefreshReport(BaseModel):
+    started_at: datetime
+    finished_at: datetime
+    years: list[int]
+    official_records_seen: int
+    discovered_records_seen: int
+    new_records: int
+    changed_records: int
+    indexed_records: int
+    sources_failed: int
+    errors: list[str] = Field(default_factory=list)
