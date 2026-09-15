@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import gzip
 import json
 import re
@@ -11,14 +12,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-DETAIL_KINDS = {"lei", "decreto", "proposicao", "licitacao", "contrato"}
-PROCUREMENT_KINDS = {"licitacao", "contrato"}
+DETAIL_KINDS = {"lei", "decreto", "proposicao", "licitacao", "contrato", "ata"}
+PROCUREMENT_KINDS = {"licitacao", "contrato", "ata"}
 CNPJ_RE = re.compile(r"(?<!\d)(\d{2})[.\s]?(\d{3})[.\s]?(\d{3})[/\s]?(\d{4})[-\s]?(\d{2})(?!\d)")
 REF_RE = re.compile(r"\b(\d{1,6}/(?:[A-Z]{2,12}/)?(?:19|20)\d{2})\b", re.I)
 LAW_RE = re.compile(r"\blei(?:\s+complementar)?\s*(?:n[º°.]?|:)?\s*(\d{1,6})(?:[./-](\d{4}))?", re.I)
 PROCUREMENT_CONTEXT_RE = re.compile(
     r"\b(licita[cç][aã]o|preg[aã]o|concorr[eê]ncia|dispensa|inexigibilidade|"
-    r"processo(?:\s+de\s+compra)?|contrato|edital|chamada\s+p[uú]blica|leil[aã]o)\b",
+    r"processo(?:\s+de\s+compra)?|contrato|edital|chamada\s+p[uú]blica|leil[aã]o|"
+    r"ata\s+de\s+registro\s+de\s+pre[cç]os)\b",
     re.I,
 )
 SUPPLIER_KEYS = {
@@ -28,8 +30,12 @@ SUPPLIER_KEYS = {
 IDENTIFIER_KEYS = {
     "identifier", "numero", "número", "number", "processo", "processo_administrativo",
     "processo_de_compra", "numero_controle_pncp", "numerocontrolepncp",
-    "numero_controle_pncp_compra", "numerocontrolepncpcompra", "compras_gov",
+    "numero_controle_pncp_compra", "numerocontrolepncpcompra", "compras_gov", "id_compra",
 }
+PNCP_KEYS = (
+    "numero_controle_pncp", "numerocontrolepncp", "numero_controle_pncp_compra",
+    "numerocontrolepncpcompra",
+)
 
 
 def normalize(value: str) -> str:
@@ -192,6 +198,71 @@ def compact_detail(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def procurement_identity(item: dict[str, Any]) -> str:
+    attrs = item.get("attributes") or {}
+    for key, value in attrs.items():
+        normalized_key = normalize(key).replace(" ", "_")
+        if normalized_key in PNCP_KEYS and value not in (None, ""):
+            token = re.sub(r"\W+", "", normalize(str(value)))
+            if token:
+                return f"pncp:{token}"
+    return f"record:{item.get('id')}"
+
+
+def procurement_score(item: dict[str, Any]) -> int:
+    attrs = item.get("attributes") or {}
+    source = item.get("source") or {}
+    meaningful = sum(value not in (None, "", [], {}) for value in attrs.values())
+    documents = attrs.get("documentos") or []
+    score = meaningful + (len(documents) * 3 if isinstance(documents, list) else 0)
+    host = urlsplit(str(source.get("url") or "")).netloc.casefold()
+    if "suzano.sp.gov.br" in host or "camarasuzano.sp.gov.br" in host:
+        score += 5
+    if item.get("summary"):
+        score += 2
+    return score
+
+
+def merge_procurements(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for item in items:
+        grouped[procurement_identity(item)].append(item)
+
+    merged: list[dict[str, Any]] = []
+    for group in grouped.values():
+        ranked = sorted(group, key=procurement_score, reverse=True)
+        base = copy.deepcopy(ranked[0])
+        attrs = base.setdefault("attributes", {})
+        sources: list[dict[str, str]] = []
+        origin_ids: list[str] = []
+
+        for candidate in ranked:
+            origin_ids.append(str(candidate.get("id") or ""))
+            source = candidate.get("source") or {}
+            name = str(source.get("name") or "Fonte pública")
+            url = str(source.get("url") or "")
+            if url and not any(current["url"] == url for current in sources):
+                sources.append({"name": name, "url": url})
+            candidate_attrs = candidate.get("attributes") or {}
+            for key, value in candidate_attrs.items():
+                if attrs.get(key) in (None, "", [], {}) and value not in (None, "", [], {}):
+                    attrs[key] = copy.deepcopy(value)
+            for field in ("summary", "date", "year"):
+                if base.get(field) in (None, "") and candidate.get(field) not in (None, ""):
+                    base[field] = candidate[field]
+
+        attrs["fontes_cruzadas"] = sources
+        attrs["fontes_total"] = len(sources)
+        attrs["registros_origem"] = [value for value in dict.fromkeys(origin_ids) if value]
+        merged.append(base)
+
+    merged.sort(
+        key=lambda item: (str(item.get("date") or ""), str(item.get("id") or "")),
+        reverse=True,
+    )
+    return merged
+
+
 def build(database: Path, output: Path) -> dict[str, int]:
     conn = sqlite3.connect(f"file:{database.resolve().as_posix()}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
@@ -258,24 +329,28 @@ def build(database: Path, output: Path) -> dict[str, int]:
         write_gzip(output / "details" / f"{shard}.json.gz", detail_shards.get(shard, {}))
         write_gzip(output / "relations" / f"{shard}.json.gz", relation_shards.get(shard, {}))
 
-    procurements = [
+    raw_procurements = [
         details[record_id]
         for record_id in details
         if str(details[record_id].get("kind") or "") in PROCUREMENT_KINDS
     ]
-    procurements.sort(
-        key=lambda item: (str(item.get("date") or ""), str(item.get("id") or "")),
-        reverse=True,
-    )
+    procurements = merge_procurements(raw_procurements)
     write_gzip(output / "contratacoes.json.gz", {"items": procurements})
 
     api_root = output.parent / "api" / "v1"
     write_gzip(api_root / "contratacoes.json.gz", {"items": procurements})
     relation_count = sum(len(values) for values in related.values())
+    source_names = {
+        str(item.get("source", {}).get("name") or "")
+        for item in raw_procurements
+        if item.get("source", {}).get("name")
+    }
     summary = {
         "records": len(payloads),
         "details": len(details),
         "procurements": len(procurements),
+        "procurements_raw": len(raw_procurements),
+        "procurement_sources": len(source_names),
         "records_with_relations": len(related),
         "relation_edges": relation_count,
         "detail_shards": 16,
