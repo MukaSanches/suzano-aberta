@@ -1,87 +1,143 @@
 # Demonstração institucional
 
-Este roteiro foi pensado para uma apresentação curta a um gabinete, conselho, universidade, associação ou órgão público. A demonstração funciona no terminal e evita depender de slides para provar que a infraestrutura existe.
+Este roteiro serve para apresentar o Suzano Aberta em poucos minutos a uma universidade, associação, conselho, gabinete, equipe técnica, veículo de imprensa ou órgão público. A proposta é demonstrar o software funcionando, com fonte visível e sem depender de slides para provar que a infraestrutura existe.
 
-## 1. Explique o problema
+## Antes da apresentação
 
-Informações públicas de Suzano existem, mas estão distribuídas entre portais, páginas, tabelas e documentos. O projeto não substitui esses portais; cria uma camada técnica comum para consulta, rastreabilidade e preservação local.
+No Windows:
 
-## 2. Verifique as fontes
+```cmd
+suzano.cmd
+```
+
+Em outros sistemas:
+
+```bash
+suzano console
+```
+
+Se o snapshot ainda não estiver instalado:
+
+```text
+suzano› sincronizar
+```
+
+## A demonstração de cinco minutos
+
+### 1. Mostre que o sistema conhece o próprio estado
+
+```text
+suzano› diagnostico
+```
+
+Explique que o programa diferencia a saúde da máquina local da disponibilidade das fontes externas. O diagnóstico verifica SQLite, FTS5, JSON1, integridade do banco, Python e espaço em disco sem fazer uma coleta na internet.
+
+### 2. Mostre o acervo sem preparar uma consulta
+
+```text
+suzano› recentes
+```
+
+A lista vem numerada. Isso demonstra que existe um snapshot local consultável, não apenas um conjunto de links estáticos.
+
+### 3. Pesquise como uma pessoa normal pesquisaria
+
+Digite apenas:
+
+```text
+suzano› educação
+```
+
+Não é necessário escrever uma expressão SQL, URL ou comando Python. O console trata texto comum como busca.
+
+### 4. Abra um resultado pelo número
+
+```text
+suzano› 1
+```
+
+Mostre o registro completo, o ID estável e a fonte preservada.
+
+### 5. Volte à evidência original
+
+```text
+suzano› fonte 1
+```
+
+Se for apropriado abrir o navegador durante a apresentação:
+
+```text
+suzano› abrir 1
+```
+
+O ponto principal é mostrar que o dado pesquisável não fica separado da publicação de origem.
+
+### 6. Mostre a dimensão do índice
+
+```text
+suzano› panorama
+```
+
+A tabela separa os registros por tipo. Não interprete a contagem como medida de desempenho de qualquer órgão; ela descreve apenas o que está presente naquele snapshot.
+
+### 7. Mostre que mudanças são observáveis
+
+```text
+suzano› mudancas 20
+```
+
+O sistema registra observações de itens novos ou alterados sem converter uma diferença técnica em acusação ou conclusão automática.
+
+## Segunda demonstração: operação técnica
+
+Se o público for técnico, saia do console e mostre as superfícies programáticas:
+
+```bash
+suzano inicio
+suzano diagnostico --json
+suzano buscar "transporte escolar" --limite 10
+suzano-api
+```
+
+Depois abra localmente:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Isso demonstra que o mesmo projeto possui interface humana, CLI para automação, biblioteca Python, snapshot local e API OpenAPI somente leitura.
+
+## Saúde e integridade das fontes
+
+Quando houver internet disponível:
 
 ```bash
 suzano doctor
-```
-
-O comando mostra quais endereços oficiais catalogados estão acessíveis naquele momento.
-
-## 3. Revise a integridade dos links
-
-```bash
 suzano integridade
 ```
 
-O comando destaca domínios externos que não fazem parte da lista conhecida pelo projeto. Um achado significa apenas que existe um link para revisão humana; não representa acusação de invasão, fraude ou irregularidade.
+`doctor` verifica acessibilidade. `integridade` executa regras específicas de revisão. Um achado de integridade significa apenas que a regra encontrou um sinal documentado; não prova invasão, fraude, autoria ou irregularidade.
 
-## 4. Faça uma coleta
+## Coleta ao vivo
+
+Uma coleta real pode demorar e depende da disponibilidade de terceiros. Use-a quando fizer sentido demonstrar ingestão:
 
 ```bash
 suzano coletar --ano 2026
 ```
 
-Ao final, mostre quantas fontes concluíram, quantos registros foram observados e se houve falhas.
-
-## 5. Mostre o panorama
+ou:
 
 ```bash
-suzano panorama
+suzano atualizar --anos 2025,2026
 ```
 
-A tabela resume os tipos de dados armazenados localmente.
-
-## 6. Pesquise um tema
-
-```bash
-suzano buscar "educação"
-```
-
-Escolha um resultado e destaque a URL oficial preservada.
-
-## 7. Mostre rastreabilidade
-
-```bash
-suzano ver <id-do-registro>
-```
-
-O ponto principal da demonstração é que o dado nunca fica separado de sua fonte.
-
-## 8. Mostre alterações
-
-Execute uma nova coleta em outro momento e use:
-
-```bash
-suzano mudancas
-```
-
-A biblioteca registra diferenças observadas sem classificá-las automaticamente como problema ou irregularidade.
-
-## O que vale demonstrar em cinco minutos
-
-Uma apresentação curta pode seguir esta sequência:
-
-```bash
-suzano doctor
-suzano integridade
-suzano coletar --ano 2026
-suzano panorama
-suzano buscar "educação"
-```
-
-Depois, abra um resultado específico com `suzano ver`. Isso mostra, em poucos minutos, disponibilidade das fontes, integridade básica, coleta, organização, busca e rastreabilidade.
+Não dependa de uma coleta ao vivo para demonstrar a busca. O desenho por snapshot existe justamente para separar ingestão cara de consulta rápida.
 
 ## Mensagem central
 
-> Suzano Aberta torna publicações oficiais mais fáceis de consultar, comparar e reutilizar, mantendo o caminho de volta à fonte original.
+> O Suzano Aberta transforma publicações públicas dispersas em um acervo pesquisável e reutilizável sem cortar o caminho de volta à fonte original.
 
-## Limite da apresentação
+## Cuidados ao apresentar números
 
-Não apresente contagens como se representassem toda a atividade do município quando uma fonte estiver indisponível. O relatório de coleta deve acompanhar qualquer demonstração quantitativa para deixar claro o que foi efetivamente observado naquela execução.
+Uma contagem descreve o snapshot e as fontes que contribuíram para ele. Se uma fonte estiver indisponível ou uma área ainda não tiver cobertura completa, isso deve ser informado. O software prioriza uma lacuna explícita a um número preenchido por inferência.
