@@ -8,6 +8,7 @@ from .http import PoliteHttpClient
 
 
 def extract_pdf_text(http: PoliteHttpClient, url: str, *, max_pages: int | None = None) -> str:
+    """Extrai texto de PDF público sem OCR; PDFs somente-imagem retornam texto vazio."""
     result = http.get(url)
     if "pdf" not in result.content_type.lower() and not url.lower().split("?", 1)[0].endswith(".pdf"):
         raise ValueError("O recurso informado não parece ser um PDF.")

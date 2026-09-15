@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from hashlib import sha256
 from typing import Any, Literal
@@ -12,26 +13,38 @@ RecordKind = Literal[
     "vereador",
     "proposicao",
     "contrato",
+    "ata_registro_preco",
+    "licitacao",
     "comissao",
     "presenca",
     "diario",
-    "licitacao",
     "secretaria",
     "documento_fiscal",
     "documento_orcamentario",
     "ato_oficial",
+    "concurso",
+    "transferencia",
+    "parceria",
     "noticia",
 ]
 
+ChangeType = Literal["novo", "alterado", "ausente", "reativado"]
+
 
 class SourceRef(BaseModel):
+    """Referência mínima necessária para auditar a origem de um registro."""
+
     name: str
     url: str
     collected_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    observed_on: str | None = None
     content_sha256: str | None = None
+    status_code: int | None = None
 
 
 class PublicRecord(BaseModel):
+    """Representação normalizada de uma publicação pública municipal."""
+
     id: str
     kind: RecordKind
     title: str
@@ -42,7 +55,7 @@ class PublicRecord(BaseModel):
     source: SourceRef
 
     def canonical_payload(self) -> dict[str, Any]:
-        """Payload sem metadados voláteis, usado para detectar alterações reais."""
+        """Conteúdo estável usado para comparar observações ao longo do tempo."""
         return {
             "id": self.id,
             "kind": self.kind,
@@ -53,11 +66,11 @@ class PublicRecord(BaseModel):
             "attributes": self.attributes,
             "source_name": self.source.name,
             "source_url": self.source.url,
+            "source_observed_on": self.source.observed_on,
+            "source_content_sha256": self.source.content_sha256,
         }
 
     def fingerprint(self) -> str:
-        import json
-
         raw = json.dumps(
             self.canonical_payload(),
             ensure_ascii=False,
@@ -80,7 +93,7 @@ class SourceStatus(BaseModel):
 class Change(BaseModel):
     record_id: str
     kind: str
-    change_type: Literal["novo", "alterado", "ausente"]
+    change_type: ChangeType
     observed_at: datetime
     previous_hash: str | None = None
     current_hash: str | None = None
@@ -94,4 +107,6 @@ class CollectionReport(BaseModel):
     sources_failed: int
     new_records: int
     changed_records: int
+    missing_records: int
+    reactivated_records: int
     errors: list[str] = Field(default_factory=list)
