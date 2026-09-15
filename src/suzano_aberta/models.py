@@ -35,6 +35,10 @@ class SourceRef(BaseModel):
     url: str
     collected_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     content_sha256: str | None = None
+    authority: str | None = None
+    category: str | None = None
+    retrieval_method: str | None = None
+    media_type: str | None = None
 
 
 class PublicRecord(BaseModel):
@@ -48,7 +52,13 @@ class PublicRecord(BaseModel):
     source: SourceRef
 
     def canonical_payload(self) -> dict[str, Any]:
-        """Payload sem metadados voláteis, usado para detectar alterações reais."""
+        """Payload estável usado para detectar alteração substantiva.
+
+        Metadados operacionais ou de catalogação da fonte ficam fora desta
+        impressão digital para que uma evolução de proveniência não reescreva o
+        histórico de milhares de registros como se o conteúdo público tivesse
+        mudado.
+        """
         return {
             "id": self.id,
             "kind": self.kind,

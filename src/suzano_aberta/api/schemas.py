@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from ..models import Change, PublicRecord
@@ -12,16 +14,25 @@ class PageInfo(BaseModel):
     next_offset: int | None = Field(default=None, ge=0)
 
 
+class ResponseMeta(BaseModel):
+    api_version: str
+    schema_version: str
+    dataset_version: str
+    request_id: str | None = None
+
+
 class RecordsResponse(BaseModel):
     query: str | None = None
     filters: dict[str, str | int | None] = Field(default_factory=dict)
     page: PageInfo
     items: list[PublicRecord]
+    meta: ResponseMeta | None = None
 
 
 class ChangesResponse(BaseModel):
     page: PageInfo
     items: list[Change]
+    meta: ResponseMeta | None = None
 
 
 class SourceCount(BaseModel):
@@ -29,15 +40,30 @@ class SourceCount(BaseModel):
     records: int = Field(ge=0)
 
 
+class SourceSummary(BaseModel):
+    name: str
+    records: int = Field(ge=0)
+    first_seen: str | None = None
+    last_seen: str | None = None
+
+
+class SourcesResponse(BaseModel):
+    items: list[SourceSummary]
+    total: int = Field(ge=0)
+    meta: ResponseMeta | None = None
+
+
 class StatsResponse(BaseModel):
     records: int = Field(ge=0)
     documents: int = Field(default=0, ge=0)
     legislation: int = Field(default=0, ge=0)
+    procurements: int = Field(default=0, ge=0)
     first_seen: str | None = None
     last_seen: str | None = None
     fts_enabled: bool
     database_bytes: int = Field(ge=0)
     sqlite_version: str
+    dataset_version: str
     kinds: dict[str, int]
     top_sources: list[SourceCount]
 
@@ -48,12 +74,15 @@ class HealthResponse(BaseModel):
     records: int = Field(default=0, ge=0)
     documents: int = Field(default=0, ge=0)
     legislation: int = Field(default=0, ge=0)
+    procurements: int = Field(default=0, ge=0)
+    dataset_version: str | None = None
     detail: str | None = None
 
 
 class ServiceResponse(BaseModel):
     name: str
     api_version: str
+    schema_version: str
     package_version: str
     description: str
     documentation: str
@@ -66,3 +95,26 @@ class SnapshotResponse(BaseModel):
     checksum_url: str
     metadata_url: str
     note: str
+
+
+class CapabilitiesResponse(BaseModel):
+    api_version: str
+    schema_version: str
+    read_only: bool
+    formats: list[str]
+    pagination: dict[str, int | str]
+    sorting: list[str]
+    date_modes: list[str]
+    record_kinds: list[str]
+    standards: list[str]
+    endpoints: dict[str, str]
+
+
+class ProblemDetail(BaseModel):
+    type: str
+    title: str
+    status: int
+    detail: str
+    instance: str
+    request_id: str | None = None
+    errors: list[dict[str, Any]] | None = None
