@@ -11,6 +11,8 @@ RecordKind = Literal[
     "sessao",
     "vereador",
     "proposicao",
+    "lei",
+    "decreto",
     "contrato",
     "comissao",
     "presenca",
