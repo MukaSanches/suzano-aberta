@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Infraestrutura aberta para descobrir, preservar e pesquisar informações públicas sobre Suzano, SP.</strong>
+  <strong>Infraestrutura aberta para descobrir, preservar, relacionar e pesquisar informações públicas sobre Suzano, SP.</strong>
 </p>
 
 <p align="center">
@@ -11,58 +11,65 @@
   <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Licença Apache 2.0" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-102A43"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-0B6E4F">
+  <img alt="Biblioteca 0.5.0" src="https://img.shields.io/badge/library-0.5.0-102A43">
+  <img alt="API 1.2" src="https://img.shields.io/badge/API-1.2-0B6E4F">
 </p>
 
 > **Projeto cívico independente.** O Suzano Aberta não é um portal oficial da Prefeitura Municipal de Suzano nem da Câmara Municipal de Suzano. Em caso de divergência, prevalece a publicação da fonte responsável.
 
 ## O que é, em linguagem simples
 
-Informações públicas não costumam morar em um só lugar. Um contrato pode estar em uma página; um edital em PDF; uma lei em outro sistema; uma publicação antiga pode ter mudado de endereço.
+Informações públicas não costumam morar em um só lugar. Um contrato pode estar em uma página; um edital em PDF; uma lei em outro sistema; uma compra pública pode aparecer tanto no município quanto em bases nacionais; uma publicação antiga pode ter mudado de endereço.
 
-O **Suzano Aberta** constrói uma camada de pesquisa sobre esse material. Ele coleta e organiza registros públicos, preserva a origem, indexa conteúdo pesquisável e distribui o mesmo acervo por diferentes caminhos:
+O **Suzano Aberta** constrói uma camada de pesquisa e rastreabilidade sobre esse material. Ele coleta e organiza registros públicos, preserva a origem, indexa conteúdo pesquisável, relaciona evidências compatíveis e distribui o mesmo acervo por diferentes caminhos:
 
 ```text
-fontes públicas
-      ↓
-coleta + documentos + histórico
-      ↓
-SQLite + FTS5 + proveniência
-      ↓
-validação + checksum + snapshot
-      ↓
-┌─────────┬─────────┬────────┬────────┐
-│ portal  │ API v1  │ Python │  CLI   │
-└─────────┴─────────┴────────┴────────┘
+fontes municipais + APIs públicas + arquivos históricos
+                         ↓
+              coleta + normalização
+                         ↓
+        SQLite + FTS5 + proveniência
+                         ↓
+      validação + checksum + snapshot
+                         ↓
+┌─────────┬──────────┬─────────┬────────┐
+│ portal  │ API 1.2  │ Python  │  CLI   │
+└─────────┴──────────┴─────────┴────────┘
 ```
 
-O objetivo não é dizer ao cidadão no que acreditar. É permitir que ele **encontre e confira a fonte**.
+O objetivo não é dizer ao cidadão no que acreditar. É permitir que ele **encontre, relacione e confira a fonte**.
 
 ## Portal público
 
-O repositório inclui um portal estático preparado para GitHub Pages em `web/`. A interface foi desenhada com princípios de serviços públicos digitais: linguagem direta, acessibilidade, navegação previsível, foco em tarefas e transparência sobre a origem dos dados.
+O portal oficial do projeto é publicado pelo GitHub Pages:
+
+**https://mukasanches.github.io/suzano-aberta/**
+
+A interface foi desenhada com princípios de serviços públicos digitais: linguagem direta, acessibilidade, navegação previsível, foco em tarefas e transparência sobre a origem dos dados.
 
 A pesquisa segue uma estratégia de resiliência:
 
-1. se uma URL da API estiver configurada, o portal consulta a **API v1 + FTS5**;
-2. se a API estiver indisponível, ele recua para um **índice estático derivado do snapshot**;
-3. o portal continua mostrando a última versão publicada do acervo mesmo que a coleta do dia falhe.
+1. se uma URL da API estiver configurada, o portal consulta a API dinâmica;
+2. se a API estiver indisponível, ele usa um índice estático derivado do snapshot;
+3. uma coleta que falha não substitui automaticamente a última versão válida.
 
 O dataset web é gerado automaticamente a partir do snapshot SQLite validado. Não há contador fictício nem conteúdo de demonstração misturado ao acervo real.
 
-## Busca e acervo
-
-A pesquisa principal usa SQLite FTS5 com tokenização Unicode, remoção de diacríticos, prefixos e ranking BM25. O banco preserva registros atuais, documentos e referências históricas encontradas em fontes públicas.
+## Fontes e acervo
 
 O motor de coleta trabalha, entre outros, com:
 
-- Câmara, sessões, proposições, contratos, comissões e presença parlamentar;
-- licitações, secretarias, contas públicas e orçamento;
-- Imprensa Oficial, leis, decretos e notícias institucionais;
-- PDF, DOCX, XLSX, CSV, XML, TXT e formatos relacionados;
+- Câmara Municipal: sessões, proposições, legislação consolidada, contratos, licitações, dispensas, comissões, presenças e Diário Oficial;
+- Prefeitura: licitações, secretarias, contas públicas, orçamento, Imprensa Oficial, atos e notícias;
+- **PNCP**: contratações, contratos e atas de registro de preços relacionadas ao município;
+- **Compras.gov.br Dados Abertos**: fonte nacional complementar para contratações da Lei 14.133;
+- PDF, DOCX, XLSX, CSV, XML, TXT e outros formatos públicos suportados;
 - descoberta web por páginas, links, `robots.txt` e sitemaps;
 - referências históricas em Common Crawl, Wayback Machine e Internet Archive.
 
-Bloqueios de portais atuais não são contornados. Quando uma fonte não permite determinada automação, a cobertura pode ser ampliada por índices públicos independentes de preservação.
+As fontes permanecem independentes. Quando dois registros compartilham identificadores públicos verificáveis — por exemplo número de controle PNCP, processo, CNPJ ou norma citada — o projeto pode registrar a relação sem transformar isso em julgamento sobre regularidade.
+
+Bloqueios de portais atuais não são contornados. Quando uma fonte não permite determinada automação, a cobertura pode ser ampliada por APIs públicas, arquivos históricos ou outras fontes oficiais acessíveis.
 
 ## Começar em 30 segundos
 
@@ -99,9 +106,9 @@ suzano buscar "transporte escolar"
 suzano buscar "Santa Casa"
 ```
 
-## API própria
+## API 1.2
 
-A API é uma camada HTTP **somente leitura** sobre o índice validado. Coleta e mutação não ficam expostas à internet.
+A API é uma camada HTTP **somente leitura** sobre snapshots validados. Coleta, reindexação, execução de crawler e mutações não são expostas como operações públicas.
 
 ```bash
 suzano-api
@@ -112,24 +119,33 @@ Por padrão:
 ```text
 http://127.0.0.1:8000
 http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/openapi.json
 ```
 
 Principais rotas:
 
 ```text
-GET /v1/search?q=educacao
+GET /v1/search?q=educacao&sort=date_desc
 GET /v1/records
 GET /v1/records/{id}
-GET /v1/stats
+GET /v1/documents
+GET /v1/legislation
+GET /v1/procurements
 GET /v1/changes
+GET /v1/stats
+GET /v1/sources
+GET /v1/capabilities
+GET /v1/catalog
+GET /v1/records/{id}/provenance
 GET /v1/snapshot
 GET /health/live
 GET /health/ready
+GET /metrics
 ```
 
-A API inclui paginação limitada, filtros, ETag, cache HTTP, GZip, CORS configurável, Trusted Hosts, request ID e health checks.
+A API mantém **versão do pacote, versão do contrato HTTP, versão do schema e versão do dataset separadas**. Erros são serializados como `application/problem+json`; respostas consultivas usam request ID, cache HTTP/ETag quando aplicável e headers de versão. Proveniência e catálogo possuem representações JSON-LD inspiradas em W3C PROV e DCAT.
 
-## Grandes volumes: use o snapshot
+### Grandes volumes: use o snapshot
 
 A API não deve ser usada para baixar o acervo inteiro página por página. Para jornalismo de dados, pesquisa acadêmica ou processamento em massa, use a release rolling `data-latest`:
 
@@ -140,6 +156,22 @@ data-latest.json
 ```
 
 A sincronização verifica SHA-256, cabeçalho SQLite e `PRAGMA quick_check` antes da instalação.
+
+## Uso como biblioteca Python
+
+```python
+from suzano_aberta import Suzano, record_provenance
+
+with Suzano(database="suzano.sqlite3") as suzano:
+    resultados = suzano.search("mobilidade")
+
+for item in resultados[:5]:
+    print(item.title)
+    print(item.source.url)
+    print(record_provenance(item)["source_class"])
+```
+
+A biblioteca 0.5.0 trata URLs e respostas de fontes externas como entrada não confiável: aplica timeout, limite de tamanho, redirects limitados e validados, retry apenas em falhas transitórias conhecidas e rejeita destinos literais locais/privados por padrão.
 
 ## Atualização autônoma
 
@@ -155,20 +187,7 @@ Expansão pesada do acervo:
 suzano acervo-maximo
 ```
 
-A automação preserva o snapshot anterior, executa coleta, reindexa, valida o banco e só então publica a nova geração.
-
-## Uso como biblioteca Python
-
-```python
-from suzano_aberta import Suzano
-
-with Suzano(database="suzano.sqlite3") as suzano:
-    resultados = suzano.search("mobilidade")
-
-for item in resultados[:5]:
-    print(item.title)
-    print(item.source.url)
-```
+A automação preserva o snapshot anterior, executa coleta, reindexa, valida o banco e só então publica a nova geração. A falha de uma fonte não apaga resultados válidos vindos das demais.
 
 ## Operação por Docker
 
@@ -176,19 +195,24 @@ for item in resultados[:5]:
 docker compose up --build
 ```
 
-A imagem da API roda sem privilégios de root e usa volume persistente para o banco.
+A imagem da API roda sem privilégios de root e usa volume persistente para o banco. Na camada de serviço, o SQLite é aberto em `mode=ro`, `immutable=1`, `query_only=ON` e `trusted_schema=OFF`.
 
 ## Confiabilidade e segurança
 
 - nenhum dado ausente é inventado;
 - cada registro mantém a fonte pública de origem;
-- fingerprints determinísticos registram alterações de conteúdo;
-- crawler respeita `robots.txt` e limita hosts autorizados;
-- API abre o SQLite em modo read-only;
+- fingerprints determinísticos registram alterações substantivas de conteúdo;
+- metadados operacionais de proveniência não reescrevem artificialmente o histórico;
+- crawler respeita `robots.txt` e possui limites de resposta, redirects e retry;
+- URLs literais locais e IPs privados não são aceitos pelo cliente público por padrão;
+- API pública é somente leitura e impõe limites de paginação;
+- erros possuem formato previsível e legível por máquina;
 - publicação do snapshot exige integridade do SQLite e checksum;
 - CI roda em Python 3.11, 3.12 e 3.13;
-- mypy estrito, Ruff, testes, build do pacote e CodeQL fazem parte da esteira;
-- o portal não usa anúncios nem scripts de rastreamento de terceiros.
+- mypy estrito, Ruff, testes, build do pacote, container e CodeQL fazem parte da esteira;
+- o portal não depende de analytics de terceiros para funcionar.
+
+Esses controles usam referências públicas de engenharia como NIST, OWASP, RFC 9457, W3C PROV e DCAT. O projeto **não afirma certificação governamental, classificação de segurança ou equivalência a sistemas sigilosos**.
 
 ## Acessibilidade
 
@@ -200,13 +224,13 @@ Acessibilidade é tratada como trabalho contínuo, não como consequência autom
 
 ```text
 suzano-aberta/
-├── src/suzano_aberta/     biblioteca, coleta, busca e API
+├── src/suzano_aberta/     biblioteca, coleta, busca, proveniência e API
 ├── web/                    portal estático / GitHub Pages
 ├── brand/                  identidade visual canônica
 ├── scripts/                build e validação de dados do portal
 ├── tests/                  testes determinísticos
 ├── tests_live/             verificações separadas contra fontes reais
-├── docs/                   arquitetura, metodologia e políticas
+├── docs/                   arquitetura, contratos e políticas
 └── .github/workflows/      CI, CodeQL, coleta e publicação
 ```
 
@@ -231,11 +255,19 @@ python -m build
 
 **Separação de responsabilidades.** O portal não controla o crawler; a API não escreve no acervo; a coleta não decide o que é politicamente verdadeiro.
 
+**Entrada externa é não confiável até ser validada.** Uma API oficial também pode falhar, mudar contrato ou devolver conteúdo inesperado.
+
+**Compatibilidade é parte do produto.** Adicionar metadados não deve fazer toda a história parecer alterada, e consumidores não devem precisar adivinhar quando o contrato mudou.
+
 ## Documentação
 
 - [Arquitetura](docs/arquitetura.md)
 - [Autonomia e busca](docs/autonomia-e-busca.md)
 - [API pública](docs/api.md)
+- [Contrato da API](docs/API-CONTRACT.md)
+- [Governança da API](docs/api-governance.md)
+- [Fronteiras de segurança](docs/SECURITY-BOUNDARIES.md)
+- [Política de fontes upstream](docs/UPSTREAM-SOURCES.md)
 - [Fontes](docs/fontes.md)
 - [Metodologia](docs/metodologia.md)
 - [Modelo de dados](docs/modelo-de-dados.md)
