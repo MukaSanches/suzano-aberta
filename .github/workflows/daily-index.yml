@@ -8,6 +8,7 @@ on:
       - ".github/workflows/daily-index.yml"
       - "scripts/bootstrap_documents.py"
       - "scripts/bootstrap_legislation.py"
+      - "scripts/bootstrap_procurement_apis.py"
       - "src/suzano_aberta/catalog.py"
       - "src/suzano_aberta/sources/**"
   schedule:
@@ -71,19 +72,10 @@ jobs:
             --from-year 1949 \
             --to-year "$(date -u +%Y)"
 
-      - name: Refresh structured official sources before checkpoint
-        shell: bash
+      - name: Bootstrap PNCP and Compras.gov procurement APIs
         run: |
-          set -euo pipefail
-          CURRENT_YEAR="$(date -u +%Y)"
-          YEARS="$((CURRENT_YEAR - 2)),$((CURRENT_YEAR - 1)),${CURRENT_YEAR}"
-          suzano atualizar \
-            --anos "${YEARS}" \
-            --sem-descoberta \
-            --sem-noticias-web \
-            --max-paginas 0 \
-            --profundidade 0 \
-            --max-arquivos 0
+          python scripts/bootstrap_procurement_apis.py \
+            --database suzano-aberta.sqlite3
 
       - name: Publish structured safe checkpoint
         shell: bash
