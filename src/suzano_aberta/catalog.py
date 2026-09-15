@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .integrity import TRANSPARENCIA_URL
 from .sources.base import SourceDefinition
 from .sources.camara import CAMARA, COMISSOES_URL, CONTRATOS_DADOS_URL, DIARIO_URL, SESSOES_URL, VEREADORES_URL
 from .sources.prefeitura import CONTAS_URL, IMPRENSA_URL, LEIS_DECRETOS_URL, LICITACOES_URL, NOTICIAS_URL, ORCAMENTO_URL, PREFEITURA, SECRETARIAS_URL
@@ -13,6 +14,7 @@ SOURCES: tuple[SourceDefinition, ...] = (
     SourceDefinition("camara-comissoes", "Comissões permanentes", COMISSOES_URL, "Câmara Municipal de Suzano", "legislativo", "Pautas das reuniões das comissões."),
     SourceDefinition("camara-diario", "Diário Oficial do Legislativo", DIARIO_URL, "Câmara Municipal de Suzano", "diario", "Índice das edições oficiais."),
     SourceDefinition("prefeitura-home", "Prefeitura Municipal", PREFEITURA, "Prefeitura Municipal de Suzano", "institucional", "Página principal."),
+    SourceDefinition("prefeitura-transparencia", "Portal de Transparência", TRANSPARENCIA_URL, "Prefeitura Municipal de Suzano", "transparencia", "Índice municipal de transparência e ponto de verificação de integridade de links."),
     SourceDefinition("prefeitura-licitacoes", "Editais e licitações", LICITACOES_URL, "Prefeitura Municipal de Suzano", "compras-publicas", "Índice oficial de editais e licitações."),
     SourceDefinition("prefeitura-secretarias", "Secretarias", SECRETARIAS_URL, "Prefeitura Municipal de Suzano", "estrutura", "Estrutura e contatos das secretarias."),
     SourceDefinition("prefeitura-contas", "Contas públicas", CONTAS_URL, "Prefeitura Municipal de Suzano", "fiscal", "Relatórios fiscais e demonstrativos."),

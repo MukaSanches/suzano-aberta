@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from hashlib import sha256
 
 from bs4 import BeautifulSoup
@@ -32,7 +33,7 @@ class PrefeituraSource(BaseSource):
 
     def collect(self, *, year: int) -> list[PublicRecord]:
         records: list[PublicRecord] = []
-        collectors = (
+        collectors: tuple[Callable[[], list[PublicRecord]], ...] = (
             lambda: self.tenders(year=year),
             self.secretariats,
             lambda: self.fiscal_documents(year=year, limit=400),

@@ -43,15 +43,10 @@ jobs:
         run: python -m compileall -q src tests
 
       - name: Static correctness checks
-        id: lint
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          ruff check --select E,F --ignore E501 . 2>&1 | tee ruff.txt
-          status=${PIPESTATUS[0]}
-          echo "$status" > ruff.status
-          exit "$status"
+        run: ruff check --select E,F --ignore E501 .
+
+      - name: Type check
+        run: mypy src/suzano_aberta
 
       - name: Tests
         run: pytest --cov=suzano_aberta --cov-report=term-missing
@@ -61,24 +56,7 @@ jobs:
           suzano --help
           suzano fontes --help
           suzano doctor --help
-
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: quality-python-${{ matrix.python-version }}
-          path: |
-            ruff.txt
-            ruff.status
-          if-no-files-found: ignore
-          retention-days: 3
-
-      - name: Enforce static checks
-        if: always()
-        shell: bash
-        run: |
-          test -f ruff.status
-          test "$(cat ruff.status)" = "0"
+          suzano integridade --help
 
   package:
     name: Build package
@@ -104,5 +82,5 @@ jobs:
         run: |
           python -m pip install dist/*.whl
           python -m pip check
-          python -c "import suzano_aberta; assert suzano_aberta.__version__ == '0.1.0'"
+          python -c "import suzano_aberta; assert suzano_aberta.__version__ == '0.1.1'"
           suzano --help

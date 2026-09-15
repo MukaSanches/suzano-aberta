@@ -145,6 +145,46 @@ def changes(
     console.print(table)
 
 
+@app.command("integridade")
+def integrity(
+    as_json: Annotated[bool, typer.Option("--json", help="Saída JSON para automação.")] = False,
+    fail_on_finding: Annotated[
+        bool,
+        typer.Option(
+            "--falhar-se-encontrar",
+            help="Retorna código 3 quando houver domínio externo não reconhecido.",
+        ),
+    ] = False,
+) -> None:
+    """Revê links externos inesperados em fontes municipais selecionadas."""
+    with Suzano() as suzano:
+        report = suzano.integrity()
+
+    if as_json:
+        console.print_json(report.model_dump_json())
+    elif report.ok:
+        console.print("Nenhum domínio externo não reconhecido foi encontrado.")
+    else:
+        table = Table(title="Integridade de fontes — revisão recomendada")
+        table.add_column("Domínio")
+        table.add_column("Texto observado")
+        table.add_column("Destino")
+        for finding in report.findings:
+            table.add_row(
+                finding.host,
+                finding.evidence or "—",
+                finding.target_url,
+            )
+        console.print(table)
+        console.print(
+            "Os achados indicam apenas links externos fora da lista conhecida; "
+            "não constituem conclusão sobre incidente ou irregularidade."
+        )
+
+    if fail_on_finding and report.findings:
+        raise typer.Exit(code=3)
+
+
 @app.command("doctor")
 def doctor(
     as_json: Annotated[bool, typer.Option("--json", help="Saída JSON para automação.")] = False,

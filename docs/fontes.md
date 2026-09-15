@@ -14,6 +14,7 @@ Suzano Aberta prioriza publicações de primeira parte dos órgãos públicos do
 ## Prefeitura Municipal de Suzano
 
 - Portal institucional: `https://suzano.sp.gov.br/`
+- Portal de Transparência: `https://suzano.sp.gov.br/transparencia/`
 - Editais e licitações: `https://suzano.sp.gov.br/editais-licitacoes/`
 - Secretarias: `https://suzano.sp.gov.br/secretarias/`
 - Contas públicas: `https://suzano.sp.gov.br/transparencia/contas-publicas/`
@@ -22,10 +23,12 @@ Suzano Aberta prioriza publicações de primeira parte dos órgãos públicos do
 - Leis e decretos: `https://suzano.sp.gov.br/transparencia/leis-e-decretos/`
 - Notícias: `https://suzano.sp.gov.br/noticias/`
 
+O Portal de Transparência também é usado pelo verificador de integridade de links externos. A metodologia dessa verificação está em [`integridade.md`](integridade.md).
+
 ## Critério de inclusão
 
 Uma fonte entra no catálogo quando possui vínculo institucional claro com o município, conteúdo público pertinente ao escopo e estrutura suficientemente estável para coleta responsável.
 
 ## Mudanças nos portais
 
-Sites públicos mudam. O comando `suzano doctor` verifica acessibilidade básica, e os smoke tests ajudam a detectar alterações estruturais. Falha de coleta não significa ausência do dado no órgão.
+Sites públicos mudam. O comando `suzano doctor` verifica acessibilidade básica, `suzano integridade` destaca domínios externos não reconhecidos e os smoke tests ajudam a detectar alterações estruturais. Falha de coleta não significa ausência do dado no órgão.
