@@ -3,6 +3,11 @@ const shardCache = new Map();
 let recordsPromise;
 let lexiconPromise;
 
+const DOCUMENT_KINDS = new Set([
+  "arquivo", "arquivo_historico", "diario", "documento_fiscal", "documento_orcamentario", "lei", "decreto"
+]);
+const LEGISLATION_KINDS = new Set(["lei", "decreto", "proposicao"]);
+
 function normalize(value) {
   return String(value || "")
     .normalize("NFD")
@@ -87,21 +92,58 @@ function intersectSets(sets) {
 function recordObject(row) {
   return {
     id: row[0], kind: row[1], title: row[2], date: row[3], year: row[4],
-    source_name: row[5], source_url: row[6], last_seen: row[7], summary: row[8] || ""
+    source_name: row[5], source_url: row[6], last_seen: row[7], summary: row[8] || "",
+    effective_date: row[9] || "", date_basis: row[10] || "observed"
   };
 }
 
-async function searchStatic({ query, kind, year, limit = 30, offset = 0 }) {
-  const clean = normalize(query);
-  if (!clean) return { total: 0, items: [] };
-  const queryTokens = clean.split(" ").filter(token => token.length >= 2).slice(0, 8);
-  if (!queryTokens.length) return { total: 0, items: [] };
+function inScope(row, scope) {
+  if (scope === "documents") return DOCUMENT_KINDS.has(row?.[1]);
+  if (scope === "legislation") return LEGISLATION_KINDS.has(row?.[1]);
+  return true;
+}
 
-  const [lexicon, records] = await Promise.all([getLexicon(), getRecords()]);
+function filterIds(ids, records, { scope, kind, year, date_from, date_to }) {
+  return ids.filter(index => {
+    const row = records[index];
+    if (!row || !inScope(row, scope)) return false;
+    if (kind && row[1] !== kind) return false;
+    if (year && Number(row[4]) !== Number(year)) return false;
+    const effective = String(row[9] || "");
+    if (date_from && (!effective || effective < date_from)) return false;
+    if (date_to && (!effective || effective > date_to)) return false;
+    return true;
+  });
+}
+
+function sortIds(ids, records, clean, sort) {
+  ids.sort((left, right) => {
+    const a = records[left];
+    const b = records[right];
+    if (sort === "relevance" && clean) {
+      const at = normalize(a?.[2]);
+      const bt = normalize(b?.[2]);
+      const aExact = at.includes(clean) ? 1 : 0;
+      const bExact = bt.includes(clean) ? 1 : 0;
+      if (aExact !== bExact) return bExact - aExact;
+    }
+    const ad = String(a?.[9] || "");
+    const bd = String(b?.[9] || "");
+    if (ad !== bd) return sort === "date_asc" ? ad.localeCompare(bd) : bd.localeCompare(ad);
+    return String(a?.[0] || "").localeCompare(String(b?.[0] || ""));
+  });
+}
+
+async function matchingIds(query, records) {
+  const clean = normalize(query);
+  if (!clean) return { clean, ids: records.map((_, index) => index) };
+  const queryTokens = clean.split(" ").filter(token => token.length >= 2).slice(0, 8);
+  if (!queryTokens.length) return { clean, ids: [] };
+  const lexicon = await getLexicon();
   const sets = [];
   for (const queryToken of queryTokens) {
     const tokenMatches = prefixMatches(lexicon, queryToken);
-    if (!tokenMatches.length) return { total: 0, items: [] };
+    if (!tokenMatches.length) return { clean, ids: [] };
     const byShard = new Map();
     for (const token of tokenMatches) {
       const shard = shardFor(token);
@@ -115,25 +157,16 @@ async function searchStatic({ query, kind, year, limit = 30, offset = 0 }) {
     }
     sets.push(unionPostingLists(postings));
   }
+  return { clean, ids: [...intersectSets(sets)] };
+}
 
-  let ids = [...intersectSets(sets)];
-  if (kind) ids = ids.filter(index => records[index]?.[1] === kind);
-  if (year) ids = ids.filter(index => Number(records[index]?.[4]) === Number(year));
-
-  ids.sort((left, right) => {
-    const a = records[left];
-    const b = records[right];
-    const at = normalize(a?.[2]);
-    const bt = normalize(b?.[2]);
-    const aExact = at.includes(clean) ? 1 : 0;
-    const bExact = bt.includes(clean) ? 1 : 0;
-    if (aExact !== bExact) return bExact - aExact;
-    const ay = Number(a?.[4] || 0);
-    const by = Number(b?.[4] || 0);
-    if (ay !== by) return by - ay;
-    return String(b?.[7] || "").localeCompare(String(a?.[7] || ""));
-  });
-
+async function searchStatic(payload) {
+  const records = await getRecords();
+  const { clean, ids: matched } = await matchingIds(payload.query || "", records);
+  let ids = filterIds(matched, records, payload);
+  sortIds(ids, records, clean, payload.sort || "date_desc");
+  const offset = Number(payload.offset || 0);
+  const limit = Number(payload.limit || 30);
   const page = ids.slice(offset, offset + limit).map(index => recordObject(records[index]));
   return { total: ids.length, items: page };
 }
