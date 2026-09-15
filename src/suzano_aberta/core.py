@@ -174,8 +174,11 @@ class Suzano:
             discovery = WebDiscovery(self.http)
             discovered: list[PublicRecord] = []
             official_seeds = [source.url for source in SOURCES]
+            # No máximo ~1/3 do orçamento revisita páginas antigas; o restante fica
+            # reservado para sitemaps, links novos e expansão real do acervo.
+            prior_seed_limit = max(100, max_pages // 3)
             with Store(self.database) as store:
-                prior_seeds = store.web_seed_urls(limit=max(1000, max_pages * 4))
+                prior_seeds = store.web_seed_urls(limit=prior_seed_limit)
             crawl_seeds = list(dict.fromkeys([*official_seeds, *prior_seeds]))
             try:
                 discovered.extend(
