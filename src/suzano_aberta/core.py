@@ -8,7 +8,8 @@ from typing import Literal
 
 from .catalog import SOURCES
 from .http import PoliteHttpClient
-from .models import Change, CollectionReport, PublicRecord, SourceStatus
+from .integrity import check_transparency_integrity
+from .models import Change, CollectionReport, IntegrityReport, PublicRecord, SourceStatus
 from .sources import CamaraSource, PrefeituraSource
 from .store import Store
 
@@ -125,6 +126,10 @@ class Suzano:
     def changes(self, *, limit: int = 50) -> list[Change]:
         with Store(self.database) as store:
             return store.latest_changes(limit=limit)
+
+    def integrity(self) -> IntegrityReport:
+        """Executa verificações determinísticas de integridade em fontes públicas selecionadas."""
+        return check_transparency_integrity(self.http)
 
     def doctor(self) -> list[SourceStatus]:
         statuses: list[SourceStatus] = []
