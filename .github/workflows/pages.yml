@@ -8,6 +8,7 @@ on:
       - "brand/**"
       - "src/suzano_aberta/sources/**"
       - "src/suzano_aberta/catalog.py"
+      - "scripts/bootstrap_procurement_apis.py"
       - "scripts/build_web_dataset.py"
       - "scripts/build_portal_enrichment.py"
       - "scripts/build_news_feed.py"
@@ -21,6 +22,7 @@ on:
       - "brand/**"
       - "src/suzano_aberta/sources/**"
       - "src/suzano_aberta/catalog.py"
+      - "scripts/bootstrap_procurement_apis.py"
       - "scripts/build_web_dataset.py"
       - "scripts/build_portal_enrichment.py"
       - "scripts/build_news_feed.py"
@@ -88,6 +90,11 @@ jobs:
           print(f'snapshot validado: {total} registros')
           PY
 
+      - name: Refresh PNCP and Compras.gov for the public portal
+        run: |
+          python scripts/bootstrap_procurement_apis.py \
+            --database /tmp/suzano-aberta.sqlite3
+
       - name: Build static search dataset
         run: python scripts/build_web_dataset.py --database /tmp/suzano-aberta.sqlite3 --output web/data
 
@@ -115,10 +122,14 @@ jobs:
           enrichment = json.loads((root / "enrichment.json").read_text(encoding="utf-8"))
           if enrichment.get("detail_shards") != 16 or enrichment.get("relation_shards") != 16:
               raise SystemExit("camada de detalhes/relacionamentos incompleta")
+          if int(enrichment.get("procurements_raw", 0)) <= 4:
+              raise SystemExit("contratações estruturadas ainda não superaram o snapshot antigo")
+          if int(enrichment.get("procurement_sources", 0)) < 2:
+              raise SystemExit("contratações não possuem cobertura multi-fonte suficiente")
           with gzip.open("web/api/v1/contratacoes.json.gz", "rt", encoding="utf-8") as handle:
               payload = json.load(handle)
-          if "items" not in payload:
-              raise SystemExit("coleção pública de contratações inválida")
+          if not payload.get("items"):
+              raise SystemExit("coleção pública de contratações está vazia")
           print({"news": 5, **enrichment})
           PY
 
