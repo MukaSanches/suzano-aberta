@@ -54,6 +54,7 @@ A primeira versão inclui coleta real e rastreável de fontes públicas oficiais
 | Imprensa Oficial | edições públicas do Diário Oficial do Executivo |
 | Leis e decretos | documentos publicados na área oficial de legislação do Executivo |
 | Notícias institucionais | publicações recentes do portal municipal |
+| Integridade de fontes | revisão determinística de domínios externos não reconhecidos em páginas municipais selecionadas |
 
 A biblioteca também mantém um histórico local das mudanças observadas entre coletas. Ela não interpreta uma alteração como irregularidade; registra apenas que o conteúdo público observado mudou.
 
@@ -91,6 +92,12 @@ Verifique se as fontes oficiais estão acessíveis:
 suzano doctor
 ```
 
+Revise links externos inesperados em fontes municipais selecionadas:
+
+```bash
+suzano integridade
+```
+
 Colete o ano corrente:
 
 ```bash
@@ -121,6 +128,21 @@ Exporte o acervo local normalizado:
 suzano exportar dados-suzano.json
 ```
 
+## Integridade de fontes
+
+A partir da 0.1.1, o comando `suzano integridade` revisa links externos presentes em fontes municipais selecionadas. A verificação usa regras determinísticas: domínios do próprio município são aceitos, uma pequena lista de serviços externos conhecidos é permitida e os demais aparecem como itens para revisão humana.
+
+Um achado **não significa** que houve invasão, fraude ou irregularidade. Significa somente que uma página oficial referencia um domínio externo que o projeto ainda não reconhece como serviço esperado.
+
+Para automação, use:
+
+```bash
+suzano integridade --json
+suzano integridade --falhar-se-encontrar
+```
+
+A metodologia está documentada em [`docs/integridade.md`](docs/integridade.md).
+
 ## Uso como biblioteca Python
 
 ```python
@@ -129,8 +151,10 @@ from suzano_aberta import Suzano
 with Suzano(database="suzano.sqlite3") as suzano:
     relatorio = suzano.collect(year=2026)
     resultados = suzano.search("mobilidade")
+    integridade = suzano.integrity()
 
 print(relatorio.records)
+print(integridade.ok)
 for item in resultados[:5]:
     print(item.title)
     print(item.source.url)
@@ -190,6 +214,7 @@ A v0.1 segue regras conservadoras:
 - separa parsers por órgão;
 - possui testes para normalização, persistência e parsers críticos;
 - mantém um comando de diagnóstico das fontes;
+- mantém uma verificação separada de integridade de links externos;
 - executa CI em Python 3.11, 3.12 e 3.13;
 - executa smoke tests separados contra fontes públicas reais.
 
@@ -204,6 +229,7 @@ O inventário completo está em [`docs/fontes.md`](docs/fontes.md). Entre as fon
 - Dados estruturados de contratos: https://www.camarasuzano.sp.gov.br/dados-estruturados/
 - Diário Oficial do Legislativo: https://www.camarasuzano.sp.gov.br/doel/
 - Prefeitura Municipal de Suzano: https://suzano.sp.gov.br/
+- Portal de Transparência: https://suzano.sp.gov.br/transparencia/
 - Editais e licitações: https://suzano.sp.gov.br/editais-licitacoes/
 - Contas públicas: https://suzano.sp.gov.br/transparencia/contas-publicas/
 - Leis orçamentárias: https://suzano.sp.gov.br/transparencia/leis-orcamentarias/
@@ -215,6 +241,7 @@ O inventário completo está em [`docs/fontes.md`](docs/fontes.md). Entre as fon
 - [Fontes oficiais](docs/fontes.md)
 - [Metodologia de coleta](docs/metodologia.md)
 - [Modelo de dados](docs/modelo-de-dados.md)
+- [Integridade de fontes](docs/integridade.md)
 - [Limitações conhecidas](docs/limitacoes.md)
 - [Roteiro de demonstração institucional](docs/demo-institucional.md)
 
