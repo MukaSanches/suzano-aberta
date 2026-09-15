@@ -23,3 +23,31 @@ SOURCES: tuple[SourceDefinition, ...] = (
     SourceDefinition("prefeitura-leis", "Leis e decretos", LEIS_DECRETOS_URL, "Prefeitura Municipal de Suzano", "legislacao", "Documentos publicados na área oficial de legislação do Executivo."),
     SourceDefinition("prefeitura-noticias", "Notícias institucionais", NOTICIAS_URL, "Prefeitura Municipal de Suzano", "noticias", "Publicações institucionais recentes."),
 )
+
+
+# Entradas adicionais usadas pelo rastreador para aprofundar o acervo. Elas não
+# entram no `doctor`, porque parte do portal municipal aplica proteção automatizada
+# e pode responder 403 a runners públicos mesmo quando a página existe no navegador.
+EXPANSION_SEEDS: tuple[str, ...] = (
+    "https://suzano.sp.gov.br/transparencia/concursos-publicos/",
+    "https://suzano.sp.gov.br/transparencia/rh-e-processo-seletivo/",
+    "https://suzano.sp.gov.br/transparencia/terceiro-setor/",
+    "https://suzano.sp.gov.br/transparencia/leis-orcamentarias/parecer-previo-das-contas-anuais/",
+    "https://suzano.sp.gov.br/transparencia/contratos-de-financiamento/",
+    "https://suzano.sp.gov.br/transparencia/lei-aldir-blanc/",
+    "https://suzano.sp.gov.br/transparencia/transferencias-especiais/",
+    "https://suzano.sp.gov.br/transparencia/renuncia-de-receita/",
+    "https://suzano.sp.gov.br/transparencia/terceiro-setor/subvencoes-terceiro-setor/",
+    "https://suzano.sp.gov.br/transparencia/terceiro-setor/subvencoes-terceiro-setor/relatorio/",
+    "https://suzano.sp.gov.br/transparencia/terceiro-setor/convenios-terceiro-setor/",
+    "https://suzano.sp.gov.br/transparencia/terceiro-setor/ajustes/",
+    "https://suzano.sp.gov.br/transparencia/siafic/",
+    "https://suzano.sp.gov.br/transparencia/irmandade-da-santa-casa-de-misericordia-de-suzano/",
+    "https://suzano.sp.gov.br/transparencia/editais-e-licitacoes-covid-19/",
+    "https://suzano.sp.gov.br/assuntos-juridicos/parcerias-e-convenios/",
+    "https://suzano.sp.gov.br/wp-content/uploads/2026/05/PLANO-ESTRATEGICO-INSTITUCIONAL-2025-2028.pdf",
+    "https://suzano.sp.gov.br/wp-content/uploads/2026/05/SIGILO-LAI.pdf",
+    "https://www.camarasuzano.sp.gov.br/",
+    "https://www.camarasuzano.sp.gov.br/transparencia/",
+    "https://www.camarasuzano.sp.gov.br/doel/",
+)
