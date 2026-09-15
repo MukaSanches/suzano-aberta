@@ -15,12 +15,7 @@ from .snapshot import SnapshotError
 from .store import Store
 
 DEFAULT_DATABASE = Path("suzano-aberta.sqlite3")
-
-app = typer.Typer(
-    name="suzano",
-    help="Consulta, descobre, indexa e preserva dados públicos sobre Suzano.",
-    no_args_is_help=True,
-)
+app = typer.Typer(name="suzano", help="Consulta, descobre, indexa e preserva dados públicos sobre Suzano.", no_args_is_help=True)
 console = Console()
 
 
@@ -45,366 +40,155 @@ def _parse_years(value: str | None) -> list[int] | None:
 
 def _print_refresh_report(title: str, report: object) -> None:
     from .models import RefreshReport
-
     if not isinstance(report, RefreshReport):
         raise TypeError("Relatório inesperado")
     table = Table(title=title)
     table.add_column("Métrica")
     table.add_column("Valor", justify="right")
-    for key, value in (
-        ("Anos", ", ".join(str(item) for item in report.years)),
-        ("Registros oficiais observados", report.official_records_seen),
-        ("Páginas/arquivos/históricos", report.discovered_records_seen),
-        ("Novos registros", report.new_records),
-        ("Registros alterados", report.changed_records),
-        ("Total no índice", report.indexed_records),
-        ("Falhas toleradas", report.sources_failed),
-    ):
+    for key, value in (("Anos", ", ".join(str(item) for item in report.years)), ("Registros oficiais observados", report.official_records_seen), ("Páginas/arquivos/históricos", report.discovered_records_seen), ("Novos registros", report.new_records), ("Registros alterados", report.changed_records), ("Total no índice", report.indexed_records), ("Falhas toleradas", report.sources_failed)):
         table.add_row(key, str(value))
     console.print(table)
     for error in report.errors:
         console.print(f"[yellow]{error}[/yellow]")
 
 
+@app.command("console")
+def interactive_console(database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE) -> None:
+    """Abre o modo interativo, ideal para usar o Suzano Aberta pelo CMD do Windows."""
+    from .console import run_console
+    run_console(database)
+
+
 @app.command("fontes")
 def sources() -> None:
     """Lista as fontes públicas conhecidas pela biblioteca."""
     table = Table(title="Fontes oficiais catalogadas")
-    table.add_column("Chave")
-    table.add_column("Fonte")
-    table.add_column("Categoria")
-    table.add_column("Autoridade")
+    table.add_column("Chave"); table.add_column("Fonte"); table.add_column("Categoria"); table.add_column("Autoridade")
     for source in SOURCES:
         table.add_row(source.key, source.name, source.category, source.authority)
     console.print(table)
 
 
 @app.command("coletar")
-def collect(
-    year: Annotated[int | None, typer.Option("--ano", "-a", help="Ano de referência.")] = None,
-    profile: Annotated[
-        str,
-        typer.Option("--perfil", "-p", help="completo, legislativo ou executivo"),
-    ] = "completo",
-    database: Annotated[Path, typer.Option("--db", help="Arquivo SQLite local.")] = DEFAULT_DATABASE,
-) -> None:
+def collect(year: Annotated[int | None, typer.Option("--ano", "-a")] = None, profile: Annotated[str, typer.Option("--perfil", "-p")] = "completo", database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE) -> None:
     """Coleta fontes oficiais e atualiza o histórico local."""
     if profile not in {"completo", "legislativo", "executivo"}:
         raise typer.BadParameter("Use: completo, legislativo ou executivo")
     resolved_year = year if year is not None else _default_year()
     with Suzano(database=database, auto_sync=False) as suzano:
         report = suzano.collect(year=resolved_year, profile=cast(Profile, profile))
-    table = Table(title=f"Coleta {resolved_year}")
-    table.add_column("Métrica")
-    table.add_column("Valor", justify="right")
-    for key, value in (
-        ("Registros", report.records),
-        ("Fontes concluídas", report.sources_ok),
-        ("Fontes com falha", report.sources_failed),
-        ("Novos registros", report.new_records),
-        ("Registros alterados", report.changed_records),
-    ):
+    table = Table(title=f"Coleta {resolved_year}"); table.add_column("Métrica"); table.add_column("Valor", justify="right")
+    for key, value in (("Registros", report.records), ("Fontes concluídas", report.sources_ok), ("Fontes com falha", report.sources_failed), ("Novos registros", report.new_records), ("Registros alterados", report.changed_records)):
         table.add_row(key, str(value))
     console.print(table)
-    for error in report.errors:
-        console.print(f"[red]{error}[/red]")
-    if report.sources_failed:
-        raise typer.Exit(code=2)
+    for error in report.errors: console.print(f"[red]{error}[/red]")
+    if report.sources_failed: raise typer.Exit(code=2)
 
 
 @app.command("atualizar")
-def refresh(
-    years: Annotated[
-        str | None,
-        typer.Option(
-            "--anos",
-            help="Anos separados por vírgula. Sem informar, usa os três anos mais recentes.",
-        ),
-    ] = None,
-    profile: Annotated[
-        str,
-        typer.Option("--perfil", "-p", help="completo, legislativo ou executivo"),
-    ] = "completo",
-    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-    max_pages: Annotated[
-        int,
-        typer.Option("--max-paginas", help="Máximo de páginas web visitadas por execução."),
-    ] = 750,
-    max_depth: Annotated[
-        int,
-        typer.Option("--profundidade", help="Profundidade máxima do rastreador de links."),
-    ] = 3,
-    max_documents: Annotated[
-        int,
-        typer.Option("--max-arquivos", help="Máximo de arquivos cujo conteúdo será extraído nesta execução."),
-    ] = 250,
-    include_history: Annotated[
-        bool,
-        typer.Option("--historico", help="Consulta também índices públicos de preservação histórica da web."),
-    ] = False,
-    max_historical: Annotated[
-        int,
-        typer.Option("--max-historicos", help="Teto de registros históricos descobertos."),
-    ] = 10_000,
-    no_discovery: Annotated[
-        bool,
-        typer.Option("--sem-descoberta", help="Atualiza só os coletores oficiais."),
-    ] = False,
-    no_news: Annotated[
-        bool,
-        typer.Option("--sem-noticias-web", help="Não consulta o feed público de notícias da web."),
-    ] = False,
-) -> None:
-    """Executa atualização autônoma de páginas, documentos e, opcionalmente, histórico."""
-    if profile not in {"completo", "legislativo", "executivo"}:
-        raise typer.BadParameter("Use: completo, legislativo ou executivo")
-    if min(max_pages, max_depth, max_documents, max_historical) < 0:
-        raise typer.BadParameter("Os limites de coleta não podem ser negativos")
-
+def refresh(years: Annotated[str | None, typer.Option("--anos")] = None, profile: Annotated[str, typer.Option("--perfil", "-p")] = "completo", database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE, max_pages: Annotated[int, typer.Option("--max-paginas")] = 750, max_depth: Annotated[int, typer.Option("--profundidade")] = 3, max_documents: Annotated[int, typer.Option("--max-arquivos")] = 250, include_history: Annotated[bool, typer.Option("--historico")] = False, max_historical: Annotated[int, typer.Option("--max-historicos")] = 10_000, no_discovery: Annotated[bool, typer.Option("--sem-descoberta")] = False, no_news: Annotated[bool, typer.Option("--sem-noticias-web")] = False) -> None:
+    """Executa atualização autônoma de páginas, documentos e histórico."""
+    if profile not in {"completo", "legislativo", "executivo"}: raise typer.BadParameter("Use: completo, legislativo ou executivo")
+    if min(max_pages, max_depth, max_documents, max_historical) < 0: raise typer.BadParameter("Os limites de coleta não podem ser negativos")
     with Suzano(database=database, auto_sync=False) as suzano:
-        report = suzano.refresh(
-            years=_parse_years(years),
-            profile=cast(Profile, profile),
-            discover=not no_discovery,
-            include_news=not no_news,
-            max_pages=max_pages,
-            max_depth=max_depth,
-            max_documents=max_documents,
-            include_history=include_history,
-            max_historical_records=max_historical,
-        )
-
+        report = suzano.refresh(years=_parse_years(years), profile=cast(Profile, profile), discover=not no_discovery, include_news=not no_news, max_pages=max_pages, max_depth=max_depth, max_documents=max_documents, include_history=include_history, max_historical_records=max_historical)
     _print_refresh_report("Atualização autônoma — Suzano Aberta", report)
 
 
 @app.command("acervo-maximo")
-def maximum_archive(
-    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-    max_pages: Annotated[
-        int,
-        typer.Option("--max-paginas", help="Orçamento de páginas para o rastreamento profundo."),
-    ] = 6_000,
-    max_depth: Annotated[
-        int,
-        typer.Option("--profundidade", help="Profundidade máxima do rastreamento profundo."),
-    ] = 6,
-    max_documents: Annotated[
-        int,
-        typer.Option("--max-arquivos", help="Arquivos públicos a baixar e transformar em texto pesquisável."),
-    ] = 1_800,
-    max_historical: Annotated[
-        int,
-        typer.Option("--max-historicos", help="Registros de arquivos/URLs históricas a incorporar."),
-    ] = 40_000,
-    common_crawl_collections: Annotated[
-        int,
-        typer.Option("--colecoes-common-crawl", help="Quantidade de índices recentes do Common Crawl a consultar."),
-    ] = 12,
-) -> None:
-    """Expande agressivamente o acervo usando web atual, documentos e arquivos históricos."""
-    if min(
-        max_pages,
-        max_depth,
-        max_documents,
-        max_historical,
-        common_crawl_collections,
-    ) < 0:
-        raise typer.BadParameter("Os limites de coleta não podem ser negativos")
-
+def maximum_archive(database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE, max_pages: Annotated[int, typer.Option("--max-paginas")] = 6_000, max_depth: Annotated[int, typer.Option("--profundidade")] = 6, max_documents: Annotated[int, typer.Option("--max-arquivos")] = 1_800, max_historical: Annotated[int, typer.Option("--max-historicos")] = 40_000, common_crawl_collections: Annotated[int, typer.Option("--colecoes-common-crawl")] = 12) -> None:
+    """Expande agressivamente o acervo."""
+    if min(max_pages, max_depth, max_documents, max_historical, common_crawl_collections) < 0: raise typer.BadParameter("Os limites não podem ser negativos")
     with Suzano(database=database, auto_sync=False) as suzano:
-        report = suzano.max_archive(
-            max_pages=max_pages,
-            max_depth=max_depth,
-            max_documents=max_documents,
-            max_historical_records=max_historical,
-            common_crawl_collections=common_crawl_collections,
-        )
+        report = suzano.max_archive(max_pages=max_pages, max_depth=max_depth, max_documents=max_documents, max_historical_records=max_historical, common_crawl_collections=common_crawl_collections)
     _print_refresh_report("Acervo máximo — Suzano Aberta", report)
 
 
 @app.command("sincronizar")
-def sync(
-    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-) -> None:
-    """Baixa o snapshot público diário já indexado para pesquisa instantânea."""
+def sync(database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE) -> None:
+    """Baixa o snapshot público diário já indexado."""
     try:
-        with Suzano(database=database, auto_sync=False) as suzano:
-            count = suzano.sync()
+        with Suzano(database=database, auto_sync=False) as suzano: count = suzano.sync()
     except SnapshotError as exc:
-        console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(code=2) from exc
+        console.print(f"[red]{exc}[/red]"); raise typer.Exit(code=2) from exc
     console.print(f"Snapshot instalado com {count} registros pesquisáveis em {database}.")
 
 
 @app.command("reindexar")
-def reindex(
-    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-) -> None:
-    """Reconstrói e otimiza o índice FTS5 local."""
-    with Suzano(database=database, auto_sync=False) as suzano:
-        count = suzano.reindex()
+def reindex(database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE) -> None:
+    """Reconstrói o índice FTS5 local."""
+    with Suzano(database=database, auto_sync=False) as suzano: count = suzano.reindex()
     console.print(f"Índice reconstruído para {count} registros.")
 
 
 @app.command("buscar")
-def search(
-    query: Annotated[str, typer.Argument(help="Palavra ou expressão para procurar.")],
-    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-    limit: Annotated[int, typer.Option("--limite", "-n")] = 30,
-    no_web: Annotated[
-        bool,
-        typer.Option("--sem-web", help="Não consulta a web quando o índice local não tem resultado."),
-    ] = False,
-) -> None:
-    """Pesquisa o índice FTS local; em falta, tenta uma descoberta web rápida."""
+def search(query: Annotated[str, typer.Argument()], database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE, limit: Annotated[int, typer.Option("--limite", "-n")] = 30, no_web: Annotated[bool, typer.Option("--sem-web")] = False) -> None:
+    """Pesquisa o índice local e, se necessário, a web."""
     with Suzano(database=database) as suzano:
-        records = suzano.search(query, limit=limit, live_fallback=not no_web)
-        bootstrap_error = suzano.last_bootstrap_error
-    table = Table(title=f'Resultados para "{query}"')
-    table.add_column("Tipo")
-    table.add_column("Título")
-    table.add_column("Data")
-    table.add_column("Fonte")
-    for record in records:
-        table.add_row(record.kind, record.title, record.date or "—", record.source.url)
+        records = suzano.search(query, limit=limit, live_fallback=not no_web); bootstrap_error = suzano.last_bootstrap_error
+    table = Table(title=f'Resultados para "{query}"'); table.add_column("ID"); table.add_column("Tipo"); table.add_column("Título"); table.add_column("Data"); table.add_column("Fonte")
+    for record in records: table.add_row(record.id, record.kind, record.title, record.date or "—", record.source.url)
     console.print(table)
-    if not records and bootstrap_error:
-        console.print(f"[yellow]Snapshot remoto indisponível: {bootstrap_error}[/yellow]")
+    if not records and bootstrap_error: console.print(f"[yellow]Snapshot remoto indisponível: {bootstrap_error}[/yellow]")
 
 
 @app.command("ver")
-def show(
-    record_id: Annotated[str, typer.Argument(help="ID interno do registro.")],
-    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-) -> None:
-    """Exibe um registro em linguagem simples e a sua fonte."""
-    with Store(database) as store:
-        records = store.search(record_id, limit=5)
+def show(record_id: Annotated[str, typer.Argument()], database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE) -> None:
+    """Exibe um registro e sua fonte."""
+    with Store(database) as store: records = store.search(record_id, limit=5)
     record = next((item for item in records if item.id == record_id), None)
-    if record is None:
-        console.print("Registro não encontrado.")
-        raise typer.Exit(code=1)
+    if record is None: console.print("Registro não encontrado."); raise typer.Exit(code=1)
     console.print(explain(record))
 
 
 @app.command("panorama")
-def snapshot(
-    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-    as_json: Annotated[bool, typer.Option("--json")] = False,
-) -> None:
-    """Mostra um retrato do que já foi coletado."""
-    with Suzano(database=database, auto_sync=False) as suzano:
-        counts = suzano.snapshot()
-    if as_json:
-        console.print_json(json.dumps(counts, ensure_ascii=False))
-        return
-    table = Table(title="Suzano Aberta — panorama local")
-    table.add_column("Tipo")
-    table.add_column("Registros", justify="right")
-    for kind, count in counts.items():
-        table.add_row(kind, str(count))
+def snapshot(database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE, as_json: Annotated[bool, typer.Option("--json")] = False) -> None:
+    """Mostra um retrato do acervo local."""
+    with Suzano(database=database, auto_sync=False) as suzano: counts = suzano.snapshot()
+    if as_json: console.print_json(json.dumps(counts, ensure_ascii=False)); return
+    table = Table(title="Suzano Aberta — panorama local"); table.add_column("Tipo"); table.add_column("Registros", justify="right")
+    for kind, count in counts.items(): table.add_row(kind, str(count))
     console.print(table)
 
 
 @app.command("mudancas")
-def changes(
-    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-    limit: Annotated[int, typer.Option("--limite", "-n")] = 30,
-) -> None:
-    """Mostra registros novos ou alterados detectados entre coletas."""
-    with Suzano(database=database, auto_sync=False) as suzano:
-        items = suzano.changes(limit=limit)
-    table = Table(title="Mudanças detectadas")
-    table.add_column("Quando")
-    table.add_column("Tipo")
-    table.add_column("Registro")
-    table.add_column("Evento")
-    for item in items:
-        table.add_row(
-            item.observed_at.isoformat(timespec="seconds"),
-            item.kind,
-            item.record_id,
-            item.change_type,
-        )
+def changes(database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE, limit: Annotated[int, typer.Option("--limite", "-n")] = 30) -> None:
+    """Mostra registros novos ou alterados."""
+    with Suzano(database=database, auto_sync=False) as suzano: items = suzano.changes(limit=limit)
+    table = Table(title="Mudanças detectadas"); table.add_column("Quando"); table.add_column("Tipo"); table.add_column("Registro"); table.add_column("Evento")
+    for item in items: table.add_row(item.observed_at.isoformat(timespec="seconds"), item.kind, item.record_id, item.change_type)
     console.print(table)
 
 
 @app.command("integridade")
-def integrity(
-    as_json: Annotated[bool, typer.Option("--json", help="Saída JSON para automação.")] = False,
-    fail_on_finding: Annotated[
-        bool,
-        typer.Option(
-            "--falhar-se-encontrar",
-            help="Retorna código 3 quando houver domínio externo não reconhecido.",
-        ),
-    ] = False,
-) -> None:
-    """Revê links externos inesperados em fontes municipais selecionadas."""
-    with Suzano(auto_sync=False) as suzano:
-        report = suzano.integrity()
-
-    if as_json:
-        console.print_json(report.model_dump_json())
-    elif report.ok:
-        console.print("Nenhum domínio externo não reconhecido foi encontrado.")
+def integrity(as_json: Annotated[bool, typer.Option("--json")] = False, fail_on_finding: Annotated[bool, typer.Option("--falhar-se-encontrar")] = False) -> None:
+    """Revê links externos inesperados."""
+    with Suzano(auto_sync=False) as suzano: report = suzano.integrity()
+    if as_json: console.print_json(report.model_dump_json())
+    elif report.ok: console.print("Nenhum domínio externo não reconhecido foi encontrado.")
     else:
-        table = Table(title="Integridade de fontes — revisão recomendada")
-        table.add_column("Domínio")
-        table.add_column("Texto observado")
-        table.add_column("Destino")
-        for finding in report.findings:
-            table.add_row(
-                finding.host,
-                finding.evidence or "—",
-                finding.target_url,
-            )
-        console.print(table)
-        console.print(
-            "Os achados indicam apenas links externos fora da lista conhecida; "
-            "não constituem conclusão sobre incidente ou irregularidade."
-        )
-
-    if fail_on_finding and report.findings:
-        raise typer.Exit(code=3)
+        table = Table(title="Integridade de fontes — revisão recomendada"); table.add_column("Domínio"); table.add_column("Texto observado"); table.add_column("Destino")
+        for finding in report.findings: table.add_row(finding.host, finding.evidence or "—", finding.target_url)
+        console.print(table); console.print("Os achados são sinais para revisão; não constituem conclusão sobre irregularidade.")
+    if fail_on_finding and report.findings: raise typer.Exit(code=3)
 
 
 @app.command("doctor")
-def doctor(
-    as_json: Annotated[bool, typer.Option("--json", help="Saída JSON para automação.")] = False,
-) -> None:
-    """Verifica se as fontes oficiais catalogadas continuam acessíveis."""
-    with Suzano(auto_sync=False) as suzano:
-        statuses = suzano.doctor()
-    if as_json:
-        payload = [item.model_dump(mode="json") for item in statuses]
-        console.print_json(json.dumps(payload, ensure_ascii=False))
+def doctor(as_json: Annotated[bool, typer.Option("--json")] = False) -> None:
+    """Verifica se as fontes catalogadas continuam acessíveis."""
+    with Suzano(auto_sync=False) as suzano: statuses = suzano.doctor()
+    if as_json: console.print_json(json.dumps([item.model_dump(mode="json") for item in statuses], ensure_ascii=False))
     else:
-        table = Table(title="Saúde das fontes")
-        table.add_column("Fonte")
-        table.add_column("HTTP", justify="right")
-        table.add_column("Tempo", justify="right")
-        table.add_column("Estado")
-        for item in statuses:
-            table.add_row(
-                item.source,
-                str(item.status_code or "—"),
-                f"{item.elapsed_ms or 0} ms",
-                "OK" if item.ok else "FALHA",
-            )
+        table = Table(title="Saúde das fontes"); table.add_column("Fonte"); table.add_column("HTTP", justify="right"); table.add_column("Tempo", justify="right"); table.add_column("Estado")
+        for item in statuses: table.add_row(item.source, str(item.status_code or "—"), f"{item.elapsed_ms or 0} ms", "OK" if item.ok else "FALHA")
         console.print(table)
-    if any(not item.ok for item in statuses):
-        raise typer.Exit(code=2)
+    if any(not item.ok for item in statuses): raise typer.Exit(code=2)
 
 
 @app.command("exportar")
-def export_data(
-    output: Annotated[Path, typer.Argument(help="Arquivo .json de destino.")],
-    database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-) -> None:
-    """Exporta todos os registros preservados para JSON."""
-    with Store(database) as store:
-        count = store.export_json(output)
+def export_data(output: Annotated[Path, typer.Argument()], database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE) -> None:
+    """Exporta todos os registros para JSON."""
+    with Store(database) as store: count = store.export_json(output)
     console.print(f"{count} registros exportados para {output}")
 
 
