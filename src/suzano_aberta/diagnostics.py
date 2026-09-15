@@ -37,8 +37,16 @@ class LocalDiagnostic:
     checks: tuple[DiagnosticCheck, ...]
 
     @property
-    def healthy(self) -> bool:
+    def environment_ok(self) -> bool:
+        """Indica ausência de erro crítico na máquina/banco, mesmo sem dados instalados."""
+
         return not any(check.status == "error" for check in self.checks)
+
+    @property
+    def healthy(self) -> bool:
+        """Indica que o ambiente está sem erro crítico e possui acervo consultável."""
+
+        return self.environment_ok and self.records > 0
 
 
 def human_bytes(value: int) -> str:
