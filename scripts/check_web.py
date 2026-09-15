@@ -10,6 +10,7 @@ ROOT = Path("web")
 PAGES = [
     "index.html",
     "explorar.html",
+    "legislacao.html",
     "sobre.html",
     "desenvolvedores.html",
     "status.html",
@@ -82,6 +83,30 @@ def inspect_page(path: Path) -> None:
             fail(f"{path}: link local quebrado {href}")
 
 
+def validate_generated_data_api() -> None:
+    api_root = ROOT / "api"
+    if not api_root.exists():
+        return
+    required = [
+        api_root / "health" / "ready.json",
+        api_root / "v1" / "index.json",
+        api_root / "v1" / "stats.json",
+        api_root / "v1" / "records.json.gz",
+        api_root / "v1" / "documentos.json.gz",
+        api_root / "v1" / "legislacao.json.gz",
+    ]
+    for path in required:
+        if not path.exists() or path.stat().st_size == 0:
+            fail(f"Data API ausente ou vazia: {path}")
+    ready = json.loads(required[0].read_text(encoding="utf-8"))
+    if not ready.get("ready"):
+        fail("Data API não está pronta")
+    if int(ready.get("documents", 0)) < 1:
+        fail("Data API não pode ser publicada com zero documentos")
+    if int(ready.get("legislation", 0)) < 1:
+        fail("Data API não pode ser publicada sem leis, decretos ou proposições")
+
+
 def main() -> None:
     for name in PAGES:
         path = ROOT / name
@@ -103,7 +128,8 @@ def main() -> None:
         if not required.exists():
             fail(f"asset ausente: {required}")
 
-    print("Portal estático validado.")
+    validate_generated_data_api()
+    print("Portal estático e Data API validados.")
 
 
 if __name__ == "__main__":
