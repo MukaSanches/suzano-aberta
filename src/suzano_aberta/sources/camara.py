@@ -184,6 +184,7 @@ class CamaraSource(BaseSource):
                     kind="proposicao",
                     title=f"{type_name.title()} {number}",
                     summary=summary or None,
+                    date=session.date,
                     year=year,
                     attributes={"type": type_name, "number": number, "author": author, "sessions": [session_info]},
                     source=SourceRef(name=self.definition.name, url=url),
