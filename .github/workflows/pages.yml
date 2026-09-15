@@ -6,7 +6,11 @@ on:
     paths:
       - "web/**"
       - "brand/**"
+      - "src/suzano_aberta/sources/**"
+      - "src/suzano_aberta/catalog.py"
       - "scripts/build_web_dataset.py"
+      - "scripts/build_portal_enrichment.py"
+      - "scripts/build_news_feed.py"
       - "scripts/render_web_config.py"
       - "scripts/check_web.py"
       - ".github/workflows/pages.yml"
@@ -15,12 +19,16 @@ on:
     paths:
       - "web/**"
       - "brand/**"
+      - "src/suzano_aberta/sources/**"
+      - "src/suzano_aberta/catalog.py"
       - "scripts/build_web_dataset.py"
+      - "scripts/build_portal_enrichment.py"
+      - "scripts/build_news_feed.py"
       - "scripts/render_web_config.py"
       - "scripts/check_web.py"
       - ".github/workflows/pages.yml"
   schedule:
-    - cron: "23 8 * * *"
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -44,6 +52,13 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
+          cache: pip
+
+      - name: Install library
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip check
 
       - name: Download validated rolling snapshot
         shell: bash
@@ -76,6 +91,12 @@ jobs:
       - name: Build static search dataset
         run: python scripts/build_web_dataset.py --database /tmp/suzano-aberta.sqlite3 --output web/data
 
+      - name: Build cross-record relations and detail collections
+        run: python scripts/build_portal_enrichment.py --database /tmp/suzano-aberta.sqlite3 --output web/data
+
+      - name: Refresh five latest web news
+        run: python scripts/build_news_feed.py --output web/data/news.json
+
       - name: Render runtime configuration
         env:
           SUZANO_API_BASE: ${{ vars.SUZANO_API_BASE }}
@@ -84,7 +105,22 @@ jobs:
       - name: Validate portal
         run: |
           python scripts/check_web.py
-          python -m compileall -q scripts
+          python -m compileall -q scripts src
+          python - <<'PY'
+          import gzip, json, pathlib
+          root = pathlib.Path("web/data")
+          news = json.loads((root / "news.json").read_text(encoding="utf-8"))
+          if news.get("count") != 5 or len(news.get("items", [])) != 5:
+              raise SystemExit("feed de notícias não contém exatamente 5 itens")
+          enrichment = json.loads((root / "enrichment.json").read_text(encoding="utf-8"))
+          if enrichment.get("detail_shards") != 16 or enrichment.get("relation_shards") != 16:
+              raise SystemExit("camada de detalhes/relacionamentos incompleta")
+          with gzip.open("web/api/v1/contratacoes.json.gz", "rt", encoding="utf-8") as handle:
+              payload = json.load(handle)
+          if "items" not in payload:
+              raise SystemExit("coleção pública de contratações inválida")
+          print({"news": 5, **enrichment})
+          PY
 
       - name: Configure Pages
         if: github.event_name != 'pull_request'
