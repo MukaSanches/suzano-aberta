@@ -14,6 +14,7 @@ RecordKind = Literal[
     "lei",
     "decreto",
     "contrato",
+    "ata",
     "comissao",
     "presenca",
     "diario",
