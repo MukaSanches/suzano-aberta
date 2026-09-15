@@ -22,35 +22,27 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
-
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-
       - name: Install
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
           python -m pip check
-
       - name: Compile
         run: python -m compileall -q src tests
-
       - name: Static correctness checks
         run: ruff check --select E,F --ignore E501 .
-
       - name: Type check
         run: mypy src/suzano_aberta
-
       - name: Tests
         run: pytest --cov=suzano_aberta --cov-report=term-missing
-
       - name: CLI, API and library smoke tests
         run: |
           suzano --help
@@ -63,35 +55,31 @@ jobs:
           suzano reindexar --help
           suzano buscar --help
           suzano-api --help
-          python -c "from suzano_aberta import SuzanoClient, SuzanoIndex; assert SuzanoClient and SuzanoIndex"
+          python -c "from suzano_aberta import SuzanoClient, SuzanoIndex, build_entity_graph, quality_report; assert SuzanoClient and SuzanoIndex and build_entity_graph and quality_report"
           python -c "from suzano_aberta.api import app; schema=app.openapi(); assert schema['info']['version'] == '1.2.0'; required={'/v1/documents','/v1/legislation','/v1/procurements','/v1/capabilities','/v1/sources','/v1/catalog','/v1/records/{record_id}/provenance'}; assert required.issubset(schema['paths'])"
 
   package:
     name: Build package
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
           cache: pip
-
       - name: Build wheel and source archive
         run: |
           python -m pip install --upgrade pip build
           python -m build
-
       - name: Install built wheel
         run: |
           python -m pip install dist/*.whl
           python -m pip check
-          python -c "import suzano_aberta; assert suzano_aberta.__version__ == '0.6.0'"
-          python -c "from suzano_aberta import SuzanoClient, SuzanoIndex; assert SuzanoClient and SuzanoIndex"
+          python -c "import importlib.metadata as m, suzano_aberta; assert suzano_aberta.__version__ == m.version('suzano-aberta')"
+          python -c "from suzano_aberta import SuzanoClient, SuzanoIndex, build_entity_graph, quality_report; assert SuzanoClient and SuzanoIndex and build_entity_graph and quality_report"
           python -c "from suzano_aberta.api import app; schema=app.openapi(); assert schema['info']['version'] == '1.2.0'; assert '/v1/search' in schema['paths']; assert '/v1/procurements' in schema['paths']; assert '/v1/catalog' in schema['paths']"
           suzano --help
           suzano-api --help
@@ -100,13 +88,10 @@ jobs:
     name: Build API container
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       - name: Build image
         run: docker build -t suzano-aberta-api:ci .
-
       - name: Container CLI smoke test
         run: docker run --rm suzano-aberta-api:ci suzano-api --help
