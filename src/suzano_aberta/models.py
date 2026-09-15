@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from hashlib import sha256
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+
+RecordKind = Literal[
+    "sessao",
+    "vereador",
+    "proposicao",
+    "contrato",
+    "comissao",
+    "presenca",
+    "diario",
+    "licitacao",
+    "secretaria",
+    "documento_fiscal",
+    "documento_orcamentario",
+    "ato_oficial",
+    "noticia",
+]
+
+
+class SourceRef(BaseModel):
+    name: str
+    url: str
+    collected_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    content_sha256: str | None = None
+
+
+class PublicRecord(BaseModel):
+    id: str
+    kind: RecordKind
+    title: str
+    summary: str | None = None
+    date: str | None = None
+    year: int | None = None
+    attributes: dict[str, Any] = Field(default_factory=dict)
+    source: SourceRef
+
+    def canonical_payload(self) -> dict[str, Any]:
+        """Payload sem metadados voláteis, usado para detectar alterações reais."""
+        return {
+            "id": self.id,
+            "kind": self.kind,
+            "title": self.title,
+            "summary": self.summary,
+            "date": self.date,
+            "year": self.year,
+            "attributes": self.attributes,
+            "source_name": self.source.name,
+            "source_url": self.source.url,
+        }
+
+    def fingerprint(self) -> str:
+        import json
+
+        raw = json.dumps(
+            self.canonical_payload(),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        ).encode("utf-8")
+        return sha256(raw).hexdigest()
+
+
+class SourceStatus(BaseModel):
+    source: str
+    url: str
+    ok: bool
+    status_code: int | None = None
+    elapsed_ms: int | None = None
+    detail: str | None = None
+
+
+class Change(BaseModel):
+    record_id: str
+    kind: str
+    change_type: Literal["novo", "alterado", "ausente"]
+    observed_at: datetime
+    previous_hash: str | None = None
+    current_hash: str | None = None
+
+
+class CollectionReport(BaseModel):
+    started_at: datetime
+    finished_at: datetime
+    records: int
+    sources_ok: int
+    sources_failed: int
+    new_records: int
+    changed_records: int
+    errors: list[str] = Field(default_factory=list)
