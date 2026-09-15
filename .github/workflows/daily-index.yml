@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/daily-index.yml"
+      - "scripts/bootstrap_documents.py"
   schedule:
     - cron: "17 07 * * *"
 
@@ -19,7 +20,7 @@ concurrency:
 jobs:
   refresh-index:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -52,8 +53,15 @@ jobs:
           fi
           rm -f suzano-aberta.sqlite3.gz
 
+      - name: Bootstrap official documents first
+        run: |
+          python scripts/bootstrap_documents.py \
+            --database suzano-aberta.sqlite3 \
+            --max-pages 180 \
+            --max-documents 650
+
       - name: Refresh official sources, web discovery and news mentions
-        run: suzano atualizar --max-paginas 1200 --profundidade 3
+        run: suzano atualizar --max-paginas 1200 --profundidade 3 --max-arquivos 650
 
       - name: Validate and describe SQLite index
         shell: bash
@@ -64,25 +72,46 @@ jobs:
           from datetime import UTC, datetime
 
           db = sqlite3.connect("suzano-aberta.sqlite3")
-          # Materializa todas as páginas WAL no arquivo principal antes de compactar.
           db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
           check = db.execute("PRAGMA quick_check").fetchone()[0]
           if str(check).lower() != "ok":
               raise SystemExit(f"quick_check failed: {check}")
+
           total = db.execute("SELECT COUNT(*) FROM records WHERE active=1").fetchone()[0]
           if total < 1:
               raise SystemExit("refusing to publish an empty index")
+
           counts = dict(db.execute(
               "SELECT kind, COUNT(*) FROM records WHERE active=1 GROUP BY kind ORDER BY kind"
           ).fetchall())
+          document_kinds = {
+              "arquivo",
+              "arquivo_historico",
+              "diario",
+              "documento_fiscal",
+              "documento_orcamentario",
+          }
+          documents = sum(int(counts.get(kind, 0)) for kind in document_kinds)
+          if documents < 1:
+              raise SystemExit("refusing to publish a snapshot with zero documents")
+
+          extracted = db.execute(
+              "SELECT COUNT(*) FROM records WHERE active=1 AND kind='arquivo' "
+              "AND payload_json LIKE '%\"texto_extraido\":true%'"
+          ).fetchone()[0]
           fts = db.execute("SELECT COUNT(*) FROM records_fts").fetchone()[0]
+          if fts != total:
+              raise SystemExit(f"FTS mismatch: {fts} != {total}")
           db.close()
+
           metadata = {
               "generated_at": datetime.now(UTC).isoformat(),
               "records": total,
+              "documents": documents,
+              "documents_with_extracted_text": extracted,
               "fts_rows": fts,
               "counts_by_kind": counts,
-              "schema": 2,
+              "schema": 3,
           }
           with open("data-latest.json", "w", encoding="utf-8") as handle:
               json.dump(metadata, handle, ensure_ascii=False, indent=2)

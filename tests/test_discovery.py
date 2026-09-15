@@ -34,6 +34,10 @@ class FakeHttp:
                 b"<html><body><h1>Saude publica</h1>"
                 b"<p>Unidades, atendimento e informacoes de saude da cidade.</p></body></html>",
             ),
+            "https://example.test/manual.pdf": (
+                "application/pdf",
+                b"%PDF-1.4\n% documento de teste\n",
+            ),
         }
 
     def get(self, url: str, *, attempts: int = 3) -> HttpResult:
@@ -69,3 +73,20 @@ def test_discovery_uses_sitemap_and_crawled_links(tmp_path: Path) -> None:
     with Store(database) as store:
         store.upsert_many(records)
         assert store.search("matriculas escola")[0].title == "Educação municipal"
+
+
+def test_direct_document_seed_is_indexed_without_page_crawl() -> None:
+    discovery = WebDiscovery(FakeHttp())  # type: ignore[arg-type]
+    records = discovery.discover(
+        ["https://example.test/manual.pdf"],
+        max_pages=1,
+        max_depth=0,
+        max_documents=1,
+        include_sitemaps=False,
+    )
+
+    assert len(records) == 1
+    assert records[0].kind == "arquivo"
+    assert records[0].title == "manual.pdf"
+    assert records[0].source.content_sha256 is not None
+    assert discovery.stats.documents_fetched == 1

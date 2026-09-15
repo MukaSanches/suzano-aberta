@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: suzano-aberta-api
+    runtime: python
+    plan: free
+    buildCommand: python -m pip install --upgrade pip && python -m pip install .
+    startCommand: uvicorn suzano_aberta.api:app --host 0.0.0.0 --port $PORT --no-access-log
+    healthCheckPath: /health/ready
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: SUZANO_API_DATABASE
+        value: /tmp/suzano-aberta.sqlite3
+      - key: SUZANO_API_AUTO_SYNC
+        value: "true"
+      - key: SUZANO_API_SYNC_INTERVAL_SECONDS
+        value: "3600"
+      - key: SUZANO_API_CORS_ORIGINS
+        value: https://mukasanches.github.io
