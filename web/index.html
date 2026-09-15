@@ -13,8 +13,9 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./assets/styles.css">
   <link rel="stylesheet" href="./assets/portal-v2.css">
+  <link rel="stylesheet" href="./assets/portal-v3.css">
   <script defer src="./assets/app.js"></script>
-  <script defer src="./assets/portal-v2.js"></script>
+  <script defer src="./assets/portal-v3.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -60,9 +61,9 @@
 
   <section class="section section-tint">
     <div class="wrap">
-      <div class="section-head"><div><span class="eyebrow">Agora em Suzano</span><h2>5 últimas notícias encontradas na web</h2></div><p>O bloco combina publicações institucionais e menções públicas recentes, elimina duplicatas e republica exatamente cinco itens.</p></div>
-      <div class="news-grid" data-news-list aria-live="polite"><div class="loading">Atualizando notícias…</div></div>
-      <p class="search-help" data-news-generated>Atualização programada a cada 30 minutos.</p>
+      <div class="section-head"><div><span class="eyebrow">Agora em Suzano</span><h2>O que está acontecendo na cidade</h2></div><p>Um digest automático das publicações mais recentes, sempre apontando para a fonte original.</p></div>
+      <div data-news-list aria-live="polite"><div class="loading">Atualizando notícias…</div></div>
+      <div class="news-digest-meta"><strong data-news-source-summary>checando fontes…</strong><span data-news-generated>Nova varredura a cada 30 minutos.</span></div>
     </div>
   </section>
 
@@ -71,7 +72,7 @@
       <div class="section-head"><div><span class="eyebrow">Explorar</span><h2>Comece pelo assunto, não pelo órgão</h2></div><p>As coleções especializadas oferecem contexto sem esconder os mesmos registros da busca geral.</p></div>
       <div class="cards">
         <article class="card"><div class="card-kicker">Legislativo</div><h3>Leis e proposições</h3><p>Normas e matérias legislativas com leitura da fonte oficial e vínculos encontrados no acervo.</p><a class="card-link" href="./legislacao.html">Abrir legislação</a></article>
-        <article class="card"><div class="card-kicker">Compras públicas</div><h3>Licitações e contratos</h3><p>Editais, pregões, dispensas, contratos, processos e anexos da Prefeitura e da Câmara.</p><a class="card-link" href="./contratacoes.html">Abrir contratações</a></article>
+        <article class="card"><div class="card-kicker">Compras públicas</div><h3>Licitações e contratos</h3><p>Editais, pregões, dispensas, contratos, atas, processos e anexos cruzados entre fontes municipais e nacionais.</p><a class="card-link" href="./contratacoes.html">Abrir contratações</a></article>
         <article class="card"><div class="card-kicker">Documentos</div><h3>Arquivos públicos</h3><p>PDF, planilhas, documentos de texto e outros arquivos indexados com data e fonte.</p><a class="card-link" href="./explorar.html?scope=documents">Ver documentos</a></article>
         <article class="card"><div class="card-kicker">Executivo</div><h3>Atos e Diário Oficial</h3><p>Publicações administrativas, imprensa oficial, leis e decretos localizados nas fontes catalogadas.</p><a class="card-link" href="./explorar.html?q=decreto">Pesquisar atos</a></article>
         <article class="card"><div class="card-kicker">Cidade</div><h3>Serviços e secretarias</h3><p>Informações institucionais preservadas para facilitar a navegação por temas municipais.</p><a class="card-link" href="./explorar.html?q=secretaria">Pesquisar secretarias</a></article>
@@ -115,9 +116,9 @@
     <div class="wrap">
       <div class="section-head"><div><span class="eyebrow">Como funciona</span><h2>Da fonte pública à consulta cruzada</h2></div><p>Coleta, enriquecimento, validação e publicação são etapas separadas para reduzir erros e preservar rastreabilidade.</p></div>
       <div class="architecture">
-        <div class="arch-row"><strong>1. Descobrir</strong><span>Prefeitura, Câmara, transparência, legislação, sitemaps, documentos e índices públicos.</span></div>
-        <div class="arch-row"><strong>2. Enriquecer</strong><span>Páginas de detalhe fornecem processo, modalidade, anexos, situação, texto e outros metadados.</span></div>
-        <div class="arch-row"><strong>3. Relacionar</strong><span>CNPJ, processo, fornecedor, norma e URL criam vínculos explicáveis entre registros.</span></div>
+        <div class="arch-row"><strong>1. Descobrir</strong><span>Prefeitura, Câmara, PNCP, Compras.gov.br, transparência, legislação, sitemaps, documentos e índices públicos.</span></div>
+        <div class="arch-row"><strong>2. Enriquecer</strong><span>Páginas e APIs de detalhe fornecem processo, modalidade, anexos, situação, valores, fornecedores e outros metadados.</span></div>
+        <div class="arch-row"><strong>3. Relacionar</strong><span>CNPJ, processo, fornecedor, número de controle PNCP, norma e URL criam vínculos explicáveis entre registros.</span></div>
         <div class="arch-row"><strong>4. Validar</strong><span>SQLite, busca, detalhes, relações, checksums e portal são verificados antes da publicação.</span></div>
         <div class="arch-row"><strong>5. Servir</strong><span>Portal, Data API, Python, CLI e snapshots usam o mesmo núcleo de dados.</span></div>
       </div>
