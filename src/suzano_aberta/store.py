@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Iterable, Literal, cast
+from typing import Literal, cast
 
 from .models import Change, PublicRecord
 
@@ -71,7 +72,6 @@ class Store:
                 ).fetchone()
                 payload = record.model_dump_json()
                 if previous is None:
-                    change_type = "novo"
                     self._conn.execute(
                         """
                         INSERT INTO records(
@@ -95,43 +95,45 @@ class Store:
                         Change(
                             record_id=record.id,
                             kind=record.kind,
-                            change_type=change_type,
+                            change_type="novo",
                             observed_at=now,
                             current_hash=content_hash,
                         )
                     )
-                else:
-                    previous_hash = str(previous["content_hash"])
-                    changed = previous_hash != content_hash
-                    self._conn.execute(
-                        """
-                        UPDATE records
-                        SET kind=?, title=?, source_name=?, source_url=?, last_seen=?,
-                            content_hash=?, payload_json=?, active=1
-                        WHERE id=?
-                        """,
-                        (
-                            record.kind,
-                            record.title,
-                            record.source.name,
-                            record.source.url,
-                            now.isoformat(),
-                            content_hash,
-                            payload,
-                            record.id,
-                        ),
-                    )
-                    if changed:
-                        changes.append(
-                            Change(
-                                record_id=record.id,
-                                kind=record.kind,
-                                change_type="alterado",
-                                observed_at=now,
-                                previous_hash=previous_hash,
-                                current_hash=content_hash,
-                            )
+                    continue
+
+                previous_hash = str(previous["content_hash"])
+                changed = previous_hash != content_hash
+                self._conn.execute(
+                    """
+                    UPDATE records
+                    SET kind=?, title=?, source_name=?, source_url=?, last_seen=?,
+                        content_hash=?, payload_json=?, active=1
+                    WHERE id=?
+                    """,
+                    (
+                        record.kind,
+                        record.title,
+                        record.source.name,
+                        record.source.url,
+                        now.isoformat(),
+                        content_hash,
+                        payload,
+                        record.id,
+                    ),
+                )
+                if changed:
+                    changes.append(
+                        Change(
+                            record_id=record.id,
+                            kind=record.kind,
+                            change_type="alterado",
+                            observed_at=now,
+                            previous_hash=previous_hash,
+                            current_hash=content_hash,
                         )
+                    )
+
             for change in changes:
                 self._conn.execute(
                     """
@@ -170,10 +172,17 @@ class Store:
             Change(
                 record_id=str(row["record_id"]),
                 kind=str(row["kind"]),
-                change_type=cast(Literal["novo", "alterado", "ausente"], str(row["change_type"])),
+                change_type=cast(
+                    Literal["novo", "alterado", "ausente"],
+                    str(row["change_type"]),
+                ),
                 observed_at=datetime.fromisoformat(str(row["observed_at"])),
-                previous_hash=str(row["previous_hash"]) if row["previous_hash"] else None,
-                current_hash=str(row["current_hash"]) if row["current_hash"] else None,
+                previous_hash=str(row["previous_hash"])
+                if row["previous_hash"]
+                else None,
+                current_hash=str(row["current_hash"])
+                if row["current_hash"]
+                else None,
             )
             for row in rows
         ]
@@ -185,7 +194,12 @@ class Store:
         return {str(row["kind"]): int(row["total"]) for row in rows}
 
     def export_json(self, path: str | Path) -> int:
-        rows = self._conn.execute("SELECT payload_json FROM records ORDER BY kind, id").fetchall()
+        rows = self._conn.execute(
+            "SELECT payload_json FROM records ORDER BY kind, id"
+        ).fetchall()
         payload = [json.loads(str(row["payload_json"])) for row in rows]
-        Path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        Path(path).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
         return len(payload)
