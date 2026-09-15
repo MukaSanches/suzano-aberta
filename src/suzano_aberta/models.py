@@ -35,6 +35,10 @@ class SourceRef(BaseModel):
     url: str
     collected_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     content_sha256: str | None = None
+    authority: str | None = None
+    category: str | None = None
+    retrieval_method: str | None = None
+    media_type: str | None = None
 
 
 class PublicRecord(BaseModel):
@@ -59,6 +63,8 @@ class PublicRecord(BaseModel):
             "attributes": self.attributes,
             "source_name": self.source.name,
             "source_url": self.source.url,
+            "source_authority": self.source.authority,
+            "source_category": self.source.category,
         }
 
     def fingerprint(self) -> str:
