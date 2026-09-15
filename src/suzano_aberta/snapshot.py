@@ -92,6 +92,8 @@ def sync_latest_snapshot(
                     "SELECT COUNT(*) FROM records WHERE active=1"
                 ).fetchone()
                 count = int(row[0]) if row is not None else 0
+                if count < 1:
+                    raise SnapshotError("Snapshot vazio; arquivo recusado.")
             finally:
                 connection.close()
         except sqlite3.DatabaseError as exc:
@@ -99,5 +101,11 @@ def sync_latest_snapshot(
 
         install_path = temp_root / "install.sqlite3"
         os.replace(extracted, install_path)
+        for suffix in ("-wal", "-shm"):
+            sidecar = Path(f"{target}{suffix}")
+            try:
+                sidecar.unlink()
+            except FileNotFoundError:
+                pass
         os.replace(install_path, target)
         return count
