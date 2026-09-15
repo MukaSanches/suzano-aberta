@@ -31,6 +31,8 @@ class SourceCount(BaseModel):
 
 class StatsResponse(BaseModel):
     records: int = Field(ge=0)
+    documents: int = Field(default=0, ge=0)
+    legislation: int = Field(default=0, ge=0)
     first_seen: str | None = None
     last_seen: str | None = None
     fts_enabled: bool
@@ -44,6 +46,8 @@ class HealthResponse(BaseModel):
     status: str
     ready: bool
     records: int = Field(default=0, ge=0)
+    documents: int = Field(default=0, ge=0)
+    legislation: int = Field(default=0, ge=0)
     detail: str | None = None
 
 
