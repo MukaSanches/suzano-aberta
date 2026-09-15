@@ -1,0 +1,36 @@
+name: Bug
+description: Relate um comportamento incorreto reproduzível.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: O que aconteceu?
+      description: Descreva o comportamento observado e o esperado.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Como reproduzir?
+      description: Inclua o menor conjunto de passos possível.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versão
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python
+      placeholder: 3.13
+  - type: textarea
+    id: logs
+    attributes:
+      label: Saída relevante
+      render: shell
