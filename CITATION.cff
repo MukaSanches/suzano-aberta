@@ -5,14 +5,15 @@ type: software
 authors:
   - name: MukaSanches
 repository-code: "https://github.com/MukaSanches/suzano-aberta"
-url: "https://github.com/MukaSanches/suzano-aberta"
-version: 0.4.0
+url: "https://mukasanches.github.io/suzano-aberta/"
+version: 0.8.0
 date-released: 2026-09-15
 license: Apache-2.0
 keywords:
   - Suzano
   - dados abertos
   - transparência
-  - governo aberto
+  - tecnologia cívica
   - API
+  - SQLite
   - preservação digital
