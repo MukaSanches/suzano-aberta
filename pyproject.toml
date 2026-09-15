@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "MukaSanches"}]
-keywords = ["suzano", "dados-abertos", "transparencia", "governo-aberto", "civico", "legislativo", "busca", "fts5", "crawler", "arquivo", "documentos", "common-crawl", "internet-archive", "api", "openapi", "proveniencia", "dcat", "entidades", "qualidade-de-dados"]
+keywords = ["suzano", "dados-abertos", "transparencia", "governo-aberto", "civico", "legislativo", "busca", "fts5", "crawler", "arquivo", "documentos", "common-crawl", "internet-archive", "api", "openapi", "proveniencia", "dcat", "entidades", "qualidade-de-dados", "cli", "windows"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -48,6 +48,7 @@ dev = [
 [project.scripts]
 suzano = "suzano_aberta.cli:app"
 suzano-aberta = "suzano_aberta.cli:app"
+suzano-console = "suzano_aberta.console:main"
 suzano-api = "suzano_aberta.api.__main__:main"
 
 [project.urls]
