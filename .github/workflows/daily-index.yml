@@ -71,7 +71,21 @@ jobs:
             --from-year 1949 \
             --to-year "$(date -u +%Y)"
 
-      - name: Publish document-safe checkpoint
+      - name: Refresh structured official sources before checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          CURRENT_YEAR="$(date -u +%Y)"
+          YEARS="$((CURRENT_YEAR - 2)),$((CURRENT_YEAR - 1)),${CURRENT_YEAR}"
+          suzano atualizar \
+            --anos "${YEARS}" \
+            --sem-descoberta \
+            --sem-noticias-web \
+            --max-paginas 0 \
+            --profundidade 0 \
+            --max-arquivos 0
+
+      - name: Publish structured safe checkpoint
         shell: bash
         run: |
           set -euo pipefail
@@ -92,28 +106,47 @@ jobs:
               "documento_fiscal", "documento_orcamentario", "lei", "decreto",
           }
           legislation_kinds = {"lei", "decreto", "proposicao"}
+          procurement_kinds = {"licitacao", "contrato", "ata"}
           documents = sum(int(counts.get(kind, 0)) for kind in document_kinds)
           legislation = sum(int(counts.get(kind, 0)) for kind in legislation_kinds)
+          procurements = sum(int(counts.get(kind, 0)) for kind in procurement_kinds)
+          procurement_api_records = db.execute(
+              "SELECT COUNT(*) FROM records WHERE active=1 "
+              "AND (id LIKE 'pncp:%' OR id LIKE 'comprasgov:%')"
+          ).fetchone()[0]
           extracted = db.execute(
               "SELECT COUNT(*) FROM records WHERE active=1 AND kind='arquivo' "
               "AND payload_json LIKE '%\"texto_extraido\":true%'"
           ).fetchone()[0]
           fts = db.execute("SELECT COUNT(*) FROM records_fts").fetchone()[0]
           db.close()
-          if str(check).lower() != "ok" or total < 1 or documents < 1 or legislation < 1 or fts != total:
+          if (
+              str(check).lower() != "ok"
+              or total < 1
+              or documents < 1
+              or legislation < 1
+              or procurements < 1
+              or procurement_api_records < 1
+              or fts != total
+          ):
               raise SystemExit(
-                  f"checkpoint inválido: check={check} records={total} documents={documents} legislation={legislation} fts={fts}"
+                  "checkpoint inválido: "
+                  f"check={check} records={total} documents={documents} "
+                  f"legislation={legislation} procurements={procurements} "
+                  f"procurement_api_records={procurement_api_records} fts={fts}"
               )
           metadata = {
               "generated_at": datetime.now(UTC).isoformat(),
               "records": total,
               "documents": documents,
               "legislation": legislation,
+              "procurements": procurements,
+              "procurement_api_records": procurement_api_records,
               "documents_with_extracted_text": extracted,
               "fts_rows": fts,
               "counts_by_kind": counts,
-              "schema": 4,
-              "profile": "document-legislation-checkpoint",
+              "schema": 5,
+              "profile": "structured-checkpoint",
           }
           with open("data-latest.json", "w", encoding="utf-8") as handle:
               json.dump(metadata, handle, ensure_ascii=False, indent=2)
@@ -163,12 +196,22 @@ jobs:
               "decreto",
           }
           legislation_kinds = {"lei", "decreto", "proposicao"}
+          procurement_kinds = {"licitacao", "contrato", "ata"}
           documents = sum(int(counts.get(kind, 0)) for kind in document_kinds)
           legislation = sum(int(counts.get(kind, 0)) for kind in legislation_kinds)
+          procurements = sum(int(counts.get(kind, 0)) for kind in procurement_kinds)
+          procurement_api_records = db.execute(
+              "SELECT COUNT(*) FROM records WHERE active=1 "
+              "AND (id LIKE 'pncp:%' OR id LIKE 'comprasgov:%')"
+          ).fetchone()[0]
           if documents < 1:
               raise SystemExit("refusing to publish a snapshot with zero documents")
           if legislation < 1:
               raise SystemExit("refusing to publish a snapshot with zero legislation")
+          if procurements < 1:
+              raise SystemExit("refusing to publish a snapshot with zero procurements")
+          if procurement_api_records < 1:
+              raise SystemExit("refusing to publish a snapshot without PNCP/Compras.gov records")
 
           extracted = db.execute(
               "SELECT COUNT(*) FROM records WHERE active=1 AND kind='arquivo' "
@@ -184,10 +227,12 @@ jobs:
               "records": total,
               "documents": documents,
               "legislation": legislation,
+              "procurements": procurements,
+              "procurement_api_records": procurement_api_records,
               "documents_with_extracted_text": extracted,
               "fts_rows": fts,
               "counts_by_kind": counts,
-              "schema": 4,
+              "schema": 5,
               "profile": "daily-full",
           }
           with open("data-latest.json", "w", encoding="utf-8") as handle:
