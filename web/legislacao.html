@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Consulte leis, decretos e proposições públicas de Suzano em ordem cronológica."><meta name="theme-color" content="#102A43">
+  <title>Leis e proposições — Suzano Aberta</title><link rel="icon" href="./assets/favicon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./assets/styles.css"><script defer src="./assets/app.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#conteudo">Ir para o conteúdo</a><div class="independence-banner"><div class="wrap"><span class="banner-dot" aria-hidden="true"></span><span><strong>Consulta legislativa independente.</strong> A situação jurídica e a tramitação devem ser confirmadas na fonte oficial.</span></div></div>
+<header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav" aria-label="Navegação principal"><a href="./explorar.html">Explorar</a><a aria-current="page" href="./legislacao.html">Legislação</a><a href="./sobre.html">Sobre</a><a href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
+<main id="conteudo">
+<section class="page-hero"><div class="wrap"><span class="eyebrow">Legislação municipal</span><h1>Leis, decretos e proposições</h1><p class="lead">Uma coleção própria para acompanhar normas publicadas e matérias apresentadas na Câmara, sem retirar esses registros da busca geral do Suzano Aberta.</p></div></section>
+<section class="section section-tint"><div class="wrap"><div class="trust-grid"><div class="trust-item"><strong>Leis</strong><span>Normas identificadas nas fontes oficiais do município.</span></div><div class="trust-item"><strong>Decretos</strong><span>Atos normativos do Executivo classificados separadamente.</span></div><div class="trust-item"><strong>Proposições</strong><span>Projetos, requerimentos, indicações, moções, vetos e matérias legislativas.</span></div><div class="trust-item"><strong>Fonte original</strong><span>Cada resultado mantém o caminho para conferência no órgão responsável.</span></div></div></div></section>
+<section class="section"><div class="wrap results-shell">
+  <form class="filters" data-search-form data-explore-form role="search">
+    <input type="hidden" name="scope" value="legislation">
+    <div class="field"><label for="q">Assunto, número ou autor</label><input id="q" name="q" type="search" maxlength="200" autocomplete="off" placeholder="Ex.: mobilidade, 123/2026"></div>
+    <div class="field"><label for="kind">Tipo</label><select id="kind" name="kind"><option value="">Leis, decretos e proposições</option><option value="lei">Leis</option><option value="decreto">Decretos</option><option value="proposicao">Proposições</option></select></div>
+    <div class="field"><label for="date_from">De</label><input id="date_from" name="date_from" type="date"></div>
+    <div class="field"><label for="date_to">Até</label><input id="date_to" name="date_to" type="date"></div>
+    <div class="field"><label for="year">Ano</label><input id="year" name="year" type="number" min="1900" max="2100" inputmode="numeric" placeholder="2026"></div>
+    <div class="field"><label for="sort">Ordenar</label><select id="sort" name="sort"><option value="date_desc">Mais recentes primeiro</option><option value="date_asc">Mais antigos primeiro</option><option value="relevance">Relevância da busca</option></select></div>
+    <button class="button" type="submit">Aplicar filtros</button>
+    <p class="search-help"><a href="./explorar.html">Voltar ao acervo completo</a></p>
+  </form>
+  <div>
+    <div class="notice"><strong>Proposição não é lei.</strong> Projetos e outras matérias legislativas permanecem identificados como proposições até que a fonte pública permita comprovar outro estado.</div>
+    <div class="section-head" style="margin-top:2rem"><div><p class="result-count" data-result-count>Carregando coleção legislativa…</p><p class="search-help">Consulta: <strong data-search-mode>seleção automática</strong> · mais recentes primeiro</p></div></div>
+    <div data-results aria-live="polite"><p class="loading" role="status">Carregando leis e proposições…</p></div>
+  </div>
+</div></section>
+</main>
+<footer class="footer"><div class="wrap"><div class="footer-small">Esta página organiza dados públicos e não substitui a consulta oficial à Prefeitura ou à Câmara Municipal de Suzano.</div></div></footer>
+</body></html>
