@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "suzano-aberta"
-version = "0.1.1"
-description = "Infraestrutura aberta para coleta, organização e rastreabilidade de dados públicos do município de Suzano, SP."
+version = "0.2.0"
+description = "Infraestrutura autônoma para descoberta, indexação, busca e rastreabilidade de dados públicos sobre Suzano, SP."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "MukaSanches"}]
-keywords = ["suzano", "dados-abertos", "transparencia", "governo-aberto", "civico", "legislativo"]
+keywords = ["suzano", "dados-abertos", "transparencia", "governo-aberto", "civico", "legislativo", "busca", "fts5", "crawler"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",

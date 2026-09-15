@@ -1,0 +1,115 @@
+name: Daily autonomous index
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/daily-index.yml"
+  schedule:
+    - cron: "17 07 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-autonomous-index
+  cancel-in-progress: false
+
+jobs:
+  refresh-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install library
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip check
+
+      - name: Restore previous rolling snapshot
+        shell: bash
+        run: |
+          set -u
+          rm -f suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz
+          if gh release view data-latest >/dev/null 2>&1; then
+            if gh release download data-latest --pattern "suzano-aberta.sqlite3.gz" --clobber; then
+              if gzip -t suzano-aberta.sqlite3.gz; then
+                gzip -dc suzano-aberta.sqlite3.gz > suzano-aberta.sqlite3
+              fi
+            fi
+          fi
+          rm -f suzano-aberta.sqlite3.gz
+
+      - name: Refresh official sources, web discovery and news mentions
+        run: suzano atualizar --max-paginas 1200 --profundidade 3
+
+      - name: Validate and describe SQLite index
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import sqlite3
+          from datetime import UTC, datetime
+
+          db = sqlite3.connect("suzano-aberta.sqlite3")
+          # Materializa todas as páginas WAL no arquivo principal antes de compactar.
+          db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+          check = db.execute("PRAGMA quick_check").fetchone()[0]
+          if str(check).lower() != "ok":
+              raise SystemExit(f"quick_check failed: {check}")
+          total = db.execute("SELECT COUNT(*) FROM records WHERE active=1").fetchone()[0]
+          if total < 1:
+              raise SystemExit("refusing to publish an empty index")
+          counts = dict(db.execute(
+              "SELECT kind, COUNT(*) FROM records WHERE active=1 GROUP BY kind ORDER BY kind"
+          ).fetchall())
+          fts = db.execute("SELECT COUNT(*) FROM records_fts").fetchone()[0]
+          db.close()
+          metadata = {
+              "generated_at": datetime.now(UTC).isoformat(),
+              "records": total,
+              "fts_rows": fts,
+              "counts_by_kind": counts,
+              "schema": 2,
+          }
+          with open("data-latest.json", "w", encoding="utf-8") as handle:
+              json.dump(metadata, handle, ensure_ascii=False, indent=2)
+          print(json.dumps(metadata, ensure_ascii=False))
+          PY
+
+      - name: Compress and checksum snapshot
+        shell: bash
+        run: |
+          gzip -9 -n -c suzano-aberta.sqlite3 > suzano-aberta.sqlite3.gz
+          sha256sum suzano-aberta.sqlite3.gz > suzano-aberta.sqlite3.gz.sha256
+
+      - name: Publish rolling public snapshot
+        shell: bash
+        run: |
+          if gh release view data-latest >/dev/null 2>&1; then
+            gh release upload data-latest \
+              suzano-aberta.sqlite3.gz \
+              suzano-aberta.sqlite3.gz.sha256 \
+              data-latest.json \
+              --clobber
+          else
+            gh release create data-latest \
+              suzano-aberta.sqlite3.gz \
+              suzano-aberta.sqlite3.gz.sha256 \
+              data-latest.json \
+              --title "Suzano Aberta — índice diário" \
+              --notes "Snapshot público rolling, reconstruído automaticamente a partir de fontes públicas. Este asset é mutável e não representa uma release de código." \
+              --prerelease
+          fi

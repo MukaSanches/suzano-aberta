@@ -11,8 +11,8 @@ from .parsing import decode_bytes
 
 
 DEFAULT_USER_AGENT = (
-    "SuzanoAberta/0.1 (+https://github.com/MukaSanches/suzano-aberta; "
-    "coleta de dados publicos, baixa frequencia)"
+    "SuzanoAberta/0.2 (+https://github.com/MukaSanches/suzano-aberta; "
+    "indice civico publico, baixa frequencia, contato via repositorio)"
 )
 
 

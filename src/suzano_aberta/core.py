@@ -1,15 +1,24 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
 from typing import Literal
 
 from .catalog import SOURCES
+from .discovery import WebDiscovery
 from .http import PoliteHttpClient
 from .integrity import check_transparency_integrity
-from .models import Change, CollectionReport, IntegrityReport, PublicRecord, SourceStatus
+from .models import (
+    Change,
+    CollectionReport,
+    IntegrityReport,
+    PublicRecord,
+    RefreshReport,
+    SourceStatus,
+)
+from .snapshot import SnapshotError, sync_latest_snapshot
 from .sources import CamaraSource, PrefeituraSource
 from .store import Store
 
@@ -27,11 +36,14 @@ class Suzano:
         database: str | Path = "suzano-aberta.sqlite3",
         timeout: float = 20.0,
         min_interval: float = 0.15,
+        auto_sync: bool = True,
     ) -> None:
         self.database = Path(database)
         self.http = PoliteHttpClient(timeout=timeout, min_interval=min_interval)
         self.camara = CamaraSource(self.http)
         self.prefeitura = PrefeituraSource(self.http)
+        self.auto_sync = auto_sync
+        self.last_bootstrap_error: str | None = None
 
     def close(self) -> None:
         self.http.close()
@@ -81,10 +93,22 @@ class Suzano:
                 [
                     ("Prefeitura / licitações", lambda: self.prefeitura.tenders(year=year)),
                     ("Prefeitura / secretarias", self.prefeitura.secretariats),
-                    ("Prefeitura / contas públicas", lambda: self.prefeitura.fiscal_documents(year=year, limit=400)),
-                    ("Prefeitura / orçamento", lambda: self.prefeitura.budget_documents(year=year, limit=250)),
-                    ("Prefeitura / imprensa oficial", lambda: self.prefeitura.official_gazette(year=year, limit=300)),
-                    ("Prefeitura / leis e decretos", lambda: self.prefeitura.legal_acts(year=year, limit=300)),
+                    (
+                        "Prefeitura / contas públicas",
+                        lambda: self.prefeitura.fiscal_documents(year=year, limit=400),
+                    ),
+                    (
+                        "Prefeitura / orçamento",
+                        lambda: self.prefeitura.budget_documents(year=year, limit=250),
+                    ),
+                    (
+                        "Prefeitura / imprensa oficial",
+                        lambda: self.prefeitura.official_gazette(year=year, limit=300),
+                    ),
+                    (
+                        "Prefeitura / leis e decretos",
+                        lambda: self.prefeitura.legal_acts(year=year, limit=300),
+                    ),
                     ("Prefeitura / notícias", lambda: self.prefeitura.news(year=year, limit=100)),
                 ]
             )
@@ -115,9 +139,142 @@ class Suzano:
             errors=errors,
         )
 
-    def search(self, query: str, *, limit: int = 50) -> list[PublicRecord]:
+    def refresh(
+        self,
+        *,
+        years: Iterable[int] | None = None,
+        profile: Profile = "completo",
+        discover: bool = True,
+        include_news: bool = True,
+        max_pages: int = 750,
+        max_depth: int = 3,
+    ) -> RefreshReport:
+        """Atualiza dados oficiais, descobre páginas e otimiza o índice local."""
+        started = datetime.now(UTC)
+        current_year = started.year
+        resolved_years = sorted(
+            set(years if years is not None else (current_year - 2, current_year - 1, current_year))
+        )
+        errors: list[str] = []
+        official_seen = 0
+        discovered_seen = 0
+        new_records = 0
+        changed_records = 0
+        failed = 0
+
+        for year in resolved_years:
+            report = self.collect(year=year, profile=profile)
+            official_seen += report.records
+            new_records += report.new_records
+            changed_records += report.changed_records
+            failed += report.sources_failed
+            errors.extend(report.errors)
+
+        if discover:
+            discovery = WebDiscovery(self.http)
+            discovered: list[PublicRecord] = []
+            official_seeds = [source.url for source in SOURCES]
+            # No máximo ~1/3 do orçamento revisita páginas antigas; o restante fica
+            # reservado para sitemaps, links novos e expansão real do acervo.
+            prior_seed_limit = max(100, max_pages // 3)
+            with Store(self.database) as store:
+                prior_seeds = store.web_seed_urls(limit=prior_seed_limit)
+            crawl_seeds = list(dict.fromkeys([*official_seeds, *prior_seeds]))
+            try:
+                discovered.extend(
+                    discovery.discover(
+                        crawl_seeds,
+                        max_pages=max_pages,
+                        max_depth=max_depth,
+                    )
+                )
+            except Exception as exc:
+                errors.append(f"Descoberta web: {type(exc).__name__}: {exc}")
+                failed += 1
+            if include_news:
+                try:
+                    discovered.extend(discovery.discover_news())
+                except Exception as exc:
+                    errors.append(f"Descoberta de notícias: {type(exc).__name__}: {exc}")
+                    failed += 1
+
+            unique = {record.id: record for record in discovered}
+            discovered_seen = len(unique)
+            if unique:
+                with Store(self.database) as store:
+                    web_changes = store.upsert_many(unique.values())
+                new_records += sum(item.change_type == "novo" for item in web_changes)
+                changed_records += sum(item.change_type == "alterado" for item in web_changes)
+            failed += discovery.stats.failed
+
         with Store(self.database) as store:
+            store.optimize()
+            indexed_records = store.count_records()
+
+        return RefreshReport(
+            started_at=started,
+            finished_at=datetime.now(UTC),
+            years=resolved_years,
+            official_records_seen=official_seen,
+            discovered_records_seen=discovered_seen,
+            new_records=new_records,
+            changed_records=changed_records,
+            indexed_records=indexed_records,
+            sources_failed=failed,
+            errors=errors,
+        )
+
+    def sync(self) -> int:
+        """Instala o snapshot público pré-indexado mais recente."""
+        return sync_latest_snapshot(self.database)
+
+    def reindex(self) -> int:
+        with Store(self.database) as store:
+            count = store.rebuild_search_index()
+            store.optimize()
+            return count
+
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = 50,
+        live_fallback: bool = True,
+    ) -> list[PublicRecord]:
+        self._bootstrap_search_database()
+        with Store(self.database) as store:
+            records = store.search(query, limit=limit)
+        if records or not live_fallback:
+            return records
+
+        discovery = WebDiscovery(self.http)
+        try:
+            fresh = discovery.discover_news((query,), per_query=max(25, limit))
+        except Exception:
+            return []
+        if not fresh:
+            return []
+        with Store(self.database) as store:
+            store.upsert_many(fresh)
             return store.search(query, limit=limit)
+
+    def _bootstrap_search_database(self) -> None:
+        if not self.auto_sync:
+            return
+        needs_snapshot = not self.database.exists()
+        if not needs_snapshot:
+            try:
+                with Store(self.database) as store:
+                    needs_snapshot = store.count_records() == 0
+            except Exception:
+                needs_snapshot = True
+        if not needs_snapshot:
+            return
+        try:
+            self.sync()
+            self.last_bootstrap_error = None
+        except (SnapshotError, OSError) as exc:
+            self.last_bootstrap_error = str(exc)
 
     def snapshot(self) -> dict[str, int]:
         with Store(self.database) as store:
