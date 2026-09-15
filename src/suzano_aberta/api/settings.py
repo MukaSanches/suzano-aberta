@@ -37,6 +37,7 @@ class ApiSettings:
     sync_interval_seconds: int = 0
     cors_origins: tuple[str, ...] = ()
     allowed_hosts: tuple[str, ...] = ("*",)
+    metrics_enabled: bool = True
 
     @classmethod
     def from_env(cls) -> "ApiSettings":
@@ -46,4 +47,5 @@ class ApiSettings:
             sync_interval_seconds=_env_int("SUZANO_API_SYNC_INTERVAL_SECONDS", 0),
             cors_origins=_env_csv("SUZANO_API_CORS_ORIGINS"),
             allowed_hosts=_env_csv("SUZANO_API_ALLOWED_HOSTS", ("*",)),
+            metrics_enabled=_env_bool("SUZANO_API_METRICS", True),
         )
