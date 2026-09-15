@@ -12,10 +12,11 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: daily-autonomous-index
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   refresh-index:
@@ -57,8 +58,63 @@ jobs:
         run: |
           python scripts/bootstrap_documents.py \
             --database suzano-aberta.sqlite3 \
-            --max-pages 180 \
-            --max-documents 650
+            --max-pages 30 \
+            --max-documents 150
+
+      - name: Publish document-safe checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import sqlite3
+          from datetime import UTC, datetime
+
+          db = sqlite3.connect("suzano-aberta.sqlite3")
+          db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+          check = db.execute("PRAGMA quick_check").fetchone()[0]
+          counts = dict(db.execute(
+              "SELECT kind, COUNT(*) FROM records WHERE active=1 GROUP BY kind ORDER BY kind"
+          ).fetchall())
+          total = sum(int(value) for value in counts.values())
+          document_kinds = {
+              "arquivo", "arquivo_historico", "diario",
+              "documento_fiscal", "documento_orcamentario",
+          }
+          documents = sum(int(counts.get(kind, 0)) for kind in document_kinds)
+          extracted = db.execute(
+              "SELECT COUNT(*) FROM records WHERE active=1 AND kind='arquivo' "
+              "AND payload_json LIKE '%\"texto_extraido\":true%'"
+          ).fetchone()[0]
+          fts = db.execute("SELECT COUNT(*) FROM records_fts").fetchone()[0]
+          db.close()
+          if str(check).lower() != "ok" or total < 1 or documents < 1 or fts != total:
+              raise SystemExit(
+                  f"checkpoint inválido: check={check} records={total} documents={documents} fts={fts}"
+              )
+          metadata = {
+              "generated_at": datetime.now(UTC).isoformat(),
+              "records": total,
+              "documents": documents,
+              "documents_with_extracted_text": extracted,
+              "fts_rows": fts,
+              "counts_by_kind": counts,
+              "schema": 3,
+              "profile": "document-checkpoint",
+          }
+          with open("data-latest.json", "w", encoding="utf-8") as handle:
+              json.dump(metadata, handle, ensure_ascii=False, indent=2)
+          print(json.dumps(metadata, ensure_ascii=False))
+          PY
+          gzip -9 -n -c suzano-aberta.sqlite3 > suzano-aberta.sqlite3.gz
+          sha256sum suzano-aberta.sqlite3.gz > suzano-aberta.sqlite3.gz.sha256
+          gh release upload data-latest \
+            suzano-aberta.sqlite3.gz \
+            suzano-aberta.sqlite3.gz.sha256 \
+            data-latest.json \
+            --clobber
+          gh workflow run pages.yml --ref main
+          rm -f suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 data-latest.json
 
       - name: Refresh official sources, web discovery and news mentions
         run: suzano atualizar --max-paginas 1200 --profundidade 3 --max-arquivos 650
@@ -112,6 +168,7 @@ jobs:
               "fts_rows": fts,
               "counts_by_kind": counts,
               "schema": 3,
+              "profile": "daily-full",
           }
           with open("data-latest.json", "w", encoding="utf-8") as handle:
               json.dump(metadata, handle, ensure_ascii=False, indent=2)
@@ -142,3 +199,4 @@ jobs:
               --notes "Snapshot público rolling, reconstruído automaticamente a partir de fontes públicas. Este asset é mutável e não representa uma release de código." \
               --prerelease
           fi
+          gh workflow run pages.yml --ref main
