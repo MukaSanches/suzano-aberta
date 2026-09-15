@@ -1,58 +1,77 @@
 # Integridade de fontes
 
-A coleta de dados públicos depende da integridade das páginas que apontam para os documentos. Uma página pode continuar respondendo HTTP 200 e, ainda assim, passar a publicar links inesperados.
+Uma fonte pode responder HTTP 200 e ainda assim ter mudado de estrutura, passar a apontar para destinos externos inesperados ou deixar de publicar determinado material. O Suzano Aberta evita resumir situações diferentes em um único rótulo de “saúde”.
 
-Por isso, o Suzano Aberta separa duas perguntas:
+## Três perguntas diferentes
 
-1. **a fonte está acessível?** — verificada por `suzano doctor`;
-2. **a fonte contém referências externas inesperadas?** — verificada por `suzano integridade`.
+1. **a instalação local está funcional?** — `suzano diagnostico`;
+2. **as fontes catalogadas estão acessíveis agora?** — `suzano doctor`;
+3. **uma regra específica encontrou um sinal que precisa de revisão?** — `suzano integridade`.
 
-## Regra atual
+Essa separação reduz falsos diagnósticos. Uma máquina sem FTS5 não significa que o site oficial caiu; um HTTP 500 não significa que houve alteração de integridade; e um link externo inesperado não prova comprometimento.
 
-Na versão 0.1.1 a verificação cobre o índice de Transparência da Prefeitura de Suzano.
+## Regra de integridade implementada
+
+A verificação atual cobre uma fonte municipal selecionada e procura domínios externos que não estejam no conjunto conhecido pelo projeto.
 
 O processo é determinístico:
 
-1. a página oficial é baixada pelo mesmo cliente HTTP controlado usado pelos coletores;
-2. cada link é transformado em URL absoluta;
-3. domínios do município (`suzano.sp.gov.br` e subdomínios) são aceitos;
-4. serviços externos conhecidos e documentados ficam em uma allowlist curta;
-5. os demais domínios são retornados como `dominio_externo_nao_reconhecido`.
+1. a página pública é obtida pelo mesmo cliente HTTP controlado usado pelos coletores;
+2. links são transformados em URLs absolutas;
+3. domínios municipais esperados são aceitos;
+4. serviços externos conhecidos e documentados permanecem em uma allowlist curta;
+5. os demais destinos são retornados como `dominio_externo_nao_reconhecido`.
 
-A allowlist não tenta adivinhar se um site é confiável. Um novo domínio deve ser revisado e documentado antes de ser incluído.
+A allowlist não é uma declaração geral de confiança em um terceiro. Ela registra apenas que aquele destino é esperado pela regra atual. Um novo domínio deve ser revisado antes de ser incorporado.
 
 ## O que um achado significa
 
-Um achado significa apenas:
+Um achado significa que a página observada continha uma referência externa que a regra atual não reconheceu como esperada.
 
-> uma fonte oficial contém um link para um domínio externo que não faz parte do conjunto conhecido pelo projeto.
+Ele **não** prova invasão, comprometimento, fraude, autoria, irregularidade administrativa, intenção maliciosa ou responsabilidade de qualquer pessoa.
 
-Ele **não** prova invasão, comprometimento, fraude, autoria, irregularidade administrativa ou intenção maliciosa.
+O software registra o fato observável — URL, domínio e evidência disponível — e deixa conclusões de segurança ou jurídicas para investigação apropriada.
 
-Essa distinção é importante porque o software deve registrar fatos observáveis e deixar conclusões de segurança ou jurídicas para investigação apropriada.
-
-## Automação
-
-Saída humana:
+## Uso humano
 
 ```bash
 suzano integridade
 ```
 
-Saída estruturada:
+## Saída estruturada
 
 ```bash
 suzano integridade --json
 ```
 
-Para pipelines que desejem interromper a execução quando houver itens para revisão:
+## Uso em pipeline
 
 ```bash
 suzano integridade --falhar-se-encontrar
 ```
 
-Nesse modo, o comando retorna código de saída `3` quando houver pelo menos um domínio externo não reconhecido.
+Nesse modo, o comando retorna código `3` quando há pelo menos um item para revisão. Esse código significa “a regra encontrou algo”, não “um incidente foi confirmado”.
 
-## Evolução prevista
+## Saúde local
 
-Verificações futuras podem incluir alterações inesperadas de domínio, mudança de MIME type, desaparecimento de documentos, alteração de certificados, hashes de documentos e mudanças estruturais em páginas críticas. Cada regra deve permanecer testável, explicável e independente de modelos generativos.
+Para verificar o ambiente sem fazer chamadas à internet:
+
+```bash
+suzano diagnostico
+suzano diagnostico --json
+```
+
+O diagnóstico local cobre Python, diretório de dados, espaço livre, SQLite, FTS5, JSON1 e `PRAGMA quick_check` no modo profundo.
+
+## Saúde das fontes
+
+```bash
+suzano doctor
+suzano doctor --json
+```
+
+`doctor` executa verificações básicas de acessibilidade das fontes catalogadas e informa status/tempo observado. Uma falha representa indisponibilidade ou erro naquela verificação; não é evidência de intenção ou irregularidade.
+
+## Regras futuras
+
+Novas verificações podem acompanhar mudança inesperada de domínio, MIME type, certificado, hash de documento, estrutura de páginas críticas ou desaparecimento persistente de recursos. Cada regra deve possuir definição clara, evidência preservada, teste determinístico e linguagem proporcional ao que realmente foi observado.

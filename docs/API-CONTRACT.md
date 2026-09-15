@@ -2,13 +2,15 @@
 
 **HTTP API:** 1.2.0  
 **Schema:** 2026-09-15  
-**Python package:** 0.5.0
+**Python package:** 0.8.0
 
 ## Compatibility promise
 
 Within `/v1`, additive response fields and new GET endpoints may be introduced without a major API version change. Existing fields are not intentionally removed or repurposed. Consumers should ignore unknown fields.
 
 A breaking semantic or structural change requires a new major path such as `/v2`.
+
+The Python package, HTTP API, response schema and dataset have independent version identities. Package `0.8.0` therefore does not imply an HTTP API `v2`.
 
 ## Response identity
 
