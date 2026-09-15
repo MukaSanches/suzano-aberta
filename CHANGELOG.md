@@ -2,6 +2,21 @@
 
 Todas as mudanças relevantes do projeto são registradas aqui. O formato segue a ideia de Keep a Changelog e o versionamento segue SemVer enquanto compatível com a fase inicial do projeto.
 
+## [Unreleased]
+
+### Portal e identidade
+
+- nova identidade visual vetorial do Suzano Aberta, com símbolo, lockup horizontal, paleta e regras de uso;
+- portal público estático preparado para GitHub Pages, com páginas de busca, projeto, desenvolvedores, status e acessibilidade;
+- pesquisa web com estratégia API-first e fallback estático derivado do snapshot validado;
+- índice estático em Web Worker com léxico, registros compactados e 32 shards gzip para evitar download monolítico;
+- PWA mínima com service worker e cache do shell, mantendo dados e configuração em estratégia network-first;
+- workflow de GitHub Pages que valida checksum do snapshot, executa `PRAGMA quick_check`, recusa acervo vazio, gera o índice web e prepara a implantação;
+- geração automática de estatísticas, últimas publicações, fontes e anos a partir do banco real;
+- documentação do portal, política de independência institucional e compromisso de acessibilidade;
+- teste determinístico do gerador de dataset e validador estático de HTML, links locais e ausência de rastreadores conhecidos;
+- README reescrito para explicar o sistema em linguagem simples e documentar portal, API, snapshot, Docker e princípios de confiabilidade.
+
 ## [0.4.0] - 2026-09-15
 
 ### API HTTP

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 112" role="img" aria-labelledby="title desc">
+  <title id="title">Suzano Aberta</title>
+  <desc id="desc">Identidade visual do projeto Suzano Aberta.</desc>
+  <g transform="translate(4 20) scale(.9)">
+    <path fill="#102A43" d="M10 12h29c8.3 0 14 4.8 14 12.1 0 7.1-5.4 12-13.8 12H28.7c-4.1 0-6.7 2.1-6.7 5.2 0 3.1 2.6 5.2 6.7 5.2H50v9H28.2C18.8 55.5 12 50 12 41.3c0-8.4 6.6-14.1 16.3-14.1h11.2c3.1 0 4.9-1.1 4.9-3.1 0-2-1.8-3.1-4.9-3.1H10z"/>
+    <path fill="#0B6E4F" d="M48.5 13.4 62 8v52l-13.5-5.4z"/>
+    <path fill="#0B6E4F" d="M10.4 56.7c11.7-8.7 23.9-14.5 39.1-17.4v9.1c-13.1 2.8-23.8 7.7-33.5 15.1z"/>
+    <circle cx="48.5" cy="27.2" r="5.8" fill="#F0B429"/>
+  </g>
+  <text x="82" y="58" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="700" fill="#102A43">Suzano</text>
+  <text x="234" y="58" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="700" fill="#0B6E4F">Aberta</text>
+  <text x="84" y="82" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="2.2" fill="#52697A">INFORMAÇÃO PÚBLICA, RASTREÁVEL E ABERTA</text>
+</svg>

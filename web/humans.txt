@@ -1,0 +1,4 @@
+Suzano Aberta
+Projeto cívico independente e open source.
+Código: https://github.com/MukaSanches/suzano-aberta
+Princípios: clareza, acessibilidade, rastreabilidade e neutralidade.

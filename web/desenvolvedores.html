@@ -1,0 +1,20 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="API, biblioteca Python, CLI e snapshots do Suzano Aberta."><meta name="theme-color" content="#102A43"><title>Desenvolvedores — Suzano Aberta</title><link rel="icon" href="./assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="./assets/styles.css"><script defer src="./assets/app.js"></script></head>
+<body><a class="skip-link" href="#conteudo">Ir para o conteúdo</a><div class="independence-banner"><div class="wrap"><span class="banner-dot"></span><span>Dados e código para reutilização responsável.</span></div></div><header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav"><a href="./explorar.html">Explorar</a><a href="./sobre.html">Sobre</a><a aria-current="page" href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
+<main id="conteudo"><section class="page-hero"><div class="wrap"><span class="eyebrow">Plataforma</span><h1>Use o acervo no seu próprio projeto.</h1><p class="lead">API read-only, pacote Python, CLI e snapshot SQLite completo. Para grandes volumes, baixe o snapshot; para consultas de aplicação, use a API.</p></div></section><section class="section"><div class="wrap prose">
+<h2>API v1</h2><p>A API é deliberadamente somente leitura. Ela não expõe rotas públicas de coleta, atualização ou reindexação.</p><pre>GET <span data-api-base>https://api.exemplo.suzanoaberta</span>/v1/search?q=educacao
+GET <span data-api-base>https://api.exemplo.suzanoaberta</span>/v1/records
+GET <span data-api-base>https://api.exemplo.suzanoaberta</span>/v1/stats
+GET <span data-api-base>https://api.exemplo.suzanoaberta</span>/v1/changes</pre><p><a class="button button-quiet" data-api-link href="#">Abrir documentação OpenAPI</a></p>
+<h2>Python</h2><pre>pip install -e .
+
+from suzano_aberta import Suzano
+
+with Suzano(database="suzano.sqlite3") as suzano:
+    resultados = suzano.search("mobilidade")</pre>
+<h2>Linha de comando</h2><pre>suzano sincronizar
+suzano buscar "educação"
+suzano panorama
+suzano mudancas</pre>
+<h2>Snapshot completo</h2><p>Para análise em massa, não pagine toda a API. Use o banco SQLite compactado publicado como release rolling, acompanhado de checksum SHA-256.</p><p><a class="button" href="https://github.com/MukaSanches/suzano-aberta/releases/tag/data-latest">Abrir snapshot mais recente</a></p>
+<h2>Contrato e rastreabilidade</h2><p>Os modelos preservam identificador, tipo, título, atributos, fonte e instante de coleta. Consulte o repositório para o esquema completo, exemplos e política de compatibilidade.</p>
+</div></section></main><footer class="footer"><div class="wrap"><div class="footer-small">Código sob Apache-2.0. Dados e documentos permanecem sujeitos às condições de suas fontes originais.</div></div></footer></body></html>

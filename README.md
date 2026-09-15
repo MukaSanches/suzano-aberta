@@ -1,59 +1,70 @@
-# Suzano Aberta
+<p align="center">
+  <img src="brand/logo-horizontal.svg" width="520" alt="Suzano Aberta — informação pública, rastreável e aberta">
+</p>
 
-[![CI](https://github.com/MukaSanches/suzano-aberta/actions/workflows/ci.yml/badge.svg)](https://github.com/MukaSanches/suzano-aberta/actions/workflows/ci.yml)
+<p align="center">
+  <strong>Infraestrutura aberta para descobrir, preservar e pesquisar informações públicas sobre Suzano, SP.</strong>
+</p>
 
-Infraestrutura aberta para descobrir, preservar, organizar e pesquisar informações públicas relacionadas ao município de Suzano, em São Paulo.
+<p align="center">
+  <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="Licença Apache 2.0" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-102A43"></a>
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-0B6E4F">
+</p>
 
-O projeto reúne dados estruturados, páginas, documentos e referências históricas em um único índice pesquisável, mantendo a ligação com a fonte original. A partir da versão 0.4, esse acervo também pode ser consultado por uma API HTTP própria.
+> **Projeto cívico independente.** O Suzano Aberta não é um portal oficial da Prefeitura Municipal de Suzano nem da Câmara Municipal de Suzano. Em caso de divergência, prevalece a publicação da fonte responsável.
 
-O Suzano Aberta é independente e não possui vínculo institucional com a Prefeitura Municipal de Suzano ou com a Câmara Municipal de Suzano.
+## O que é, em linguagem simples
 
-## Em linguagem simples
+Informações públicas não costumam morar em um só lugar. Um contrato pode estar em uma página; um edital em PDF; uma lei em outro sistema; uma publicação antiga pode ter mudado de endereço.
 
-Informações públicas de uma cidade costumam ficar espalhadas entre páginas, portais, PDFs, planilhas, diários oficiais e sistemas diferentes. O Suzano Aberta tenta transformar esse conjunto disperso em um acervo pesquisável.
-
-A arquitetura atual faz quatro trabalhos principais:
-
-1. coleta e normaliza fontes públicas de Suzano;
-2. descobre páginas e arquivos relacionados e preserva sua origem;
-3. indexa o conteúdo em SQLite FTS5 para busca rápida;
-4. oferece o índice por linha de comando, Python e API HTTP.
+O **Suzano Aberta** constrói uma camada de pesquisa sobre esse material. Ele coleta e organiza registros públicos, preserva a origem, indexa conteúdo pesquisável e distribui o mesmo acervo por diferentes caminhos:
 
 ```text
-fontes públicas + documentos + arquivos históricos
-                       │
-                       ▼
-             coleta e descoberta
-                       │
-                       ▼
-          normalização + proveniência
-                       │
-                       ▼
-                SQLite + FTS5
-                       │
-           ┌───────────┼───────────┐
-           ▼           ▼           ▼
-          CLI        Python       API v1
+fontes públicas
+      ↓
+coleta + documentos + histórico
+      ↓
+SQLite + FTS5 + proveniência
+      ↓
+validação + checksum + snapshot
+      ↓
+┌─────────┬─────────┬────────┬────────┐
+│ portal  │ API v1  │ Python │  CLI   │
+└─────────┴─────────┴────────┴────────┘
 ```
 
-## O que existe hoje
+O objetivo não é dizer ao cidadão no que acreditar. É permitir que ele **encontre e confira a fonte**.
 
-A base do projeto inclui:
+## Portal público
 
-- Câmara Municipal: vereadores, sessões, proposições, contratos, comissões, presenças e Diário Oficial do Legislativo;
-- Prefeitura: licitações, secretarias, contas públicas, orçamento, Imprensa Oficial, leis, decretos e notícias;
-- crawler respeitando `robots.txt`, sitemaps e limites de profundidade;
-- descoberta e catalogação de PDF, DOCX, XLSX, CSV, XML, TXT e outros formatos públicos;
-- extração pesquisável de conteúdo em formatos compatíveis;
-- descoberta histórica por Common Crawl, Wayback Machine e Internet Archive;
-- histórico de registros novos e alterados;
-- snapshot público rolling com checksum SHA-256;
-- atualização autônoma diária;
-- API HTTP versionada e somente leitura.
+O repositório inclui um portal estático preparado para GitHub Pages em `web/`. A interface foi desenhada com princípios de serviços públicos digitais: linguagem direta, acessibilidade, navegação previsível, foco em tarefas e transparência sobre a origem dos dados.
 
-Nenhuma biblioteca consegue garantir uma cópia literal de toda a Internet. A meta do projeto é aumentar continuamente, de forma rastreável, a cobertura pública relacionada a Suzano.
+A pesquisa segue uma estratégia de resiliência:
 
-## Instalação
+1. se uma URL da API estiver configurada, o portal consulta a **API v1 + FTS5**;
+2. se a API estiver indisponível, ele recua para um **índice estático derivado do snapshot**;
+3. o portal continua mostrando a última versão publicada do acervo mesmo que a coleta do dia falhe.
+
+O dataset web é gerado automaticamente a partir do snapshot SQLite validado. Não há contador fictício nem conteúdo de demonstração misturado ao acervo real.
+
+## Busca e acervo
+
+A pesquisa principal usa SQLite FTS5 com tokenização Unicode, remoção de diacríticos, prefixos e ranking BM25. O banco preserva registros atuais, documentos e referências históricas encontradas em fontes públicas.
+
+O motor de coleta trabalha, entre outros, com:
+
+- Câmara, sessões, proposições, contratos, comissões e presença parlamentar;
+- licitações, secretarias, contas públicas e orçamento;
+- Imprensa Oficial, leis, decretos e notícias institucionais;
+- PDF, DOCX, XLSX, CSV, XML, TXT e formatos relacionados;
+- descoberta web por páginas, links, `robots.txt` e sitemaps;
+- referências históricas em Common Crawl, Wayback Machine e Internet Archive.
+
+Bloqueios de portais atuais não são contornados. Quando uma fonte não permite determinada automação, a cobertura pode ser ampliada por índices públicos independentes de preservação.
+
+## Começar em 30 segundos
 
 Requer Python 3.11 ou superior.
 
@@ -71,7 +82,7 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
-Linux ou macOS:
+Linux/macOS:
 
 ```bash
 source .venv/bin/activate
@@ -79,147 +90,72 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
-## Começar rápido
-
-Baixe o índice público já preparado:
+Baixe o índice já pronto e pesquise:
 
 ```bash
 suzano sincronizar
-```
-
-Pesquise localmente:
-
-```bash
 suzano buscar "educação"
 suzano buscar "transporte escolar"
-suzano buscar "licitação saúde"
-```
-
-Ver o tamanho do acervo:
-
-```bash
-suzano panorama
+suzano buscar "Santa Casa"
 ```
 
 ## API própria
 
-A versão 0.4 adiciona a **Suzano Aberta API v1**.
-
-Inicie localmente:
+A API é uma camada HTTP **somente leitura** sobre o índice validado. Coleta e mutação não ficam expostas à internet.
 
 ```bash
 suzano-api
 ```
 
-O serviço abre por padrão em:
+Por padrão:
 
 ```text
 http://127.0.0.1:8000
-```
-
-Documentação interativa:
-
-```text
 http://127.0.0.1:8000/docs
 ```
 
-OpenAPI:
-
-```text
-http://127.0.0.1:8000/openapi.json
-```
-
-Pesquisa:
+Principais rotas:
 
 ```text
 GET /v1/search?q=educacao
-GET /v1/search?q=saude&year=2026
-GET /v1/search?q=contrato&kind=arquivo
-```
-
-Outras rotas principais:
-
-```text
-GET /health/live
-GET /health/ready
 GET /v1/records
 GET /v1/records/{id}
 GET /v1/stats
 GET /v1/changes
 GET /v1/snapshot
+GET /health/live
+GET /health/ready
 ```
 
-A API é deliberadamente **somente leitura**. Ela não oferece endpoints públicos para disparar crawlers, alterar o banco ou reindexar o acervo.
+A API inclui paginação limitada, filtros, ETag, cache HTTP, GZip, CORS configurável, Trusted Hosts, request ID e health checks.
 
-Consulte [docs/api.md](docs/api.md) para configuração, contrato das rotas, Docker, CORS e operação.
+## Grandes volumes: use o snapshot
 
-## Docker
+A API não deve ser usada para baixar o acervo inteiro página por página. Para jornalismo de dados, pesquisa acadêmica ou processamento em massa, use a release rolling `data-latest`:
 
-```bash
-docker compose up --build
+```text
+suzano-aberta.sqlite3.gz
+suzano-aberta.sqlite3.gz.sha256
+data-latest.json
 ```
 
-Ou diretamente:
-
-```bash
-docker build -t suzano-aberta-api .
-docker run --rm -p 8000:8000 -v suzano-data:/data suzano-aberta-api
-```
-
-A imagem executa como usuário sem privilégios, usa `/data` como volume persistente e pode sincronizar periodicamente o snapshot rolling.
-
-## Busca rápida
-
-A busca textual usa SQLite FTS5 com tokenização Unicode, remoção de diacríticos, pesquisa por prefixos e ranking BM25.
-
-Isso permite resolver consultas como `educacao`, `licit` ou `transporte escolar` no índice local sem varrer os sites novamente.
-
-Para cargas em massa, a API aponta para o snapshot completo em `/v1/snapshot`. Esse caminho é preferível a paginar dezenas de milhares de itens pela rede.
-
-## Acervo máximo
-
-Para uma expansão pesada do acervo:
-
-```bash
-suzano acervo-maximo
-```
-
-O modo combina web atual, documentos e índices públicos históricos. Os limites podem ser ajustados:
-
-```bash
-suzano acervo-maximo \
-  --max-paginas 6000 \
-  --profundidade 6 \
-  --max-arquivos 1800 \
-  --max-historicos 40000 \
-  --colecoes-common-crawl 12
-```
-
-Bloqueios atuais de um portal não são contornados. Quando possível, cobertura histórica é ampliada usando catálogos públicos independentes de preservação.
+A sincronização verifica SHA-256, cabeçalho SQLite e `PRAGMA quick_check` antes da instalação.
 
 ## Atualização autônoma
 
-O ciclo normal é:
+Ciclo normal:
 
 ```bash
 suzano atualizar
 ```
 
-Ele pode combinar coletores estruturados, descoberta web, arquivos e menções públicas recentes.
+Expansão pesada do acervo:
 
-O workflow `Daily autonomous index` restaura o snapshot anterior, atualiza o acervo, valida o SQLite, compacta o banco, gera SHA-256 e publica novamente a tag rolling `data-latest`.
-
-## Snapshot público
-
-O snapshot é distribuído como:
-
-```text
-suzano-aberta.sqlite3.gz
-data-latest.json
-suzano-aberta.sqlite3.gz.sha256
+```bash
+suzano acervo-maximo
 ```
 
-A sincronização verifica checksum quando disponível, cabeçalho SQLite e `PRAGMA quick_check` antes de instalar o banco.
+A automação preserva o snapshot anterior, executa coleta, reindexa, valida o banco e só então publica a nova geração.
 
 ## Uso como biblioteca Python
 
@@ -234,52 +170,45 @@ for item in resultados[:5]:
     print(item.source.url)
 ```
 
-Atualização:
+## Operação por Docker
 
-```python
-from suzano_aberta import Suzano
-
-with Suzano(database="suzano.sqlite3", auto_sync=False) as suzano:
-    relatorio = suzano.refresh(max_pages=1000, max_depth=3)
-
-print(relatorio.indexed_records)
+```bash
+docker compose up --build
 ```
 
-## Rastreabilidade
+A imagem da API roda sem privilégios de root e usa volume persistente para o banco.
 
-Todo registro normalizado conserva um identificador estável, tipo, título, campos extraídos, URL da fonte e instante de coleta.
+## Confiabilidade e segurança
 
-O histórico usa fingerprints determinísticos. Se um registro conhecido reaparece com conteúdo diferente, a alteração pode ser registrada. Isso permite responder tanto “de onde veio este dado?” quanto “ele mudou desde a coleta anterior?”.
+- nenhum dado ausente é inventado;
+- cada registro mantém a fonte pública de origem;
+- fingerprints determinísticos registram alterações de conteúdo;
+- crawler respeita `robots.txt` e limita hosts autorizados;
+- API abre o SQLite em modo read-only;
+- publicação do snapshot exige integridade do SQLite e checksum;
+- CI roda em Python 3.11, 3.12 e 3.13;
+- mypy estrito, Ruff, testes, build do pacote e CodeQL fazem parte da esteira;
+- o portal não usa anúncios nem scripts de rastreamento de terceiros.
 
-## Segurança e confiabilidade
+## Acessibilidade
 
-A arquitetura adota algumas regras deliberadamente conservadoras:
+O portal tem como meta WCAG 2.2 AA e inclui navegação por teclado, foco visível, link de salto, semântica HTML, contraste alto, layout responsivo, suporte a zoom e respeito a `prefers-reduced-motion`.
 
-- fontes de primeira parte permanecem prioritárias;
-- dados ausentes não são inventados;
-- requisições possuem timeout, retry limitado e controle de frequência;
-- `robots.txt` é respeitado pelo crawler atual;
-- a API pública não possui rotas de escrita;
-- parâmetros de busca e paginação possuem limites;
-- registros individuais usam `ETag`;
-- CORS é restritivo até ser configurado explicitamente;
-- imagem Docker roda sem root;
-- CI cobre Python 3.11, 3.12 e 3.13;
-- mypy estrito, Ruff, testes, build do pacote, build do contêiner e CodeQL fazem parte da validação.
+Acessibilidade é tratada como trabalho contínuo, não como consequência automática de um framework.
 
-Um achado técnico não é automaticamente evidência de irregularidade administrativa ou política. A fonte responsável continua sendo a referência final.
+## Estrutura
 
-## Documentação
-
-- [API](docs/api.md)
-- [Índice autônomo e busca rápida](docs/autonomia-e-busca.md)
-- [Arquitetura](docs/arquitetura.md)
-- [Fontes](docs/fontes.md)
-- [Metodologia](docs/metodologia.md)
-- [Modelo de dados](docs/modelo-de-dados.md)
-- [Integridade de fontes](docs/integridade.md)
-- [Limitações](docs/limitacoes.md)
-- [Demonstração institucional](docs/demo-institucional.md)
+```text
+suzano-aberta/
+├── src/suzano_aberta/     biblioteca, coleta, busca e API
+├── web/                    portal estático / GitHub Pages
+├── brand/                  identidade visual canônica
+├── scripts/                build e validação de dados do portal
+├── tests/                  testes determinísticos
+├── tests_live/             verificações separadas contra fontes reais
+├── docs/                   arquitetura, metodologia e políticas
+└── .github/workflows/      CI, CodeQL, coleta e publicação
+```
 
 ## Desenvolvimento
 
@@ -288,10 +217,34 @@ python -m pip install -e ".[dev]"
 ruff check .
 mypy src/suzano_aberta
 pytest
+python scripts/check_web.py
 python -m build
-docker build -t suzano-aberta-api .
 ```
+
+## Princípios do projeto
+
+**Fonte antes da interpretação.** O registro deve poder ser conferido.
+
+**Falhar sem destruir.** Uma coleta quebrada não deve substituir uma versão válida.
+
+**Interface simples, engenharia profunda.** O cidadão não precisa conhecer SQLite, crawler ou FTS5 para pesquisar.
+
+**Separação de responsabilidades.** O portal não controla o crawler; a API não escreve no acervo; a coleta não decide o que é politicamente verdadeiro.
+
+## Documentação
+
+- [Arquitetura](docs/arquitetura.md)
+- [Autonomia e busca](docs/autonomia-e-busca.md)
+- [API pública](docs/api.md)
+- [Fontes](docs/fontes.md)
+- [Metodologia](docs/metodologia.md)
+- [Modelo de dados](docs/modelo-de-dados.md)
+- [Integridade](docs/integridade.md)
+- [Limitações](docs/limitacoes.md)
+- [Portal web](docs/portal-web.md)
+- [Identidade visual](brand/README.md)
+- [Roteiro institucional](docs/demo-institucional.md)
 
 ## Licença
 
-Código sob Apache 2.0. Dados e documentos acessados permanecem sujeitos às regras, licenças e condições de suas fontes originais.
+Código sob [Apache License 2.0](LICENSE). Dados e documentos acessados permanecem sujeitos às regras, licenças e condições das fontes originais.
