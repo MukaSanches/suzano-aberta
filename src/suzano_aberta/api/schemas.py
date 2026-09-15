@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ..models import Change, PublicRecord
 
@@ -12,6 +12,17 @@ class PageInfo(BaseModel):
     limit: int = Field(ge=1)
     offset: int = Field(ge=0)
     next_offset: int | None = Field(default=None, ge=0)
+    previous_offset: int | None = Field(default=None, ge=0)
+    returned: int = Field(default=0, ge=0)
+    has_more: bool = False
+
+    @model_validator(mode="after")
+    def derive_navigation(self) -> PageInfo:
+        remaining = max(0, self.total - self.offset)
+        self.returned = min(self.limit, remaining)
+        self.has_more = self.next_offset is not None
+        self.previous_offset = max(0, self.offset - self.limit) if self.offset > 0 else None
+        return self
 
 
 class ResponseMeta(BaseModel):
