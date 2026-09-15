@@ -1,0 +1,9 @@
+# Maintainer review is required for changes to the project baseline.
+* @MukaSanches
+
+# Collection logic and provenance rules are especially sensitive to source changes.
+/src/suzano_aberta/sources/ @MukaSanches
+/src/suzano_aberta/integrity.py @MukaSanches
+/docs/metodologia.md @MukaSanches
+/docs/integridade.md @MukaSanches
+/.github/workflows/ @MukaSanches
