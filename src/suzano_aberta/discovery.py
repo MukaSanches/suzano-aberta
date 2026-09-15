@@ -11,6 +11,7 @@ from urllib.robotparser import RobotFileParser
 from xml.etree import ElementTree
 
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 
 from .http import DEFAULT_USER_AGENT, PoliteHttpClient
 from .models import PublicRecord, SourceRef
@@ -294,8 +295,8 @@ class WebDiscovery:
                 self._robots[origin] = parser
             except Exception:
                 self._robots[origin] = None
-        parser = self._robots[origin]
-        return True if parser is None else parser.can_fetch(DEFAULT_USER_AGENT, url)
+        cached_parser = self._robots[origin]
+        return True if cached_parser is None else cached_parser.can_fetch(DEFAULT_USER_AGENT, url)
 
     def _sitemap_candidates(self, origin: str, *, max_urls: int) -> list[str]:
         candidates: list[str] = []
@@ -366,6 +367,8 @@ class WebDiscovery:
     def _links(self, soup: BeautifulSoup, base_url: str, hosts: set[str]) -> list[str]:
         links: list[str] = []
         for anchor in soup.find_all("a", href=True):
+            if not isinstance(anchor, Tag):
+                continue
             href = str(anchor.get("href") or "").strip()
             if not href or href.startswith(("mailto:", "tel:", "javascript:", "data:")):
                 continue
