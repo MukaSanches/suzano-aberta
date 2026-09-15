@@ -11,6 +11,8 @@ from rich.table import Table
 
 from .catalog import SOURCES
 from .core import Profile, Suzano, explain
+from .diagnostics import human_bytes, inspect_local_environment
+from .index import SuzanoIndex
 from .snapshot import SnapshotError
 from .store import Store
 
@@ -26,6 +28,10 @@ console = Console()
 
 def _default_year() -> int:
     return datetime.now().year
+
+
+def _format_int(value: int) -> str:
+    return f"{value:,}".replace(",", ".")
 
 
 def _parse_years(value: str | None) -> list[int] | None:
@@ -64,6 +70,93 @@ def _print_refresh_report(title: str, report: object) -> None:
     console.print(table)
     for error in report.errors:
         console.print(f"[yellow]{error}[/yellow]")
+
+
+@app.command("console")
+def interactive_console(
+    database: Annotated[Path, typer.Option("--db", help="Arquivo SQLite local.")] = DEFAULT_DATABASE,
+) -> None:
+    """Abre a experiência interativa navegável do Suzano Aberta."""
+    from .console import run_console
+
+    run_console(database)
+
+
+@app.command("inicio")
+def home(
+    database: Annotated[Path, typer.Option("--db", help="Arquivo SQLite local.")] = DEFAULT_DATABASE,
+) -> None:
+    """Mostra um retrato rápido do ambiente local e do acervo."""
+    report = inspect_local_environment(database)
+    table = Table(title="Suzano Aberta — estado local")
+    table.add_column("Item")
+    table.add_column("Valor")
+    table.add_row("Banco", str(database.resolve()))
+    table.add_row("Registros", _format_int(report.records))
+    table.add_row("Tamanho", human_bytes(report.database_bytes))
+    table.add_row("Busca", "FTS5" if report.fts_enabled else "fallback")
+    table.add_row("Última observação", report.last_seen or "—")
+    table.add_row("Estado", "operacional" if report.healthy else "requer atenção")
+    console.print(table)
+    if not report.records:
+        console.print("Execute [bold]suzano sincronizar[/bold] para instalar o snapshot público.")
+
+
+@app.command("diagnostico")
+def local_diagnostics(
+    database: Annotated[Path, typer.Option("--db", help="Arquivo SQLite local.")] = DEFAULT_DATABASE,
+    as_json: Annotated[bool, typer.Option("--json", help="Saída estruturada para automação.")] = False,
+) -> None:
+    """Verifica Python, diretório, disco, SQLite, FTS5 e integridade do banco local."""
+    report = inspect_local_environment(database, deep=True)
+    if as_json:
+        payload = {
+            "healthy": report.healthy,
+            "database": str(report.database),
+            "records": report.records,
+            "database_bytes": report.database_bytes,
+            "fts_enabled": report.fts_enabled,
+            "last_seen": report.last_seen,
+            "checks": [
+                {"name": check.name, "status": check.status, "detail": check.detail}
+                for check in report.checks
+            ],
+        }
+        console.print_json(json.dumps(payload, ensure_ascii=False))
+        return
+
+    table = Table(title="Diagnóstico local")
+    table.add_column("Estado")
+    table.add_column("Verificação")
+    table.add_column("Detalhe")
+    for check in report.checks:
+        label = {"ok": "OK", "warning": "AVISO", "error": "ERRO"}[check.status]
+        table.add_row(label, check.name, check.detail)
+    console.print(table)
+    if not report.healthy:
+        raise typer.Exit(code=2)
+
+
+@app.command("recentes")
+def recent(
+    database: Annotated[Path, typer.Option("--db", help="Arquivo SQLite local.")] = DEFAULT_DATABASE,
+    limit: Annotated[int, typer.Option("--limite", "-n", min=1, max=100)] = 20,
+) -> None:
+    """Lista os registros mais recentes do snapshot local."""
+    if not database.exists():
+        console.print("Banco local não encontrado. Execute 'suzano sincronizar'.")
+        raise typer.Exit(code=2)
+    with SuzanoIndex(database) as index:
+        records = index.records(limit=limit, sort="date_desc").items
+    table = Table(title="Publicações mais recentes")
+    table.add_column("ID")
+    table.add_column("Tipo")
+    table.add_column("Título")
+    table.add_column("Data")
+    table.add_column("Fonte")
+    for record in records:
+        table.add_row(record.id, record.kind, record.title, record.date or "—", record.source.name)
+    console.print(table)
 
 
 @app.command("fontes")
@@ -233,7 +326,7 @@ def sync(
     except SnapshotError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=2) from exc
-    console.print(f"Snapshot instalado com {count} registros pesquisáveis em {database}.")
+    console.print(f"Snapshot instalado com {_format_int(count)} registros pesquisáveis em {database}.")
 
 
 @app.command("reindexar")
@@ -243,14 +336,14 @@ def reindex(
     """Reconstrói e otimiza o índice FTS5 local."""
     with Suzano(database=database, auto_sync=False) as suzano:
         count = suzano.reindex()
-    console.print(f"Índice reconstruído para {count} registros.")
+    console.print(f"Índice reconstruído para {_format_int(count)} registros.")
 
 
 @app.command("buscar")
 def search(
     query: Annotated[str, typer.Argument(help="Palavra ou expressão para procurar.")],
     database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-    limit: Annotated[int, typer.Option("--limite", "-n")] = 30,
+    limit: Annotated[int, typer.Option("--limite", "-n", min=1, max=500)] = 30,
     no_web: Annotated[
         bool,
         typer.Option("--sem-web", help="Não consulta a web quando o índice local não tem resultado."),
@@ -261,12 +354,13 @@ def search(
         records = suzano.search(query, limit=limit, live_fallback=not no_web)
         bootstrap_error = suzano.last_bootstrap_error
     table = Table(title=f'Resultados para "{query}"')
+    table.add_column("ID")
     table.add_column("Tipo")
     table.add_column("Título")
     table.add_column("Data")
     table.add_column("Fonte")
     for record in records:
-        table.add_row(record.kind, record.title, record.date or "—", record.source.url)
+        table.add_row(record.id, record.kind, record.title, record.date or "—", record.source.name)
     console.print(table)
     if not records and bootstrap_error:
         console.print(f"[yellow]Snapshot remoto indisponível: {bootstrap_error}[/yellow]")
@@ -274,13 +368,12 @@ def search(
 
 @app.command("ver")
 def show(
-    record_id: Annotated[str, typer.Argument(help="ID interno do registro.")],
+    record_id: Annotated[str, typer.Argument(help="ID interno exato do registro.")],
     database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
 ) -> None:
     """Exibe um registro em linguagem simples e a sua fonte."""
     with Store(database) as store:
-        records = store.search(record_id, limit=5)
-    record = next((item for item in records if item.id == record_id), None)
+        record = store.get(record_id)
     if record is None:
         console.print("Registro não encontrado.")
         raise typer.Exit(code=1)
@@ -301,15 +394,15 @@ def snapshot(
     table = Table(title="Suzano Aberta — panorama local")
     table.add_column("Tipo")
     table.add_column("Registros", justify="right")
-    for kind, count in counts.items():
-        table.add_row(kind, str(count))
+    for kind, count in sorted(counts.items(), key=lambda item: (-item[1], item[0])):
+        table.add_row(kind, _format_int(count))
     console.print(table)
 
 
 @app.command("mudancas")
 def changes(
     database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
-    limit: Annotated[int, typer.Option("--limite", "-n")] = 30,
+    limit: Annotated[int, typer.Option("--limite", "-n", min=1, max=500)] = 30,
 ) -> None:
     """Mostra registros novos ou alterados detectados entre coletas."""
     with Suzano(database=database, auto_sync=False) as suzano:
@@ -405,7 +498,7 @@ def export_data(
     """Exporta todos os registros preservados para JSON."""
     with Store(database) as store:
         count = store.export_json(output)
-    console.print(f"{count} registros exportados para {output}")
+    console.print(f"{_format_int(count)} registros exportados para {output}")
 
 
 if __name__ == "__main__":
