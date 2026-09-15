@@ -173,10 +173,14 @@ class Suzano:
         if discover:
             discovery = WebDiscovery(self.http)
             discovered: list[PublicRecord] = []
+            official_seeds = [source.url for source in SOURCES]
+            with Store(self.database) as store:
+                prior_seeds = store.web_seed_urls(limit=max(1000, max_pages * 4))
+            crawl_seeds = list(dict.fromkeys([*official_seeds, *prior_seeds]))
             try:
                 discovered.extend(
                     discovery.discover(
-                        (source.url for source in SOURCES),
+                        crawl_seeds,
                         max_pages=max_pages,
                         max_depth=max_depth,
                     )
