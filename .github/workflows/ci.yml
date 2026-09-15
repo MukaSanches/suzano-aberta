@@ -58,7 +58,6 @@ jobs:
           suzano sincronizar --help
           suzano reindexar --help
           suzano buscar --help
-          suzano-console --help || true
           suzano-api --help
           python -c "from suzano_aberta import SuzanoClient, SuzanoIndex, build_entity_graph, inspect_local_environment, quality_report; assert SuzanoClient and SuzanoIndex and build_entity_graph and inspect_local_environment and quality_report"
           python -c "from suzano_aberta import inspect_local_environment; report=inspect_local_environment('missing-ci.sqlite3'); assert report.records == 0 and report.database_bytes == 0"
