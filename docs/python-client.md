@@ -1,8 +1,15 @@
-# Cliente Python oficial
+# Interfaces Python oficiais
 
-A partir da biblioteca `suzano-aberta` 0.6, o projeto inclui um cliente Python tipado para a Suzano Aberta API. Ele é útil quando você quer consumir a API HTTP sem montar URLs, parâmetros, paginação e tratamento de erros manualmente.
+A partir da biblioteca `suzano-aberta` 0.6, o projeto oferece duas interfaces tipadas de consulta:
 
-## Começo rápido
+- `SuzanoClient` para consumir a Suzano Aberta API por HTTP;
+- `SuzanoIndex` para consultar diretamente um snapshot SQLite local, sem subir servidor.
+
+As duas usam os modelos do próprio projeto e compartilham a mesma semântica de busca, filtros e ordenação sempre que possível.
+
+## Via HTTP: SuzanoClient
+
+Use esta opção quando a API já está publicada ou rodando localmente.
 
 ```python
 from suzano_aberta import SuzanoClient
@@ -23,7 +30,7 @@ with SuzanoClient() as client:
     print(client.stats())
 ```
 
-## Métodos disponíveis
+### Métodos HTTP disponíveis
 
 O cliente cobre as rotas públicas de leitura:
 
@@ -44,9 +51,43 @@ O cliente cobre as rotas públicas de leitura:
 
 As respostas são convertidas em modelos Pydantic do próprio projeto. Registros são instâncias de `PublicRecord`, portanto não é necessário trabalhar com dicionários sem tipo.
 
+## Sem servidor: SuzanoIndex
+
+Se o seu programa já possui `suzano-aberta.sqlite3`, consulte o índice diretamente:
+
+```python
+from suzano_aberta import SuzanoIndex
+
+with SuzanoIndex("suzano-aberta.sqlite3") as index:
+    resultado = index.search("transporte escolar", year=2026, limit=25)
+
+for registro in resultado.items:
+    print(registro.id, registro.title)
+```
+
+O arquivo é aberto pela mesma camada SQLite somente leitura utilizada pela API. Isso evita duplicar regras de filtros e ordenação no SDK.
+
+`SuzanoIndex` oferece `record()`, `records()`, `search()`, `documents()`, `legislation()`, `procurements()`, `changes()`, `stats()` e `iter_records()`.
+
+Exemplo de análise local sem servidor HTTP:
+
+```python
+from suzano_aberta import SuzanoIndex
+
+with SuzanoIndex("suzano-aberta.sqlite3") as index:
+    contratos = index.procurements(
+        "transporte",
+        year=2026,
+        date_from="2026-01-01",
+        date_to="2026-12-31",
+        sort="date_desc",
+    )
+    print(contratos.total)
+```
+
 ## Paginação automática
 
-Para percorrer resultados sem escrever o laço de `offset` manualmente, use `iter_records()` ou `iter_search()`:
+Para percorrer resultados HTTP sem escrever o laço de `offset` manualmente, use `iter_records()` ou `iter_search()`:
 
 ```python
 from suzano_aberta import SuzanoClient
@@ -56,11 +97,21 @@ with SuzanoClient("http://127.0.0.1:8000") as client:
         print(registro.id)
 ```
 
-O iterador continua respeitando o limite máximo publicado pela API. Para cargas realmente grandes, continue preferindo o snapshot SQLite informado por `client.snapshot()`.
+No modo local, `SuzanoIndex.iter_records()` oferece a mesma ideia:
+
+```python
+from suzano_aberta import SuzanoIndex
+
+with SuzanoIndex("suzano-aberta.sqlite3") as index:
+    for registro in index.iter_records(year=2026, page_size=100, max_items=500):
+        print(registro.id)
+```
+
+Para cargas realmente grandes, prefira trabalhar diretamente com o snapshot em vez de transportar todo o acervo pela API HTTP.
 
 ## Filtros
 
-Os métodos de busca e listagem aceitam os mesmos conceitos da API:
+Os métodos de busca e listagem aceitam os mesmos conceitos principais:
 
 ```python
 resultado = client.search(
@@ -78,7 +129,7 @@ resultado = client.search(
 
 Datas também podem ser objetos `datetime.date`.
 
-## Tratamento de erros
+## Tratamento de erros HTTP
 
 Erros HTTP compatíveis com Problem Details são convertidos em `SuzanoApiError`:
 
@@ -108,11 +159,11 @@ if not estado.ready:
     print("Índice ainda não está pronto")
 ```
 
-## Cliente HTTP e segurança
+## Segurança e testes
 
-O SDK é somente leitura, assim como a API pública. Ele não possui métodos para iniciar crawlers, reindexar, apagar ou alterar registros.
+As duas interfaces são somente leitura. Nenhuma delas possui métodos para iniciar crawlers, reindexar, apagar ou alterar registros.
 
-O cliente segue redirects e usa timeout configurável. Para alterar o timeout:
+O cliente HTTP segue redirects e usa timeout configurável:
 
 ```python
 client = SuzanoClient("https://api.exemplo", timeout=10.0)
