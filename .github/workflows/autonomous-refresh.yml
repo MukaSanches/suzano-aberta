@@ -11,7 +11,10 @@ on:
       - "src/suzano_aberta/sources/**"
       - "src/suzano_aberta/discovery.py"
       - "src/suzano_aberta/catalog.py"
+      - "src/suzano_aberta/contracts.py"
+      - "src/suzano_aberta/release.py"
       - "scripts/bootstrap_procurement_apis.py"
+      - "scripts/build_release_manifest.py"
 
 permissions:
   contents: write
@@ -19,8 +22,6 @@ permissions:
   issues: write
 
 concurrency:
-  # Compartilha o lock do daily-index para impedir duas rotinas de dados
-  # de substituírem o release data-latest ao mesmo tempo.
   group: daily-autonomous-index
   cancel-in-progress: false
 
@@ -50,17 +51,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -f suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 data-latest.json
+          rm -f suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 suzano-aberta.manifest.json data-latest.json
           gh release download data-latest \
             --pattern "suzano-aberta.sqlite3.gz" \
             --pattern "suzano-aberta.sqlite3.gz.sha256" \
             --clobber
+          gh release download data-latest --pattern "suzano-aberta.manifest.json" --clobber || true
           gh release download data-latest --pattern "data-latest.json" --clobber || true
 
-          # Guarda os assets anteriores fora do workspace. Eles são usados como
-          # rollback se a promoção do candidato falhar no meio do upload.
           cp suzano-aberta.sqlite3.gz /tmp/suzano-aberta.sqlite3.gz
           cp suzano-aberta.sqlite3.gz.sha256 /tmp/suzano-aberta.sqlite3.gz.sha256
+          if [ -f suzano-aberta.manifest.json ]; then
+            cp suzano-aberta.manifest.json /tmp/suzano-aberta.manifest.json
+          fi
           if [ -f data-latest.json ]; then
             cp data-latest.json /tmp/data-latest.json
           fi
@@ -81,7 +84,10 @@ jobs:
           open("/tmp/previous-count", "w", encoding="utf-8").write(str(total))
           print(f"base válida: {total} registros")
           PY
-          rm -f suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 data-latest.json
+          if [ -f /tmp/suzano-aberta.manifest.json ]; then
+            suzano data verify --db suzano-aberta.sqlite3 --manifest /tmp/suzano-aberta.manifest.json
+          fi
+          rm -f suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 suzano-aberta.manifest.json data-latest.json
 
       - name: Refresh structured procurement APIs
         run: python scripts/bootstrap_procurement_apis.py --database suzano-aberta.sqlite3
@@ -128,13 +134,22 @@ jobs:
               "previous_records": previous,
               "procurement_api_records": procurement_api,
               "counts_by_kind": counts,
-              "schema": 6,
+              "schema": 7,
               "profile": "autonomous-incremental",
           }
           with open("data-latest.json", "w", encoding="utf-8") as handle:
               json.dump(metadata, handle, ensure_ascii=False, indent=2)
           print(json.dumps(metadata, ensure_ascii=False))
           PY
+          suzano data quality --db suzano-aberta.sqlite3 --falhar
+          previous_args=()
+          if [ -f /tmp/suzano-aberta.manifest.json ]; then
+            previous_args=(--previous /tmp/suzano-aberta.manifest.json)
+          fi
+          python scripts/build_release_manifest.py \
+            --database suzano-aberta.sqlite3 \
+            --output suzano-aberta.manifest.json \
+            "${previous_args[@]}"
 
       - name: Publish validated rolling snapshot
         shell: bash
@@ -145,6 +160,7 @@ jobs:
           gh release upload data-latest \
             suzano-aberta.sqlite3.gz \
             suzano-aberta.sqlite3.gz.sha256 \
+            suzano-aberta.manifest.json \
             data-latest.json \
             --clobber
           gh workflow run pages.yml --ref main
@@ -156,15 +172,10 @@ jobs:
         run: |
           set -u
           assets=()
-          if [ -f /tmp/suzano-aberta.sqlite3.gz ]; then
-            assets+=(/tmp/suzano-aberta.sqlite3.gz)
-          fi
-          if [ -f /tmp/suzano-aberta.sqlite3.gz.sha256 ]; then
-            assets+=(/tmp/suzano-aberta.sqlite3.gz.sha256)
-          fi
-          if [ -f /tmp/data-latest.json ]; then
-            assets+=(/tmp/data-latest.json)
-          fi
+          if [ -f /tmp/suzano-aberta.sqlite3.gz ]; then assets+=(/tmp/suzano-aberta.sqlite3.gz); fi
+          if [ -f /tmp/suzano-aberta.sqlite3.gz.sha256 ]; then assets+=(/tmp/suzano-aberta.sqlite3.gz.sha256); fi
+          if [ -f /tmp/suzano-aberta.manifest.json ]; then assets+=(/tmp/suzano-aberta.manifest.json); fi
+          if [ -f /tmp/data-latest.json ]; then assets+=(/tmp/data-latest.json); fi
           if [ "${#assets[@]}" -ge 2 ]; then
             echo "Restaurando assets do último snapshot validado…"
             gh release upload data-latest "${assets[@]}" --clobber
