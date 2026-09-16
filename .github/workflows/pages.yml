@@ -113,6 +113,12 @@ jobs:
         run: |
           python scripts/check_web.py
           python -m compileall -q scripts src
+          node --check web/assets/app.js
+          node --check web/assets/portal-v2.js
+          node --check web/assets/portal-v3.js
+          node --check web/assets/portal-v4.js
+          node --check web/assets/search-worker.js
+          node --check web/sw.js
           python - <<'PY'
           import gzip, json, pathlib
           root = pathlib.Path("web/data")
