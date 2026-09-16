@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 
@@ -97,7 +98,9 @@ def test_manifest_exposes_public_service_shortcuts() -> None:
 def test_service_worker_caches_entire_composed_civic_shell() -> None:
     sw = read("web/sw.js")
 
-    assert 'const CACHE = "suzano-aberta-shell-v12"' in sw
+    match = re.search(r'const CACHE = "suzano-aberta-shell-v(\d+)";', sw)
+    assert match, "service worker precisa declarar uma revisão de cache do shell"
+    assert int(match.group(1)) >= 12, "a revisão do shell não pode regredir abaixo da versão Portal v11"
     for asset in (
         "portal-v4-core.css",
         "portal-v11.css",
