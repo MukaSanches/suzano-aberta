@@ -1,0 +1,108 @@
+/* Portal v11 compatibility overrides.
+ * Kept intentionally small: only selectors where the preserved v4 layer has
+ * higher specificity than the shared v11 civic design.
+ */
+
+body::before {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+.hero {
+  color: var(--ink-2);
+}
+
+.hero::before {
+  opacity: .35;
+  background-image:
+    linear-gradient(rgba(8,38,61,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8,38,61,.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to right, transparent 0%, #000 50%, #000 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 50%, #000 100%);
+}
+
+.hero h1 {
+  max-width: 14ch;
+  color: var(--civic-navy);
+  font-size: clamp(2.65rem, 6vw, 5.25rem);
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.hero .eyebrow {
+  color: var(--civic-green);
+}
+
+.hero .lead {
+  max-width: 65ch;
+  color: #456176;
+}
+
+.hero .search-box {
+  margin-top: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hero .search-label {
+  color: var(--civic-navy);
+}
+
+.hero .search-row {
+  gap: 0;
+}
+
+.hero .search-row input {
+  min-height: 58px;
+  border: 2px solid #6f8797;
+  border-radius: 7px 0 0 7px;
+  color: var(--civic-navy);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(8,38,61,.09);
+}
+
+.hero .search-row .button {
+  min-width: 128px;
+  border-radius: 0 7px 7px 0;
+  background: var(--civic-green);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(8,38,61,.09);
+}
+
+.hero .search-row .button:hover {
+  background: var(--green-dark);
+  color: #fff;
+  transform: none;
+}
+
+.hero .search-help {
+  color: var(--muted);
+}
+
+.hero .hero-quick-links a {
+  min-height: 36px;
+  border: 1px solid #afc1cc;
+  background: #fff;
+  color: var(--civic-navy);
+}
+
+.hero .hero-quick-links a:hover {
+  border-color: var(--civic-green);
+  background: var(--green-soft);
+  color: var(--civic-navy);
+}
+
+@media (max-width: 700px) {
+  .hero .search-row {
+    gap: .55rem;
+  }
+
+  .hero .search-row input,
+  .hero .search-row .button {
+    border-radius: 7px;
+  }
+}
