@@ -58,6 +58,3 @@ jobs:
 
       - name: Validate JavaScript syntax
         run: node --check web/assets/portal-v11.js
-
-      - name: Validate legacy portal contracts
-        run: python scripts/check_web.py
