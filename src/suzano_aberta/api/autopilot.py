@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from ..autopilot import AutoUpdatePolicy, AutonomousDataManager
+from .schemas import AutopilotResponse
 from .settings import ApiSettings
 
 
@@ -14,7 +15,7 @@ def install_autopilot_routes(app: FastAPI, settings: ApiSettings) -> None:
     )
     app.state.autonomous_data_manager = manager
 
-    @app.get("/v1/autopilot", tags=["sistema"])
-    def autopilot_status() -> dict[str, object]:
+    @app.get("/v1/autopilot", response_model=AutopilotResponse, tags=["sistema"])
+    def autopilot_status() -> AutopilotResponse:
         """Estado somente leitura da atualização automática do dataset local."""
-        return manager.status().to_dict()
+        return AutopilotResponse.model_validate(manager.status().to_dict())
