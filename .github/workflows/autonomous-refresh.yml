@@ -50,11 +50,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -f suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256
+          rm -f suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 data-latest.json
           gh release download data-latest \
             --pattern "suzano-aberta.sqlite3.gz" \
             --pattern "suzano-aberta.sqlite3.gz.sha256" \
             --clobber
+          gh release download data-latest --pattern "data-latest.json" --clobber || true
+
+          # Guarda os assets anteriores fora do workspace. Eles são usados como
+          # rollback se a promoção do candidato falhar no meio do upload.
+          cp suzano-aberta.sqlite3.gz /tmp/suzano-aberta.sqlite3.gz
+          cp suzano-aberta.sqlite3.gz.sha256 /tmp/suzano-aberta.sqlite3.gz.sha256
+          if [ -f data-latest.json ]; then
+            cp data-latest.json /tmp/data-latest.json
+          fi
+
           expected="$(awk '{print $1}' suzano-aberta.sqlite3.gz.sha256)"
           actual="$(sha256sum suzano-aberta.sqlite3.gz | awk '{print $1}')"
           test "$expected" = "$actual"
@@ -71,7 +81,7 @@ jobs:
           open("/tmp/previous-count", "w", encoding="utf-8").write(str(total))
           print(f"base válida: {total} registros")
           PY
-          rm -f suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256
+          rm -f suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 data-latest.json
 
       - name: Refresh structured procurement APIs
         run: python scripts/bootstrap_procurement_apis.py --database suzano-aberta.sqlite3
@@ -126,7 +136,7 @@ jobs:
           print(json.dumps(metadata, ensure_ascii=False))
           PY
 
-      - name: Publish rolling snapshot atomically
+      - name: Publish validated rolling snapshot
         shell: bash
         run: |
           set -euo pipefail
@@ -138,6 +148,29 @@ jobs:
             data-latest.json \
             --clobber
           gh workflow run pages.yml --ref main
+
+      - name: Roll back release after failed promotion
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -u
+          assets=()
+          if [ -f /tmp/suzano-aberta.sqlite3.gz ]; then
+            assets+=(/tmp/suzano-aberta.sqlite3.gz)
+          fi
+          if [ -f /tmp/suzano-aberta.sqlite3.gz.sha256 ]; then
+            assets+=(/tmp/suzano-aberta.sqlite3.gz.sha256)
+          fi
+          if [ -f /tmp/data-latest.json ]; then
+            assets+=(/tmp/data-latest.json)
+          fi
+          if [ "${#assets[@]}" -ge 2 ]; then
+            echo "Restaurando assets do último snapshot validado…"
+            gh release upload data-latest "${assets[@]}" --clobber
+          else
+            echo "Backup de release ainda não estava disponível; nenhum asset será alterado nesta etapa."
+          fi
 
       - name: Close recovered incident
         if: success()
@@ -158,7 +191,7 @@ jobs:
           title="Autopilot rolling refresh failure"
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           issue="$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty' 2>/dev/null || true)"
-          body="A rotina incremental automática falhou. O release data-latest anterior permanece como último snapshot válido; nenhum candidato reprovado é publicado. Run: $run_url"
+          body="A rotina incremental automática falhou. O portal já publicado continua servindo o último artefato aprovado e o workflow tentou restaurar os assets anteriores do release data-latest. Run: $run_url"
           if [ -n "$issue" ]; then
             gh issue comment "$issue" --body "$body" || true
           else
