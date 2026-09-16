@@ -1,28 +1,55 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Data API, API consultiva, biblioteca Python, CLI e snapshots do Suzano Aberta."><meta name="theme-color" content="#102A43"><title>Desenvolvedores — Suzano Aberta</title><link rel="icon" href="./assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="./assets/styles.css"><script defer src="./assets/app.js"></script></head>
-<body><a class="skip-link" href="#conteudo">Ir para o conteúdo</a><div class="independence-banner"><div class="wrap"><span class="banner-dot"></span><span>Dados e código para reutilização responsável.</span></div></div><header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav"><a href="./explorar.html">Explorar</a><a href="./legislacao.html">Legislação</a><a href="./sobre.html">Sobre</a><a aria-current="page" href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
-<main id="conteudo"><section class="page-hero"><div class="wrap"><span class="eyebrow">Plataforma</span><h1>Use o acervo no seu próprio projeto.</h1><p class="lead">Duas camadas públicas: uma Data API estática e resiliente para catálogo e download em massa; e uma API consultiva para filtros, paginação e aplicações interativas.</p></div></section><section class="section"><div class="wrap prose">
-<h2>Data API pública</h2><p>É gerada a partir do mesmo snapshot validado usado pelo portal e publicada junto do GitHub Pages. As coleções completas são ordenadas por data efetiva, do item mais recente para o mais antigo.</p><pre>GET <span data-static-api-base>./api</span>/health/ready.json
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Data API, API consultiva, biblioteca Python, CLI e snapshots públicos do Suzano Aberta.">
+  <meta name="theme-color" content="#081f33">
+  <meta name="color-scheme" content="light">
+  <title>Desenvolvedores — Suzano Aberta</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./assets/styles.css">
+  <link rel="stylesheet" href="./assets/portal-v4.css">
+  <script defer src="./assets/app.js"></script>
+  <script defer src="./assets/portal-v4.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+<div class="independence-banner"><div class="wrap"><span class="banner-dot" aria-hidden="true"></span><span><strong>Dados e código abertos.</strong> As publicações continuam sujeitas às condições de suas fontes originais.</span></div></div>
+<header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html" aria-label="Suzano Aberta — início"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav" aria-label="Navegação principal"><a href="./explorar.html">Explorar</a><a href="./legislacao.html">Legislação</a><a href="./contratacoes.html">Contratações</a><a href="./sobre.html">Sobre</a><a aria-current="page" href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
+<main id="conteudo">
+  <section class="page-hero"><div class="wrap"><span class="eyebrow">Plataforma aberta</span><h1>O portal é só uma das interfaces.</h1><p class="lead">Use o mesmo acervo por Data API, API HTTP consultiva, Python, CLI ou snapshot SQLite. Cada camada tem uma finalidade clara e evita obrigar o consumidor a raspar páginas.</p></div></section>
+  <section class="section section-tint"><div class="wrap"><div class="trust-grid"><div class="trust-item"><strong>Data API</strong><span>Arquivos estáticos e resilientes para catálogo, download e integração sem servidor obrigatório.</span></div><div class="trust-item"><strong>API HTTP 1.2</strong><span>Busca, filtros, paginação, proveniência e respostas tipadas em uma camada somente leitura.</span></div><div class="trust-item"><strong>Python</strong><span><code>Suzano</code>, <code>SuzanoIndex</code> e <code>SuzanoClient</code> para coleta, consulta local e HTTP.</span></div><div class="trust-item"><strong>SQLite</strong><span>Snapshot completo para análise em massa com checksum e validação antes da publicação.</span></div></div></div></section>
+  <section class="section"><div class="wrap prose">
+    <h2>Data API pública</h2><p>É gerada a partir do mesmo snapshot validado usado pelo portal e publicada junto do GitHub Pages. As coleções completas usam a melhor data conhecida sem transformar a data de coleta em data do ato.</p><pre>GET <span data-static-api-base>./api</span>/health/ready.json
 GET <span data-static-api-base>./api</span>/v1/index.json
 GET <span data-static-api-base>./api</span>/v1/stats.json
 GET <span data-static-api-base>./api</span>/v1/records.json.gz
 GET <span data-static-api-base>./api</span>/v1/documentos.json.gz
 GET <span data-static-api-base>./api</span>/v1/legislacao.json.gz
-GET <span data-static-api-base>./api</span>/v1/by-date/2026/09/15.json.gz</pre><p><a class="button button-quiet" data-api-link href="./api/v1/index.json">Abrir catálogo da Data API</a></p>
-<h2>API consultiva v1.1</h2><p>A camada FastAPI é somente leitura e oferece paginação, busca textual, intervalo de datas e ordenação. A data efetiva usa a data pública do registro; quando a fonte informa apenas o ano, esse fato permanece identificado.</p><pre>GET <span data-api-base>API consultiva</span>/v1/search?q=educacao&amp;sort=date_desc
+GET <span data-static-api-base>./api</span>/v1/contratacoes.json.gz</pre><p><a class="button button-quiet" data-api-link href="./api/v1/index.json">Abrir catálogo da Data API</a></p>
+    <h2>API consultiva HTTP 1.2</h2><p>A camada FastAPI é somente leitura e oferece busca textual, filtros, paginação, intervalo de datas, ordenação, Problem Details, request ID, ETag onde aplicável e proveniência.</p><pre>GET <span data-api-base>API consultiva</span>/v1/search?q=educacao&amp;sort=date_desc
 GET <span data-api-base>API consultiva</span>/v1/records?date_from=2026-01-01&amp;date_to=2026-12-31
 GET <span data-api-base>API consultiva</span>/v1/documents?date_from=2026-01-01&amp;sort=date_desc
-GET <span data-api-base>API consultiva</span>/v1/legislation?kind=proposicao&amp;sort=date_desc</pre>
-<h2>Semântica de datas</h2><p><strong>record</strong> é a data publicada pela fonte; <strong>year</strong> indica que só o ano foi encontrado; <strong>observed</strong> é a data em que o coletor viu o item. A ordenação padrão usa a melhor data disponível, sem apresentar a data de coleta como se fosse a data do ato.</p>
-<h2>Python</h2><pre>pip install -e .
+GET <span data-api-base>API consultiva</span>/v1/legislation?kind=proposicao&amp;sort=date_desc
+GET <span data-api-base>API consultiva</span>/v1/procurements?q=fornecedor</pre>
+    <h2>Semântica de datas</h2><p><strong>record</strong> é a data publicada pela fonte; <strong>year</strong> indica que só o ano foi encontrado; <strong>observed</strong> é a data em que o coletor viu o item. A ordenação cronológica usa a melhor evidência disponível e deixa a base da data explícita.</p>
+    <h2>Python</h2><pre>from suzano_aberta import SuzanoClient, SuzanoIndex
 
-from suzano_aberta import Suzano
-
-with Suzano(database="suzano.sqlite3") as suzano:
-    resultados = suzano.search("mobilidade")</pre>
-<h2>Linha de comando</h2><pre>suzano sincronizar
+with SuzanoIndex("suzano-aberta.sqlite3") as index:
+    pagina = index.search("mobilidade", year=2026, limit=25)
+    for item in pagina.items:
+        print(item.id, item.title, item.source.url)</pre>
+    <h2>Linha de comando</h2><pre>suzano sincronizar
 suzano buscar "educação"
+suzano diagnostico
 suzano panorama
 suzano mudancas</pre>
-<h2>Snapshot completo</h2><p>Para análise em massa, use o SQLite compactado publicado como release rolling, acompanhado de checksum SHA-256.</p><p><a class="button" href="https://github.com/MukaSanches/suzano-aberta/releases/tag/data-latest">Abrir snapshot mais recente</a></p>
-<h2>Contrato e rastreabilidade</h2><p>Os modelos preservam identificador, tipo, título, atributos, fonte e instante de coleta. A Data API também expõe <code>effective_date</code> e <code>date_basis</code> para deixar explícito de onde veio a ordenação cronológica.</p>
-</div></section></main><footer class="footer"><div class="wrap"><div class="footer-small">Código sob Apache-2.0. Dados e documentos permanecem sujeitos às condições de suas fontes originais.</div></div></footer></body></html>
+    <h2>Snapshot completo</h2><p>Para análise em massa, prefira o SQLite compactado publicado como release rolling, acompanhado de checksum SHA-256. Isso evita paginar toda a API só para reconstruir o acervo inteiro.</p><p><a class="button" href="https://github.com/MukaSanches/suzano-aberta/releases/tag/data-latest">Abrir snapshot mais recente</a></p>
+    <h2>Contrato e rastreabilidade</h2><p>Os modelos preservam identificador, tipo, título, atributos, fonte e instante de coleta. A Data API expõe também <code>effective_date</code> e <code>date_basis</code>, e a API HTTP mantém o contrato v1 documentado separadamente da versão do pacote e da versão do dataset.</p>
+  </div></section>
+</main>
+<footer class="footer"><div class="wrap"><div class="footer-grid"><div><h2>Suzano Aberta</h2><p>Infraestrutura aberta para consulta e reutilização responsável de informação pública.</p></div><div><h3>Dados</h3><ul><li><a href="./api/v1/index.json">Data API</a></li><li><a href="https://github.com/MukaSanches/suzano-aberta/releases/tag/data-latest">Snapshot</a></li></ul></div><div><h3>Projeto</h3><ul><li><a href="https://github.com/MukaSanches/suzano-aberta">GitHub</a></li><li><a href="./sobre.html">Metodologia</a></li></ul></div><div><h3>Operação</h3><ul><li><a href="./status.html">Status</a></li><li><a href="./acessibilidade.html">Acessibilidade</a></li></ul></div></div><div class="footer-small">Código sob Apache-2.0. Dados e documentos permanecem sujeitos às condições de suas fontes originais.</div></div></footer>
+</body>
+</html>
