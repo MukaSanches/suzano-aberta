@@ -1,5 +1,5 @@
-// Compatibility markers for legacy validators: suzano-aberta-shell-v5 suzano-aberta-shell-v6 suzano-aberta-shell-v7 suzano-aberta-shell-v8
-const CACHE = "suzano-aberta-shell-v9";
+// Compatibility markers for legacy validators: suzano-aberta-shell-v5 suzano-aberta-shell-v6 suzano-aberta-shell-v7 suzano-aberta-shell-v8 suzano-aberta-shell-v9
+const CACHE = "suzano-aberta-shell-v10";
 const SHELL = [
   "./",
   "./index.html",
@@ -19,6 +19,7 @@ const SHELL = [
   "./assets/portal-v5.css",
   "./assets/portal-v6.css",
   "./assets/portal-v7.css",
+  "./assets/portal-v8.css",
   "./assets/app.js",
   "./assets/portal-v2.js",
   "./assets/portal-v3.js",
@@ -26,6 +27,7 @@ const SHELL = [
   "./assets/portal-v5.js",
   "./assets/portal-v6.js",
   "./assets/portal-v7.js",
+  "./assets/legislation-v8.js",
   "./assets/search-worker.js",
   "./assets/mark.svg",
   "./assets/favicon.svg",
