@@ -80,14 +80,16 @@
     });
 
     nav.addEventListener("click", event => {
-      if (event.target.closest("a")) closeMenu();
+      const target = event.target;
+      if (target instanceof Element && target.closest("a")) closeMenu();
     });
     document.addEventListener("keydown", event => {
       if (event.key === "Escape") closeMenu();
     });
     document.addEventListener("click", event => {
       if (!nav.classList.contains("is-open")) return;
-      if (!header.contains(event.target)) closeMenu();
+      const target = event.target;
+      if (target instanceof Node && !header.contains(target)) closeMenu();
     });
   }
 
@@ -104,8 +106,10 @@
           <button class="quick-search-close" type="button" aria-label="Fechar pesquisa">×</button>
         </div>
         <form class="quick-search-form" action="./explorar.html" method="get" role="search">
-          <label class="search-label" for="quick-q">O que você quer encontrar?</label>
-          <input id="quick-q" name="q" type="search" maxlength="200" autocomplete="off" placeholder="Contrato, bairro, escola, número de lei…">
+          <div>
+            <label class="search-label" for="quick-q">O que você quer encontrar?</label>
+            <input id="quick-q" name="q" type="search" maxlength="200" autocomplete="off" placeholder="Contrato, bairro, escola, número de lei…">
+          </div>
           <button class="button" type="submit">Pesquisar</button>
         </form>
         <div class="quick-search-shortcuts" aria-label="Atalhos de pesquisa">
@@ -140,7 +144,8 @@
     });
 
     document.addEventListener("click", event => {
-      const trigger = event.target.closest("[data-quick-search-open]");
+      const target = event.target;
+      const trigger = target instanceof Element ? target.closest("[data-quick-search-open]") : null;
       if (!trigger) return;
       event.preventDefault();
       openDialog();
@@ -148,7 +153,7 @@
 
     document.addEventListener("keydown", event => {
       const target = event.target;
-      const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable;
+      const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable);
       const command = (event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase("pt-BR") === "k";
       const slash = event.key === "/" && !typing && !event.ctrlKey && !event.metaKey && !event.altKey;
       if (!command && !slash) return;
@@ -289,6 +294,10 @@
     $$(".banner-dot").forEach(dot => dot.setAttribute("aria-hidden", "true"));
   }
 
+  function registerServiceWorker() {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
+
   document.documentElement.classList.add("portal-v4");
   document.addEventListener("DOMContentLoaded", () => {
     buildNavigation();
@@ -299,5 +308,6 @@
     setupReveal();
     hardenExternalLinks();
     improveBrandAccessibility();
+    registerServiceWorker();
   });
 })();
