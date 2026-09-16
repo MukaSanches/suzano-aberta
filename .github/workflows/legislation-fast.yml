@@ -1,0 +1,54 @@
+name: Legislation fast path
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/legislacao.html"
+      - "web/sw.js"
+      - "web/assets/legislation-v9.js"
+      - "web/assets/legislation-worker-v9.js"
+      - "scripts/build_browser_legislation.py"
+      - "tests/test_legislation_fast_path.py"
+      - ".github/workflows/legislation-fast.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/legislacao.html"
+      - "web/sw.js"
+      - "web/assets/legislation-v9.js"
+      - "web/assets/legislation-worker-v9.js"
+      - "scripts/build_browser_legislation.py"
+      - "tests/test_legislation_fast_path.py"
+      - ".github/workflows/legislation-fast.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legislation-fast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  performance-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install test runner
+        run: python -m pip install pytest
+
+      - name: Validate shard builder and browser contract
+        run: python -m pytest -q tests/test_legislation_fast_path.py
+
+      - name: Validate legislation JavaScript syntax
+        run: |
+          node --check web/assets/legislation-v9.js
+          node --check web/assets/legislation-worker-v9.js
