@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Criar, revisar e planejar conteúdo para o Instagram oficial do projeto **Suzano Aberta**, mantendo identidade institucional, utilidade pública, neutralidade política, rastreabilidade e foco em crescimento orgânico qualificado.
+Criar, revisar, planejar e operar conteúdo para o Instagram oficial do projeto **Suzano Aberta**, mantendo identidade institucional, utilidade pública, neutralidade política, rastreabilidade e foco em crescimento orgânico qualificado.
 
 ## Contexto obrigatório
 
@@ -76,6 +76,8 @@ Reduzir a quantidade de páginas quando a mensagem puder ser entregue melhor em 
 
 Para feed vertical, preferir `1080 × 1350` px, proporção `4:5`.
 
+Para Stories e conteúdo de Destaques, usar `1080 × 1920` px, proporção `9:16`, mantendo elementos importantes dentro de área segura para recortes e elementos nativos do Instagram.
+
 Manter margens internas generosas e conteúdo crítico longe das bordas. Títulos devem continuar legíveis em telas pequenas e no preview do perfil.
 
 ## Legenda
@@ -130,6 +132,8 @@ Independente e apartidário.
 ↓ Acesse o portal
 ```
 
+**Link principal:** `https://mukasanches.github.io/suzano-aberta/`
+
 **Destaques, nesta ordem:**
 
 `COMECE AQUI` · `NOTÍCIAS` · `CÂMARA` · `PREFEITURA` · `CONTRATOS` · `SERVIÇOS` · `FONTES` · `SOBRE`
@@ -139,6 +143,33 @@ Independente e apartidário.
 1. Comece Aqui;
 2. Como Funciona;
 3. Guia de Suzano / conteúdo evergreen de alto valor.
+
+## Automação segura
+
+Seguir `social/instagram/AUTOMATION.md`.
+
+### Pode automatizar por integração oficial
+
+- posts de feed e carrosséis;
+- Reels;
+- Stories, quando suportado pela conta e integração;
+- agendamento;
+- métricas;
+- operações de comentários e mensagens quando a permissão oficial permitir.
+
+### Alterações estruturais do perfil
+
+Bio, campo Nome, links, foto de perfil e Destaques devem ser tratados como **estado-alvo**, mas aplicados pela interface oficial do Instagram, pois não há endpoint público de escrita para essas alterações na API oficial atual.
+
+É aceitável usar uma sessão controlada de navegador para uma operação pontual. Não criar nem recomendar bot persistente que armazene senha/cookies e simule uso humano do Instagram.
+
+### Fluxo híbrido para Destaques
+
+1. gerar Stories-base em 1080×1920;
+2. publicar/agendar via integração oficial;
+3. depois da publicação, usar a interface do Instagram para agrupá-los nos Destaques;
+4. aplicar as capas oficiais;
+5. validar ordem, nomes e legibilidade.
 
 ## Séries recomendadas
 
@@ -186,8 +217,9 @@ Antes de publicar:
 
 ## Fonte de verdade operacional
 
-Para decisões de perfil e crescimento, consultar também:
+Para decisões de perfil e crescimento, consultar:
 
-`social/instagram/PROFILE.md`
+- `social/instagram/PROFILE.md`
+- `social/instagram/AUTOMATION.md`
 
-As duas referências devem permanecer consistentes.
+As referências devem permanecer consistentes.
