@@ -19,7 +19,7 @@ class ContentObject(BaseModel):
 class SnapshotManifest(BaseModel):
     """Manifesto determinístico que descreve uma geração de dados."""
 
-    schema: str = "suzano-aberta-manifest/v1"
+    schema_version: str = "suzano-aberta-manifest/v1"
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     software_version: str
     dataset_version: str
@@ -50,12 +50,7 @@ class ManifestVerification(BaseModel):
 
 
 class ContentAddressedStore:
-    """Armazena conteúdo pela identidade criptográfica SHA-256.
-
-    Objetos são imutáveis: o mesmo conteúdo sempre resolve para o mesmo caminho.
-    O layout de dois níveis evita diretórios gigantes e segue o padrão conceitual
-    usado por sistemas de armazenamento endereçado por conteúdo.
-    """
+    """Armazena conteúdo pela identidade criptográfica SHA-256."""
 
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root)
