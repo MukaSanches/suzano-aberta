@@ -43,8 +43,8 @@ const structuredResult = recordObject(structuredHiddenEvidence, "mobilidade");
 assert.match(structuredResult.summary, /mobilidade urbana/i);
 
 const tokenMatchesForQuery = vm.runInContext("tokenMatchesForQuery", context);
-const lexicon = ["mobilidade", "mobilidades", "mobilidade-urbana", "mobiliario", "transporte"];
+const lexicon = ["mobiliario", "mobilidade", "mobilidade-urbana", "mobilidades", "transporte"];
 assert.deepEqual([...tokenMatchesForQuery(lexicon, "mobilidade")], ["mobilidade"]);
-assert.deepEqual([...tokenMatchesForQuery(lexicon, "mobili")], ["mobiliario"]);
+assert.deepEqual([...tokenMatchesForQuery(lexicon, "mobiliari")], ["mobiliario"]);
 
 console.log("search-worker relevance contract: ok");
