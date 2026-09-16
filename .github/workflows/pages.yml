@@ -125,7 +125,9 @@ jobs:
           node --check web/assets/portal-v4.js
           node --check web/assets/portal-v5.js
           node --check web/assets/portal-v6.js
+          node --check web/assets/portal-v7.js
           node --check web/assets/search-worker.js
+          node tests/search-worker.test.mjs
           node --check web/sw.js
           python - <<'PY'
           import gzip, json, pathlib
