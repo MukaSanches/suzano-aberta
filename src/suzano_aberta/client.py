@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
-from datetime import date
+from datetime import date, datetime
 from types import TracebackType
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import httpx
 from pydantic import ValidationError
@@ -13,12 +13,16 @@ from .api.schemas import (
     CapabilitiesResponse,
     ChangesResponse,
     HealthResponse,
+    ManifestResponse,
     ProblemDetail,
+    QualityResponse,
+    RecordHistoryResponse,
     RecordsResponse,
     ServiceResponse,
     SnapshotResponse,
     SourcesResponse,
     StatsResponse,
+    TemporalDiffResponse,
 )
 from .models import PublicRecord, RecordKind
 
@@ -44,19 +48,14 @@ class SuzanoApiError(RuntimeError):
 
 
 class SuzanoClient:
-    """Cliente Python tipado para a Suzano Aberta API.
-
-    O cliente é propositalmente somente leitura. Ele cobre as rotas públicas da
-    API, converte respostas em modelos Pydantic do próprio projeto e oferece
-    iteradores para paginação automática sem esconder os limites do serviço.
-    """
+    """Cliente Python tipado e somente leitura para a Suzano Aberta API."""
 
     def __init__(
         self,
         base_url: str = "http://127.0.0.1:8000",
         *,
         timeout: float = 20.0,
-        user_agent: str = "suzano-aberta-python/0.9",
+        user_agent: str = "suzano-aberta-python/1.0",
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         normalized = base_url.rstrip("/") + "/"
@@ -66,10 +65,7 @@ class SuzanoClient:
             timeout=timeout,
             follow_redirects=True,
             transport=transport,
-            headers={
-                "Accept": "application/json",
-                "User-Agent": user_agent,
-            },
+            headers={"Accept": "application/json", "User-Agent": user_agent},
         )
 
     def close(self) -> None:
@@ -92,7 +88,7 @@ class SuzanoClient:
         for key, value in values.items():
             if value is None or value == "":
                 continue
-            if isinstance(value, date):
+            if isinstance(value, (date, datetime)):
                 params[key] = value.isoformat()
             elif isinstance(value, bool):
                 params[key] = "true" if value else "false"
@@ -108,11 +104,13 @@ class SuzanoClient:
         *,
         params: Mapping[str, object | None] | None = None,
         allow_status: frozenset[int] = frozenset(),
+        accept: str = "application/json",
     ) -> httpx.Response:
         try:
             response = self._client.get(
                 path.lstrip("/"),
                 params=self._params(params or {}),
+                headers={"Accept": accept},
             )
         except httpx.HTTPError as exc:
             raise SuzanoApiError(f"Falha de conexão com a Suzano Aberta API: {exc}") from exc
@@ -156,8 +154,13 @@ class SuzanoClient:
         return HealthResponse.model_validate(self._json(response))
 
     def autopilot(self) -> AutopilotResponse:
-        """Consulta o estado de frescor e atualização automática da API."""
         return AutopilotResponse.model_validate(self._json(self._get("/v1/autopilot")))
+
+    def quality(self) -> QualityResponse:
+        return QualityResponse.model_validate(self._json(self._get("/v1/quality")))
+
+    def manifest(self) -> ManifestResponse:
+        return ManifestResponse.model_validate(self._json(self._get("/v1/manifest")))
 
     def capabilities(self) -> CapabilitiesResponse:
         return CapabilitiesResponse.model_validate(self._json(self._get("/v1/capabilities")))
@@ -171,9 +174,67 @@ class SuzanoClient:
     def snapshot(self) -> SnapshotResponse:
         return SnapshotResponse.model_validate(self._json(self._get("/v1/snapshot")))
 
+    def catalog(self) -> dict[str, Any]:
+        payload = self._json(self._get("/v1/catalog"))
+        if not isinstance(payload, dict):
+            raise SuzanoApiError("Resposta inesperada do catálogo da API.")
+        return cast(dict[str, Any], payload)
+
+    def provenance(self, record_id: str) -> dict[str, Any]:
+        payload = self._json(self._get(f"/v1/records/{record_id}/provenance"))
+        if not isinstance(payload, dict):
+            raise SuzanoApiError("Resposta inesperada de proveniência da API.")
+        return cast(dict[str, Any], payload)
+
     def record(self, record_id: str) -> PublicRecord:
         response = self._get(f"/v1/records/{record_id}")
         return PublicRecord.model_validate(self._json(response))
+
+    def record_at(self, record_id: str, at: datetime | str) -> PublicRecord:
+        response = self._get(f"/v1/records/{record_id}/at", params={"at": at})
+        return PublicRecord.model_validate(self._json(response))
+
+    def history(
+        self,
+        record_id: str,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> RecordHistoryResponse:
+        response = self._get(
+            f"/v1/records/{record_id}/history",
+            params={"limit": limit, "offset": offset},
+        )
+        return RecordHistoryResponse.model_validate(self._json(response))
+
+    def diff(
+        self,
+        from_time: datetime | str,
+        to_time: datetime | str,
+        *,
+        kind: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> TemporalDiffResponse:
+        response = self._get(
+            "/v1/diff",
+            params={
+                "from": from_time,
+                "to": to_time,
+                "kind": kind,
+                "limit": limit,
+                "offset": offset,
+            },
+        )
+        return TemporalDiffResponse.model_validate(self._json(response))
+
+    def changes_feed_atom(self, *, limit: int = 50) -> str:
+        response = self._get(
+            "/v1/feed/changes.atom",
+            params={"limit": limit},
+            accept="application/atom+xml",
+        )
+        return response.text
 
     def search(
         self,
