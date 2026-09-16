@@ -26,10 +26,14 @@ class Inspector(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.ids: set[str] = set()
+        self.duplicate_ids: set[str] = set()
         self.links: list[str] = []
         self.has_main = False
         self.has_h1 = False
         self.has_lang = False
+        self.has_viewport = False
+        self.stylesheets: set[str] = set()
+        self.scripts: set[str] = set()
         self.images_without_alt: list[str] = []
         self._html_seen = False
 
@@ -38,16 +42,25 @@ class Inspector(HTMLParser):
         if tag == "html":
             self._html_seen = True
             self.has_lang = bool(data.get("lang"))
+        if tag == "meta" and data.get("name", "").casefold() == "viewport":
+            self.has_viewport = bool(data.get("content"))
         if tag == "main":
             self.has_main = True
         if tag == "h1":
             self.has_h1 = True
         if tag == "a" and data.get("href"):
             self.links.append(str(data["href"]))
+        if tag == "link" and data.get("rel") == "stylesheet" and data.get("href"):
+            self.stylesheets.add(str(data["href"]))
+        if tag == "script" and data.get("src"):
+            self.scripts.add(str(data["src"]))
         if tag == "img" and "alt" not in data:
             self.images_without_alt.append(str(data.get("src") or "<sem src>"))
         if data.get("id"):
-            self.ids.add(str(data["id"]))
+            element_id = str(data["id"])
+            if element_id in self.ids:
+                self.duplicate_ids.add(element_id)
+            self.ids.add(element_id)
 
 
 def fail(message: str) -> None:
@@ -59,22 +72,34 @@ def inspect_page(path: Path) -> None:
     text = path.read_text(encoding="utf-8")
     parser = Inspector()
     parser.feed(text)
+
     if not parser._html_seen or not parser.has_lang:
         fail(f"{path}: <html lang> ausente")
+    if not parser.has_viewport:
+        fail(f"{path}: meta viewport ausente")
     if not parser.has_main:
         fail(f"{path}: elemento <main> ausente")
     if not parser.has_h1:
         fail(f"{path}: h1 ausente")
+    if parser.duplicate_ids:
+        fail(f"{path}: IDs HTML duplicados: {sorted(parser.duplicate_ids)}")
     if parser.images_without_alt:
         fail(f"{path}: imagens sem alt: {parser.images_without_alt}")
+    if "./assets/portal-v4.css" not in parser.stylesheets:
+        fail(f"{path}: camada visual portal-v4.css ausente")
+    if "./assets/portal-v4.js" not in parser.scripts:
+        fail(f"{path}: camada de interação portal-v4.js ausente")
     if "javascript:" in text.casefold():
         fail(f"{path}: javascript: inline não permitido")
+    if re.search(r"\son[a-z]+\s*=", text, re.I):
+        fail(f"{path}: handler JavaScript inline não permitido")
     if re.search(
         r"https?://(www\.)?(google-analytics|googletagmanager|facebook\.com/tr)",
         text,
         re.I,
     ):
         fail(f"{path}: rastreador externo detectado")
+
     for href in parser.links:
         if href.startswith(("http://", "https://", "mailto:", "#")):
             continue
@@ -102,6 +127,7 @@ def validate_generated_data_api() -> None:
     for path in required:
         if not path.exists() or path.stat().st_size == 0:
             fail(f"Data API ausente ou vazia: {path}")
+
     ready = json.loads(required[0].read_text(encoding="utf-8"))
     if not ready.get("ready"):
         fail("Data API não está pronta")
@@ -116,7 +142,7 @@ def validate_generated_data_api() -> None:
         fail("Coleção de contratações não possui lista de itens")
 
 
-def validate_portal_v2_data() -> None:
+def validate_portal_data() -> None:
     data_root = ROOT / "data"
     news = data_root / "news.json"
     enrichment = data_root / "enrichment.json"
@@ -138,6 +164,17 @@ def validate_portal_v2_data() -> None:
                 fail(f"Shard ausente: {path}")
 
 
+def validate_manifest() -> None:
+    path = ROOT / "manifest.webmanifest"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if manifest.get("lang") != "pt-BR":
+        fail("manifest.webmanifest precisa declarar lang=pt-BR")
+    if manifest.get("theme_color") != "#081f33":
+        fail("manifest.webmanifest não está alinhado ao tema visual v4")
+    if not manifest.get("icons"):
+        fail("manifest.webmanifest precisa declarar pelo menos um ícone")
+
+
 def main() -> None:
     for name in PAGES:
         path = ROOT / name
@@ -150,20 +187,26 @@ def main() -> None:
         json.loads(manifest.read_text(encoding="utf-8"))
 
     required_assets = [
-        ROOT / "assets/styles.css",
-        ROOT / "assets/portal-v2.css",
-        ROOT / "assets/app.js",
-        ROOT / "assets/portal-v2.js",
-        ROOT / "assets/search-worker.js",
+        ROOT / "assets" / "styles.css",
+        ROOT / "assets" / "portal-v2.css",
+        ROOT / "assets" / "portal-v3.css",
+        ROOT / "assets" / "portal-v4.css",
+        ROOT / "assets" / "app.js",
+        ROOT / "assets" / "portal-v2.js",
+        ROOT / "assets" / "portal-v3.js",
+        ROOT / "assets" / "portal-v4.js",
+        ROOT / "assets" / "search-worker.js",
         ROOT / "manifest.webmanifest",
+        ROOT / "sw.js",
     ]
     for required in required_assets:
-        if not required.exists():
-            fail(f"asset ausente: {required}")
+        if not required.exists() or required.stat().st_size == 0:
+            fail(f"asset ausente ou vazio: {required}")
 
+    validate_manifest()
     validate_generated_data_api()
-    validate_portal_v2_data()
-    print("Portal estático, detalhes, relações e Data API validados.")
+    validate_portal_data()
+    print("Portal v4, HTML, PWA, detalhes, relações e Data API validados.")
 
 
 if __name__ == "__main__":
