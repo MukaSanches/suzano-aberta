@@ -1,31 +1,45 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Pesquise e navegue cronologicamente pelo acervo público indexado pelo Suzano Aberta."><meta name="theme-color" content="#102A43">
-  <title>Explorar o acervo — Suzano Aberta</title><link rel="icon" href="./assets/favicon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./assets/styles.css"><link rel="stylesheet" href="./assets/portal-v2.css"><script defer src="./assets/app.js"></script><script defer src="./assets/portal-v2.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Pesquise leis, documentos, atos, contratos, licitações e outros registros públicos relacionados a Suzano.">
+  <meta name="theme-color" content="#081f33">
+  <meta name="color-scheme" content="light">
+  <title>Explorar o acervo — Suzano Aberta</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./assets/styles.css">
+  <link rel="stylesheet" href="./assets/portal-v2.css">
+  <link rel="stylesheet" href="./assets/portal-v4.css">
+  <script defer src="./assets/app.js"></script>
+  <script defer src="./assets/portal-v2.js"></script>
+  <script defer src="./assets/portal-v4.js"></script>
 </head>
 <body>
-<a class="skip-link" href="#conteudo">Ir para o conteúdo</a><div class="independence-banner"><div class="wrap"><span class="banner-dot" aria-hidden="true"></span><span><strong>Projeto cívico independente.</strong> Resultados sempre devem ser conferidos na fonte indicada.</span></div></div>
-<header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav" aria-label="Navegação principal"><a aria-current="page" href="./explorar.html">Explorar</a><a href="./legislacao.html">Legislação</a><a href="./contratacoes.html">Contratações</a><a href="./sobre.html">Sobre</a><a href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
+<a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+<div class="independence-banner"><div class="wrap"><span class="banner-dot" aria-hidden="true"></span><span><strong>Pesquisa independente.</strong> Cada resultado deve ser conferido na fonte indicada.</span></div></div>
+<header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html" aria-label="Suzano Aberta — início"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav" aria-label="Navegação principal"><a aria-current="page" href="./explorar.html">Explorar</a><a href="./legislacao.html">Legislação</a><a href="./contratacoes.html">Contratações</a><a href="./sobre.html">Sobre</a><a href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
 <main id="conteudo">
-<section class="page-hero"><div class="wrap"><span class="eyebrow">Pesquisa pública</span><h1>Explorar o acervo</h1><p class="lead">Navegue por documentos, leis, proposições, contratos, licitações, atos e demais registros. O padrão é mostrar primeiro o item de data mais recente.</p></div></section>
-<section class="section"><div class="wrap results-shell">
-  <form class="filters" data-search-form data-explore-form role="search" aria-label="Filtros da pesquisa">
-    <div class="field"><label for="q">Palavra ou expressão</label><input id="q" name="q" type="search" maxlength="200" autocomplete="off" placeholder="Ex.: transporte escolar"></div>
-    <div class="field"><label for="scope">Coleção</label><select id="scope" name="scope"><option value="">Todo o acervo</option><option value="documents">Documentos e arquivos</option><option value="legislation">Leis, decretos e proposições</option></select></div>
-    <div class="field"><label for="kind">Tipo</label><select id="kind" name="kind"><option value="">Todos os tipos</option><option value="lei">Lei</option><option value="decreto">Decreto</option><option value="proposicao">Proposição</option><option value="licitacao">Licitação</option><option value="contrato">Contrato</option><option value="arquivo">Arquivo</option><option value="arquivo_historico">Arquivo histórico</option><option value="documento_fiscal">Documento fiscal</option><option value="documento_orcamentario">Documento orçamentário</option><option value="ato_oficial">Ato oficial</option><option value="diario">Diário</option><option value="noticia">Notícia</option><option value="pagina_web">Página pública</option><option value="sessao">Sessão</option><option value="comissao">Comissão</option><option value="vereador">Vereador</option></select></div>
-    <div class="field"><label for="date_from">De</label><input id="date_from" name="date_from" type="date"></div>
-    <div class="field"><label for="date_to">Até</label><input id="date_to" name="date_to" type="date"></div>
-    <div class="field"><label for="year">Ano</label><input id="year" name="year" type="number" min="1900" max="2100" inputmode="numeric" placeholder="2026"></div>
-    <div class="field"><label for="sort">Ordenar</label><select id="sort" name="sort"><option value="date_desc">Mais recentes primeiro</option><option value="date_asc">Mais antigos primeiro</option><option value="relevance">Relevância da busca</option></select></div>
-    <button class="button" type="submit">Aplicar filtros</button>
-    <p class="search-help">Este painel possui rolagem própria em telas menores. <a href="./legislacao.html">Legislação</a> · <a href="./contratacoes.html">Contratações</a></p>
-  </form>
-  <div>
-    <div class="section-head"><div><p class="result-count" data-result-count>Carregando acervo…</p><p class="search-help">Consulta: <strong data-search-mode>seleção automática</strong> · ordenação padrão: data mais recente</p></div></div>
-    <div data-results aria-live="polite"><p class="loading" role="status">Carregando registros mais recentes…</p></div>
-  </div>
-</div></section>
+  <section class="page-hero"><div class="wrap"><span class="eyebrow">Pesquisa pública</span><h1>Explore o acervo sem precisar conhecer o portal de origem.</h1><p class="lead">Busque por assunto, número, período ou tipo de registro. A consulta tenta a API e, se necessário, continua pelo índice estático publicado junto do site.</p></div></section>
+  <section class="section"><div class="wrap results-shell">
+    <form class="filters" data-search-form data-explore-form role="search" aria-label="Filtros da pesquisa">
+      <div class="field"><label for="q">Palavra ou expressão</label><input id="q" name="q" type="search" maxlength="200" autocomplete="off" placeholder="Ex.: transporte escolar"></div>
+      <div class="field"><label for="scope">Coleção</label><select id="scope" name="scope"><option value="">Todo o acervo</option><option value="documents">Documentos e arquivos</option><option value="legislation">Leis, decretos e proposições</option></select></div>
+      <div class="field"><label for="kind">Tipo</label><select id="kind" name="kind"><option value="">Todos os tipos</option><option value="lei">Lei</option><option value="decreto">Decreto</option><option value="proposicao">Proposição</option><option value="licitacao">Licitação</option><option value="contrato">Contrato</option><option value="arquivo">Arquivo</option><option value="arquivo_historico">Arquivo histórico</option><option value="documento_fiscal">Documento fiscal</option><option value="documento_orcamentario">Documento orçamentário</option><option value="ato_oficial">Ato oficial</option><option value="diario">Diário</option><option value="noticia">Notícia</option><option value="pagina_web">Página pública</option><option value="sessao">Sessão</option><option value="comissao">Comissão</option><option value="vereador">Vereador</option></select></div>
+      <div class="field"><label for="date_from">De</label><input id="date_from" name="date_from" type="date"></div>
+      <div class="field"><label for="date_to">Até</label><input id="date_to" name="date_to" type="date"></div>
+      <div class="field"><label for="year">Ano</label><input id="year" name="year" type="number" min="1900" max="2100" inputmode="numeric" placeholder="2026"></div>
+      <div class="field"><label for="sort">Ordenar</label><select id="sort" name="sort"><option value="date_desc">Mais recentes primeiro</option><option value="date_asc">Mais antigos primeiro</option><option value="relevance">Relevância da busca</option></select></div>
+      <button class="button" type="submit">Aplicar filtros</button>
+      <p class="search-help">Atalhos: <a href="./legislacao.html">legislação</a> · <a href="./contratacoes.html">contratações</a> · pressione <strong>/</strong> para a pesquisa rápida.</p>
+    </form>
+    <div>
+      <div class="section-head"><div><span class="eyebrow">Resultados</span><h2 style="font-size:clamp(1.65rem,3vw,2.3rem)">O acervo responde com a fonte à vista.</h2><p class="result-count" data-result-count>Carregando acervo…</p><p class="search-help">Consulta: <strong data-search-mode>seleção automática</strong> · paginação de 40 itens por vez.</p></div></div>
+      <div data-results aria-live="polite" aria-busy="true"><p class="loading" role="status">Carregando registros mais recentes…</p></div>
+    </div>
+  </div></section>
 </main>
-<footer class="footer"><div class="wrap"><div class="footer-small">Suzano Aberta é independente e não substitui a fonte oficial. <a href="./sobre.html">Entenda a metodologia.</a></div></div></footer>
-</body></html>
+<footer class="footer"><div class="wrap"><div class="footer-grid"><div><h2>Suzano Aberta</h2><p>Pesquisa pública com origem preservada e índice reutilizável.</p></div><div><h3>Acervo</h3><ul><li><a href="./legislacao.html">Legislação</a></li><li><a href="./contratacoes.html">Contratações</a></li></ul></div><div><h3>Projeto</h3><ul><li><a href="./sobre.html">Sobre</a></li><li><a href="./acessibilidade.html">Acessibilidade</a></li></ul></div><div><h3>Dados</h3><ul><li><a href="./desenvolvedores.html">Desenvolvedores</a></li><li><a href="./status.html">Status</a></li></ul></div></div><div class="footer-small">Suzano Aberta é independente e não substitui a fonte oficial.</div></div></footer>
+</body>
+</html>
