@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from datetime import datetime
+from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from xml.etree.ElementTree import Element, SubElement, tostring
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import Response as FastAPIResponse
 
+from ..content_store import ManifestVerification, SnapshotManifest, load_manifest, verify_manifest
 from ..contracts import validate_database_contract
 from ..models import PublicRecord
-from ..release import build_snapshot_manifest, manifest_path_for, verify_snapshot_manifest
+from ..release import build_snapshot_manifest, manifest_path_for
 from .repository import ApiRepository
 from .schemas import (
     ManifestResponse,
@@ -22,22 +23,30 @@ from .schemas import (
 )
 from .settings import ApiSettings
 
-RepositoryDependency = Callable[[], Iterator[ApiRepository]]
-
 
 def _page(total: int, *, limit: int, offset: int) -> PageInfo:
     next_offset = offset + limit if offset + limit < total else None
     return PageInfo(total=total, limit=limit, offset=offset, next_offset=next_offset)
 
 
-def create_civic_router(
+def install_civic_routes(
+    app: FastAPI,
     settings: ApiSettings,
-    repository_dependency: RepositoryDependency,
     *,
     api_version: str,
     schema_version: str,
-) -> APIRouter:
+) -> None:
     router = APIRouter()
+
+    def repository_dependency() -> Iterator[ApiRepository]:
+        try:
+            repository = ApiRepository(settings.database)
+        except (FileNotFoundError, OSError) as exc:
+            raise HTTPException(status_code=503, detail="Índice local ainda não está disponível.") from exc
+        try:
+            yield repository
+        finally:
+            repository.close()
 
     def meta(request: Request, repository: ApiRepository) -> ResponseMeta:
         return ResponseMeta(
@@ -103,13 +112,7 @@ def create_civic_router(
         repository: ApiRepository = Depends(repository_dependency),
     ) -> TemporalDiffResponse:
         try:
-            diff = repository.temporal_diff(
-                from_time,
-                to_time,
-                kind=kind,
-                limit=limit,
-                offset=offset,
-            )
+            diff = repository.temporal_diff(from_time, to_time, kind=kind, limit=limit, offset=offset)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return TemporalDiffResponse(
@@ -131,19 +134,14 @@ def create_civic_router(
     ) -> ManifestResponse:
         sidecar = manifest_path_for(settings.database)
         if sidecar.exists():
-            from ..content_store import load_manifest
-
             current = load_manifest(sidecar)
+            verification = verify_manifest(settings.database, current)
         else:
             current, report = build_snapshot_manifest(settings.database)
             if not report.ok:
                 raise HTTPException(status_code=503, detail="O snapshot atual não atende ao contrato de dados.")
-        verification = verify_snapshot_manifest(settings.database, sidecar) if sidecar.exists() else _verify_live(settings.database, current)
-        return ManifestResponse(
-            manifest=current,
-            verification=verification,
-            meta=meta(request, repository),
-        )
+            verification = _verify_live(settings.database, current)
+        return ManifestResponse(manifest=current, verification=verification, meta=meta(request, repository))
 
     @router.get("/v1/feed/changes.atom", tags=["historico"], response_class=FastAPIResponse)
     def changes_atom(
@@ -155,7 +153,9 @@ def create_civic_router(
         feed = Element("feed", {"xmlns": "http://www.w3.org/2005/Atom"})
         SubElement(feed, "title").text = "Suzano Aberta — mudanças observadas"
         SubElement(feed, "id").text = "https://mukasanches.github.io/suzano-aberta/feeds/changes"
-        SubElement(feed, "updated").text = items[0].observed_at.isoformat() if items else datetime.now().astimezone().isoformat()
+        SubElement(feed, "updated").text = (
+            items[0].observed_at.isoformat() if items else datetime.now(UTC).isoformat()
+        )
         for item in items:
             entry = SubElement(feed, "entry")
             SubElement(entry, "id").text = f"urn:suzano-aberta:change:{item.record_id}:{item.observed_at.isoformat()}"
@@ -170,10 +170,8 @@ def create_civic_router(
             headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=300"},
         )
 
-    return router
+    app.include_router(router)
 
 
-def _verify_live(database: str | Path, manifest: object) -> object:
-    from ..content_store import SnapshotManifest, verify_manifest
-
-    return verify_manifest(database, SnapshotManifest.model_validate(manifest))
+def _verify_live(database: str | Path, manifest: SnapshotManifest) -> ManifestVerification:
+    return verify_manifest(database, manifest)
