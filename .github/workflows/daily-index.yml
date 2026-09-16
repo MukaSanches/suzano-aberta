@@ -9,7 +9,10 @@ on:
       - "scripts/bootstrap_documents.py"
       - "scripts/bootstrap_legislation.py"
       - "scripts/bootstrap_procurement_apis.py"
+      - "scripts/build_release_manifest.py"
       - "src/suzano_aberta/catalog.py"
+      - "src/suzano_aberta/contracts.py"
+      - "src/suzano_aberta/release.py"
       - "src/suzano_aberta/sources/**"
   schedule:
     - cron: "17 07 * * *"
@@ -48,15 +51,19 @@ jobs:
         shell: bash
         run: |
           set -u
-          rm -f suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz
+          rm -f suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz suzano-aberta.manifest.json
           if gh release view data-latest >/dev/null 2>&1; then
             if gh release download data-latest --pattern "suzano-aberta.sqlite3.gz" --clobber; then
               if gzip -t suzano-aberta.sqlite3.gz; then
                 gzip -dc suzano-aberta.sqlite3.gz > suzano-aberta.sqlite3
               fi
             fi
+            gh release download data-latest --pattern "suzano-aberta.manifest.json" --clobber || true
+            if [ -f suzano-aberta.manifest.json ]; then
+              cp suzano-aberta.manifest.json /tmp/previous-manifest.json
+            fi
           fi
-          rm -f suzano-aberta.sqlite3.gz
+          rm -f suzano-aberta.sqlite3.gz suzano-aberta.manifest.json
 
       - name: Bootstrap official documents first
         run: |
@@ -137,22 +144,31 @@ jobs:
               "documents_with_extracted_text": extracted,
               "fts_rows": fts,
               "counts_by_kind": counts,
-              "schema": 5,
+              "schema": 7,
               "profile": "structured-checkpoint",
           }
           with open("data-latest.json", "w", encoding="utf-8") as handle:
               json.dump(metadata, handle, ensure_ascii=False, indent=2)
           print(json.dumps(metadata, ensure_ascii=False))
           PY
+          suzano data quality --db suzano-aberta.sqlite3 --falhar
+          previous_args=()
+          if [ -f /tmp/previous-manifest.json ]; then previous_args=(--previous /tmp/previous-manifest.json); fi
+          python scripts/build_release_manifest.py \
+            --database suzano-aberta.sqlite3 \
+            --output suzano-aberta.manifest.json \
+            "${previous_args[@]}"
           gzip -9 -n -c suzano-aberta.sqlite3 > suzano-aberta.sqlite3.gz
           sha256sum suzano-aberta.sqlite3.gz > suzano-aberta.sqlite3.gz.sha256
           gh release upload data-latest \
             suzano-aberta.sqlite3.gz \
             suzano-aberta.sqlite3.gz.sha256 \
+            suzano-aberta.manifest.json \
             data-latest.json \
             --clobber
           gh workflow run pages.yml --ref main
-          rm -f suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 data-latest.json
+          cp suzano-aberta.manifest.json /tmp/previous-manifest.json
+          rm -f suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 suzano-aberta.manifest.json data-latest.json
 
       - name: Refresh official sources, web discovery and news mentions
         run: suzano atualizar --max-paginas 1200 --profundidade 3 --max-arquivos 650
@@ -179,13 +195,8 @@ jobs:
               "SELECT kind, COUNT(*) FROM records WHERE active=1 GROUP BY kind ORDER BY kind"
           ).fetchall())
           document_kinds = {
-              "arquivo",
-              "arquivo_historico",
-              "diario",
-              "documento_fiscal",
-              "documento_orcamentario",
-              "lei",
-              "decreto",
+              "arquivo", "arquivo_historico", "diario", "documento_fiscal",
+              "documento_orcamentario", "lei", "decreto",
           }
           legislation_kinds = {"lei", "decreto", "proposicao"}
           procurement_kinds = {"licitacao", "contrato", "ata"}
@@ -224,13 +235,20 @@ jobs:
               "documents_with_extracted_text": extracted,
               "fts_rows": fts,
               "counts_by_kind": counts,
-              "schema": 5,
+              "schema": 7,
               "profile": "daily-full",
           }
           with open("data-latest.json", "w", encoding="utf-8") as handle:
               json.dump(metadata, handle, ensure_ascii=False, indent=2)
           print(json.dumps(metadata, ensure_ascii=False))
           PY
+          suzano data quality --db suzano-aberta.sqlite3 --falhar
+          previous_args=()
+          if [ -f /tmp/previous-manifest.json ]; then previous_args=(--previous /tmp/previous-manifest.json); fi
+          python scripts/build_release_manifest.py \
+            --database suzano-aberta.sqlite3 \
+            --output suzano-aberta.manifest.json \
+            "${previous_args[@]}"
 
       - name: Compress and checksum snapshot
         shell: bash
@@ -245,15 +263,17 @@ jobs:
             gh release upload data-latest \
               suzano-aberta.sqlite3.gz \
               suzano-aberta.sqlite3.gz.sha256 \
+              suzano-aberta.manifest.json \
               data-latest.json \
               --clobber
           else
             gh release create data-latest \
               suzano-aberta.sqlite3.gz \
               suzano-aberta.sqlite3.gz.sha256 \
+              suzano-aberta.manifest.json \
               data-latest.json \
               --title "Suzano Aberta — índice diário" \
-              --notes "Snapshot público rolling, reconstruído automaticamente a partir de fontes públicas. Este asset é mutável e não representa uma release de código." \
+              --notes "Snapshot público rolling, reconstruído automaticamente a partir de fontes públicas, validado por contrato de dados e acompanhado por manifesto verificável. Este asset é mutável e não representa uma release de código." \
               --prerelease
           fi
           gh workflow run pages.yml --ref main
