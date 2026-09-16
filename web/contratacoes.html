@@ -13,8 +13,10 @@
   <link rel="stylesheet" href="./assets/portal-v2.css">
   <link rel="stylesheet" href="./assets/portal-v3.css">
   <link rel="stylesheet" href="./assets/portal-v4.css">
+  <link rel="stylesheet" href="./assets/portal-v5.css">
   <script defer src="./assets/portal-v3.js"></script>
   <script defer src="./assets/portal-v4.js"></script>
+  <script defer src="./assets/portal-v5.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -36,8 +38,16 @@
   </div></section>
 
   <section class="section section-tint"><div class="wrap">
-    <article class="detail-panel" data-procurement-detail hidden>
-      <div class="section-head"><div><span class="eyebrow">Detalhe consolidado</span><h2 data-procurement-detail-title>Contratação pública</h2><p data-procurement-detail-summary></p></div><a class="button" data-procurement-official target="_blank" rel="noopener noreferrer">Abrir fonte oficial</a></div>
+    <article class="detail-panel" id="detalhe" data-procurement-detail hidden>
+      <div class="detail-breadcrumb"><a href="./contratacoes.html#colecao">← Voltar à coleção</a><span>Registro consolidado com origem preservada</span></div>
+      <div class="section-head">
+        <div><span class="eyebrow">Detalhe consolidado</span><h2 data-procurement-detail-title>Contratação pública</h2><p data-procurement-detail-summary></p></div>
+        <div class="detail-actions">
+          <a class="button" data-procurement-official target="_blank" rel="noopener noreferrer">Abrir registro na fonte oficial</a>
+          <button class="button button-quiet" type="button" data-copy-record-link>Copiar link</button>
+          <p class="official-link-note" data-procurement-official-note aria-live="polite">A fonte oficial será aberta no registro mais específico disponível.</p>
+        </div>
+      </div>
       <div class="detail-layout">
         <div>
           <h3>Publicação capturada</h3><div data-procurement-publication><p class="search-help">Texto detalhado não disponível neste registro.</p></div>
@@ -48,7 +58,7 @@
       </div>
     </article>
 
-    <div class="section-head" style="margin-top:3rem"><div><span class="eyebrow">Coleção</span><h2>Pesquise por processo, objeto, fornecedor ou CNPJ.</h2></div><p><strong data-procurement-filtered-count>—</strong> resultados no filtro atual.</p></div>
+    <div class="section-head" id="colecao" style="margin-top:3rem"><div><span class="eyebrow">Coleção</span><h2>Pesquise por processo, objeto, fornecedor ou CNPJ.</h2></div><p><strong data-procurement-filtered-count>—</strong> resultados no filtro atual.</p></div>
     <div class="procurement-controls">
       <label class="search-label" for="proc-q" style="position:absolute;left:-10000px">Pesquisar contratações</label>
       <input id="proc-q" data-procurement-search type="search" autocomplete="off" placeholder="Processo, objeto, fornecedor, CNPJ, número PNCP…">
