@@ -1,0 +1,199 @@
+name: Autonomous rolling refresh
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 */4 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/autonomous-refresh.yml"
+      - "src/suzano_aberta/sources/**"
+      - "src/suzano_aberta/discovery.py"
+      - "src/suzano_aberta/catalog.py"
+      - "scripts/bootstrap_procurement_apis.py"
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+concurrency:
+  # Compartilha o lock do daily-index para impedir duas rotinas de dados
+  # de substituírem o release data-latest ao mesmo tempo.
+  group: daily-autonomous-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install library
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip check
+
+      - name: Restore last known good snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f suzano-aberta.sqlite3 suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 data-latest.json
+          gh release download data-latest \
+            --pattern "suzano-aberta.sqlite3.gz" \
+            --pattern "suzano-aberta.sqlite3.gz.sha256" \
+            --clobber
+          gh release download data-latest --pattern "data-latest.json" --clobber || true
+
+          # Guarda os assets anteriores fora do workspace. Eles são usados como
+          # rollback se a promoção do candidato falhar no meio do upload.
+          cp suzano-aberta.sqlite3.gz /tmp/suzano-aberta.sqlite3.gz
+          cp suzano-aberta.sqlite3.gz.sha256 /tmp/suzano-aberta.sqlite3.gz.sha256
+          if [ -f data-latest.json ]; then
+            cp data-latest.json /tmp/data-latest.json
+          fi
+
+          expected="$(awk '{print $1}' suzano-aberta.sqlite3.gz.sha256)"
+          actual="$(sha256sum suzano-aberta.sqlite3.gz | awk '{print $1}')"
+          test "$expected" = "$actual"
+          gzip -t suzano-aberta.sqlite3.gz
+          gzip -dc suzano-aberta.sqlite3.gz > suzano-aberta.sqlite3
+          python - <<'PY'
+          import sqlite3
+          db = sqlite3.connect("suzano-aberta.sqlite3")
+          check = db.execute("PRAGMA quick_check").fetchone()[0]
+          total = db.execute("SELECT COUNT(*) FROM records WHERE active=1").fetchone()[0]
+          db.close()
+          if str(check).lower() != "ok" or total < 1:
+              raise SystemExit(f"snapshot base inválido: check={check} records={total}")
+          open("/tmp/previous-count", "w", encoding="utf-8").write(str(total))
+          print(f"base válida: {total} registros")
+          PY
+          rm -f suzano-aberta.sqlite3.gz suzano-aberta.sqlite3.gz.sha256 data-latest.json
+
+      - name: Refresh structured procurement APIs
+        run: python scripts/bootstrap_procurement_apis.py --database suzano-aberta.sqlite3
+
+      - name: Incremental municipal and web discovery
+        run: suzano atualizar --max-paginas 320 --profundidade 2 --max-arquivos 160
+
+      - name: Validate candidate snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import sqlite3
+          from datetime import UTC, datetime
+
+          previous = int(open("/tmp/previous-count", encoding="utf-8").read())
+          db = sqlite3.connect("suzano-aberta.sqlite3")
+          db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+          check = db.execute("PRAGMA quick_check").fetchone()[0]
+          total = db.execute("SELECT COUNT(*) FROM records WHERE active=1").fetchone()[0]
+          fts = db.execute("SELECT COUNT(*) FROM records_fts").fetchone()[0]
+          counts = dict(db.execute(
+              "SELECT kind, COUNT(*) FROM records WHERE active=1 GROUP BY kind ORDER BY kind"
+          ).fetchall())
+          procurement_api = db.execute(
+              "SELECT COUNT(*) FROM records WHERE active=1 AND (id LIKE 'pncp:%' OR id LIKE 'comprasgov:%')"
+          ).fetchone()[0]
+          db.close()
+
+          minimum = max(1, int(previous * 0.85))
+          if str(check).lower() != "ok":
+              raise SystemExit(f"quick_check falhou: {check}")
+          if total < minimum:
+              raise SystemExit(f"queda anormal de cobertura: previous={previous} candidate={total} minimum={minimum}")
+          if fts != total:
+              raise SystemExit(f"FTS inconsistente: {fts} != {total}")
+          if procurement_api < 1:
+              raise SystemExit("candidato não contém registros PNCP/Compras.gov")
+
+          metadata = {
+              "generated_at": datetime.now(UTC).isoformat(),
+              "records": total,
+              "previous_records": previous,
+              "procurement_api_records": procurement_api,
+              "counts_by_kind": counts,
+              "schema": 6,
+              "profile": "autonomous-incremental",
+          }
+          with open("data-latest.json", "w", encoding="utf-8") as handle:
+              json.dump(metadata, handle, ensure_ascii=False, indent=2)
+          print(json.dumps(metadata, ensure_ascii=False))
+          PY
+
+      - name: Publish validated rolling snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          gzip -9 -n -c suzano-aberta.sqlite3 > suzano-aberta.sqlite3.gz
+          sha256sum suzano-aberta.sqlite3.gz > suzano-aberta.sqlite3.gz.sha256
+          gh release upload data-latest \
+            suzano-aberta.sqlite3.gz \
+            suzano-aberta.sqlite3.gz.sha256 \
+            data-latest.json \
+            --clobber
+          gh workflow run pages.yml --ref main
+
+      - name: Roll back release after failed promotion
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -u
+          assets=()
+          if [ -f /tmp/suzano-aberta.sqlite3.gz ]; then
+            assets+=(/tmp/suzano-aberta.sqlite3.gz)
+          fi
+          if [ -f /tmp/suzano-aberta.sqlite3.gz.sha256 ]; then
+            assets+=(/tmp/suzano-aberta.sqlite3.gz.sha256)
+          fi
+          if [ -f /tmp/data-latest.json ]; then
+            assets+=(/tmp/data-latest.json)
+          fi
+          if [ "${#assets[@]}" -ge 2 ]; then
+            echo "Restaurando assets do último snapshot validado…"
+            gh release upload data-latest "${assets[@]}" --clobber
+          else
+            echo "Backup de release ainda não estava disponível; nenhum asset será alterado nesta etapa."
+          fi
+
+      - name: Close recovered incident
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          issue="$(gh issue list --state open --search 'Autopilot rolling refresh failure in:title' --json number --jq '.[0].number // empty')"
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "A atualização automática voltou a concluir com sucesso no run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Encerrando o incidente automaticamente."
+            gh issue close "$issue" --reason completed
+          fi
+
+      - name: Record autonomous incident
+        if: failure()
+        shell: bash
+        run: |
+          set -u
+          title="Autopilot rolling refresh failure"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          issue="$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+          body="A rotina incremental automática falhou. O portal já publicado continua servindo o último artefato aprovado e o workflow tentou restaurar os assets anteriores do release data-latest. Run: $run_url"
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "$body" || true
+          else
+            gh issue create --title "$title" --body "$body" || true
+          fi

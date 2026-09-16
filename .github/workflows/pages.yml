@@ -12,6 +12,8 @@ on:
       - "scripts/build_portal_enrichment.py"
       - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
+      - "scripts/build_autopilot_digest.py"
+      - "scripts/check_autopilot.py"
       - "scripts/render_web_config.py"
       - "scripts/check_web.py"
       - ".github/workflows/pages.yml"
@@ -26,6 +28,8 @@ on:
       - "scripts/build_portal_enrichment.py"
       - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
+      - "scripts/build_autopilot_digest.py"
+      - "scripts/check_autopilot.py"
       - "scripts/render_web_config.py"
       - "scripts/check_web.py"
       - ".github/workflows/pages.yml"
@@ -62,10 +66,6 @@ jobs:
           python -m pip install -e .
           python -m pip check
 
-      # O portal é uma projeção determinística do snapshot rolling já validado.
-      # Coleta de fontes externas pertence ao pipeline de dados e não ao deploy web:
-      # isso impede que latência/indisponibilidade de PNCP ou Compras.gov bloqueie
-      # uma publicação cujo acervo de entrada já passou por checksum e integridade.
       - name: Download validated rolling snapshot
         shell: bash
         run: |
@@ -103,8 +103,11 @@ jobs:
       - name: Materialize canonical official links
         run: python scripts/enrich_official_links.py --root web
 
-      - name: Refresh five latest web news
-        run: python scripts/build_news_feed.py --output web/data/news.json
+      - name: Refresh autonomous news desk
+        run: python scripts/build_news_feed.py --database /tmp/suzano-aberta.sqlite3 --output web/data/news.json
+
+      - name: Build autonomous city briefing
+        run: python scripts/build_autopilot_digest.py --database /tmp/suzano-aberta.sqlite3 --news web/data/news.json --output web/data/autopilot.json
 
       - name: Render runtime configuration
         env:
@@ -114,20 +117,27 @@ jobs:
       - name: Validate portal
         run: |
           python scripts/check_web.py
+          python scripts/check_autopilot.py
           python -m compileall -q scripts src
           node --check web/assets/app.js
           node --check web/assets/portal-v2.js
           node --check web/assets/portal-v3.js
           node --check web/assets/portal-v4.js
           node --check web/assets/portal-v5.js
+          node --check web/assets/portal-v6.js
           node --check web/assets/search-worker.js
           node --check web/sw.js
           python - <<'PY'
           import gzip, json, pathlib
           root = pathlib.Path("web/data")
           news = json.loads((root / "news.json").read_text(encoding="utf-8"))
-          if news.get("count") != 5 or len(news.get("items", [])) != 5:
-              raise SystemExit("feed de notícias não contém exatamente 5 itens")
+          items = news.get("items") or []
+          if int(news.get("count", 0)) < 5 or len(items) < 5:
+              raise SystemExit("feed autônomo possui menos de 5 itens")
+          if int(news.get("publisher_count", 0)) < 2:
+              raise SystemExit("feed autônomo não possui diversidade mínima de fontes")
+          autopilot = json.loads((root / "autopilot.json").read_text(encoding="utf-8"))
+          pulse = autopilot.get("pulse") or {}
           enrichment = json.loads((root / "enrichment.json").read_text(encoding="utf-8"))
           if enrichment.get("detail_shards") != 16 or enrichment.get("relation_shards") != 16:
               raise SystemExit("camada de detalhes/relacionamentos incompleta")
@@ -137,13 +147,19 @@ jobs:
               raise SystemExit("snapshot rolling não possui cobertura multi-fonte suficiente")
           with gzip.open("web/api/v1/contratacoes.json.gz", "rt", encoding="utf-8") as handle:
               payload = json.load(handle)
-          items = payload.get("items") or []
-          if not items:
+          procurement_items = payload.get("items") or []
+          if not procurement_items:
               raise SystemExit("coleção pública de contratações está vazia")
-          exact_links = [item for item in items if (item.get("attributes") or {}).get("official_url_quality") == "exact"]
+          exact_links = [item for item in procurement_items if (item.get("attributes") or {}).get("official_url_quality") == "exact"]
           if not exact_links:
               raise SystemExit("nenhuma contratação possui link oficial direto materializado")
-          print({"news": 5, "official_exact": len(exact_links), **enrichment})
+          print({
+              "news": len(items),
+              "publishers": news.get("publisher_count"),
+              "autopilot_records": pulse.get("records"),
+              "official_exact": len(exact_links),
+              **enrichment,
+          })
           PY
 
       - name: Configure Pages

@@ -19,9 +19,10 @@
   <link rel="stylesheet" href="./assets/portal-v2.css">
   <link rel="stylesheet" href="./assets/portal-v3.css">
   <link rel="stylesheet" href="./assets/portal-v4.css">
+  <link rel="stylesheet" href="./assets/portal-v6.css">
   <script defer src="./assets/app.js"></script>
-  <script defer src="./assets/portal-v3.js"></script>
   <script defer src="./assets/portal-v4.js"></script>
+  <script defer src="./assets/portal-v6.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -81,11 +82,36 @@
     </div>
   </section>
 
+  <section class="section autopilot-band" aria-labelledby="autopilot-title">
+    <div class="wrap">
+      <div class="autopilot-status" data-autopilot-status><span class="autopilot-status-dot" aria-hidden="true"></span><strong>Operação automática</strong><span>carregando briefing…</span></div>
+      <div class="section-head"><div><span class="eyebrow">Pulso da cidade</span><h2 id="autopilot-title">Um briefing novo é montado sozinho a partir do acervo.</h2></div><p>O sistema recalcula atividade recente, legislação, contratações e cobertura de fontes sem escrever conclusões políticas ou esconder de onde os dados vieram.</p></div>
+      <div class="autopilot-briefing" data-autopilot-briefing aria-live="polite"><div class="loading">Calculando indicadores…</div></div>
+      <div class="autopilot-radar-grid">
+        <article class="radar-panel">
+          <div class="radar-head"><strong>Radar legislativo</strong><a href="./legislacao.html">Abrir coleção</a></div>
+          <ul class="radar-list" data-autopilot-legislation><li><span class="radar-source">Carregando registros…</span></li></ul>
+        </article>
+        <article class="radar-panel">
+          <div class="radar-head"><strong>Radar de contratações</strong><a href="./contratacoes.html">Abrir coleção</a></div>
+          <ul class="radar-list" data-autopilot-procurements><li><span class="radar-source">Carregando registros…</span></li></ul>
+        </article>
+      </div>
+      <div class="autopilot-foot"><span data-autopilot-generated>Rotinas de atualização em carregamento.</span><span data-autopilot-sources>Mapeando cobertura de fontes…</span></div>
+    </div>
+  </section>
+
   <section class="section section-tint">
     <div class="wrap">
-      <div class="section-head"><div><span class="eyebrow">Agora em Suzano</span><h2>Publicações recentes, sem virar um feed opaco.</h2></div><p>O digest reúne itens recentes e mantém a fonte visível. Notícias não são usadas como substitutas de documentos oficiais.</p></div>
+      <div class="section-head"><div><span class="eyebrow">Agora em Suzano</span><h2>Uma mesa automática acompanha o que está sendo publicado.</h2></div><p>As matérias são agrupadas por tema, deduplicadas e distribuídas entre diferentes fontes. O conteúdo continua pertencendo à fonte original, que fica visível em cada item.</p></div>
       <div data-news-list aria-live="polite"><div class="loading">Atualizando notícias…</div></div>
       <div class="news-digest-meta"><strong data-news-source-summary>checando fontes…</strong><span data-news-generated>Nova varredura a cada 30 minutos.</span></div>
+      <div class="operations-row" aria-label="Rotinas automáticas do portal">
+        <div class="operation-pill"><strong>Notícias</strong><span>varredura e seleção a cada 30 minutos</span></div>
+        <div class="operation-pill"><strong>Dados recentes</strong><span>atualização incremental ao longo do dia</span></div>
+        <div class="operation-pill"><strong>Índice completo</strong><span>reconstrução diária com validação</span></div>
+        <div class="operation-pill"><strong>Falhas</strong><span>último estado válido permanece publicado</span></div>
+      </div>
     </div>
   </section>
 
