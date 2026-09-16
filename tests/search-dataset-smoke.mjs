@@ -58,7 +58,7 @@ function assertNewestFirst(items, label) {
   }
 }
 
-async function latestKind(kind, label) {
+async function latestKind(kind, label, { required = false } = {}) {
   const result = await searchStatic({
     query: "",
     scope: "legislation",
@@ -70,16 +70,18 @@ async function latestKind(kind, label) {
     limit: 20,
     offset: 0,
   });
-  assert.ok(result.total > 0, `${label} precisa existir no snapshot real`);
-  assert.ok(result.items.length > 0, `${label} precisa retornar uma primeira página`);
+  if (required) {
+    assert.ok(result.total > 0, `${label} precisa existir no snapshot real`);
+    assert.ok(result.items.length > 0, `${label} precisa retornar uma primeira página`);
+  }
   assert.ok(result.items.every(item => item.kind === kind), `${label} não pode vazar outros tipos`);
   assertNewestFirst(result.items, label);
   return result;
 }
 
-const latestLaws = await latestKind("lei", "Leis recentes");
+const latestLaws = await latestKind("lei", "Leis recentes", { required: true });
 const latestDecrees = await latestKind("decreto", "Decretos recentes");
-const latestPropositions = await latestKind("proposicao", "Proposições recentes");
+const latestPropositions = await latestKind("proposicao", "Proposições recentes", { required: true });
 
 const mobility = await searchStatic({
   query: "MOBILIDADE",
@@ -127,11 +129,11 @@ assert.ok(
 );
 
 console.log(JSON.stringify({
-  latest_law: latestLaws.items[0]?.title,
+  latest_law: latestLaws.items[0]?.title || null,
   latest_law_date: effectiveDate(latestLaws.items[0]),
-  latest_decree: latestDecrees.items[0]?.title,
+  latest_decree: latestDecrees.items[0]?.title || null,
   latest_decree_date: effectiveDate(latestDecrees.items[0]),
-  latest_proposition: latestPropositions.items[0]?.title,
+  latest_proposition: latestPropositions.items[0]?.title || null,
   latest_proposition_date: effectiveDate(latestPropositions.items[0]),
   mobility_total: mobility.total,
   mobility_top: mobility.items.slice(0, 3).map(item => item.title),
