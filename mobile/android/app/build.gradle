@@ -1,5 +1,11 @@
 plugins { id 'com.android.application' }
 
+def releaseKeystore = System.getenv('ANDROID_KEYSTORE_FILE')
+
+def releaseStorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
+def releaseKeyAlias = System.getenv('ANDROID_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('ANDROID_KEY_PASSWORD')
+
 android {
     namespace 'br.com.suzanoaberta.app'
     compileSdk 36
@@ -12,8 +18,20 @@ android {
         versionName '1.0.0'
     }
 
+    signingConfigs {
+        if (releaseKeystore) {
+            release {
+                storeFile file(releaseKeystore)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig releaseKeystore ? signingConfigs.release : signingConfigs.debug
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
