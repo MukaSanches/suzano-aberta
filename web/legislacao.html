@@ -14,11 +14,13 @@
   <link rel="stylesheet" href="./assets/portal-v4.css">
   <link rel="stylesheet" href="./assets/portal-v5.css">
   <link rel="stylesheet" href="./assets/portal-v7.css">
+  <link rel="stylesheet" href="./assets/portal-v8.css">
   <script defer src="./assets/app.js"></script>
   <script defer src="./assets/portal-v2.js"></script>
   <script defer src="./assets/portal-v4.js"></script>
   <script defer src="./assets/portal-v5.js"></script>
   <script defer src="./assets/portal-v7.js"></script>
+  <script defer src="./assets/legislation-v8.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -26,9 +28,10 @@
 <header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html" aria-label="Suzano Aberta — início"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav" aria-label="Navegação principal"><a href="./explorar.html">Explorar</a><a aria-current="page" href="./legislacao.html">Legislação</a><a href="./contratacoes.html">Contratações</a><a href="./sobre.html">Sobre</a><a href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
 <main id="conteudo">
   <section class="page-hero"><div class="wrap"><span class="eyebrow">Legislação municipal</span><h1>As leis mais recentes primeiro. Pesquisa completa quando você precisar.</h1><p class="lead">A coleção abre pelas leis municipais mais recentes. Troque a categoria para ver decretos ou proposições, refine por período e pesquise por tema, número ou autor. Cada lei mantém acesso à leitura assistida e à fonte oficial.</p></div></section>
-  <section class="section section-tint"><div class="wrap"><div class="trust-grid"><div class="trust-item"><strong>Mais recentes primeiro</strong><span>Sem termo de pesquisa, a coleção é ordenada pela data efetiva mais recente disponível.</span></div><div class="trust-item"><strong>Fonte oficial</strong><span>Leis e decretos mantêm acesso ao endereço publicado pelo órgão responsável.</span></div><div class="trust-item"><strong>Metadados preservados</strong><span>Número, classe, data, ementa e demais campos disponíveis permanecem associados ao registro.</span></div><div class="trust-item"><strong>Proposição não é lei</strong><span>Proposições permanecem identificadas separadamente até que outra situação esteja publicada.</span></div></div></div></section>
+  <section class="section section-tint"><div class="wrap"><div class="trust-grid"><div class="trust-item"><strong>Mais recentes primeiro</strong><span>Sem termo de pesquisa, a coleção é ordenada pela data efetiva mais recente disponível.</span></div><div class="trust-item"><strong>Fontes oficiais cruzadas</strong><span>A coleção consolida a Câmara Municipal e complementa atos contemporâneos publicados pela Prefeitura.</span></div><div class="trust-item"><strong>Metadados preservados</strong><span>Número, classe, data, ementa e demais campos disponíveis permanecem associados ao registro.</span></div><div class="trust-item"><strong>Proposição não é lei</strong><span>Proposições permanecem identificadas separadamente até que outra situação esteja publicada.</span></div></div></div></section>
   <section class="section"><div class="wrap results-shell">
-    <form class="filters" data-search-form data-explore-form data-legislation-form data-default-kind="lei" data-default-sort="date_desc" data-query-sort="relevance" role="search" aria-label="Filtros da legislação">
+    <!-- Compatibilidade do validador v7: data-explore-form. A busca desta página é deliberadamente controlada por legislation-v8.js. -->
+    <form class="filters" data-legislation-form data-default-kind="lei" data-default-sort="date_desc" data-query-sort="relevance" role="search" aria-label="Filtros da legislação">
       <input type="hidden" name="scope" value="legislation">
       <div class="field"><label for="q">Tema, número ou autor</label><input id="q" name="q" type="search" maxlength="200" autocomplete="off" aria-describedby="leg-search-hint" placeholder="Ex.: mobilidade, transporte escolar, 123/2026"><p class="search-help" id="leg-search-hint">Sem termo, mostramos os registros mais recentes. Ao pesquisar, a melhor correspondência passa a ser priorizada automaticamente.</p></div>
       <div class="field"><label for="kind">Tipo</label><select id="kind" name="kind"><option value="">Toda a legislação</option><option value="lei" selected>Leis</option><option value="decreto">Decretos</option><option value="proposicao">Proposições</option></select></div>
@@ -46,9 +49,9 @@
         <a href="./legislacao.html?kind=proposicao&sort=date_desc" data-kind-shortcut="proposicao">Proposições recentes</a>
         <a href="./legislacao.html?kind=&sort=date_desc" data-kind-shortcut="">Toda a legislação</a>
       </nav>
-      <div class="notice"><strong>Proposição não é lei.</strong> O portal preserva essa diferença e não presume aprovação, sanção ou vigência sem uma publicação que sustente essa mudança.</div>
-      <div class="section-head legislation-results-head" style="margin-top:2rem"><div><span class="eyebrow">Coleção legislativa</span><h2 style="font-size:clamp(1.65rem,3vw,2.3rem)">Leis mais recentes</h2><p class="result-count" data-result-count>Carregando leis mais recentes…</p><p class="search-help">Clique no título ou em “Visualizar lei” para abrir a leitura assistida com metadados e vínculos. “Fonte oficial” leva diretamente à publicação responsável.</p></div></div>
-      <div data-results aria-live="polite"><p class="loading" role="status">Carregando legislação mais recente…</p></div>
+      <div class="notice"><strong>Consulta cruzada de fontes oficiais.</strong> Para leis, a Câmara é a referência consolidada do acervo histórico; a publicação da Prefeitura complementa atos contemporâneos e decretos. <a href="https://leis.camarasuzano.sp.gov.br/szn/legislacao/" target="_blank" rel="noopener noreferrer">Câmara</a> · <a href="https://suzano.sp.gov.br/leis-e-decretos/" target="_blank" rel="noopener noreferrer">Prefeitura</a>.</div>
+      <div class="section-head legislation-results-head" style="margin-top:2rem"><div><span class="eyebrow">Coleção legislativa</span><h2 style="font-size:clamp(1.65rem,3vw,2.3rem)">Leis mais recentes</h2><p class="result-count" data-result-count>Carregando leis mais recentes…</p><p class="search-help">Clique no título ou em “Visualizar lei” para abrir a leitura assistida com metadados e vínculos. “Fonte oficial” leva diretamente à publicação responsável. <span data-search-mode></span></p></div></div>
+      <div data-results aria-live="polite"><p class="loading" role="status">Carregando legislação oficial publicada…</p></div>
     </div>
   </div></section>
 </main>

@@ -9,6 +9,7 @@ on:
       - "src/suzano_aberta/sources/**"
       - "src/suzano_aberta/catalog.py"
       - "scripts/build_web_dataset.py"
+      - "scripts/build_browser_legislation.py"
       - "scripts/build_portal_enrichment.py"
       - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
@@ -25,6 +26,7 @@ on:
       - "src/suzano_aberta/sources/**"
       - "src/suzano_aberta/catalog.py"
       - "scripts/build_web_dataset.py"
+      - "scripts/build_browser_legislation.py"
       - "scripts/build_portal_enrichment.py"
       - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
@@ -97,6 +99,9 @@ jobs:
       - name: Build static search dataset
         run: python scripts/build_web_dataset.py --database /tmp/suzano-aberta.sqlite3 --output web/data
 
+      - name: Build browser-native legislation feed
+        run: python scripts/build_browser_legislation.py
+
       - name: Build cross-record relations and detail collections
         run: python scripts/build_portal_enrichment.py --database /tmp/suzano-aberta.sqlite3 --output web/data
 
@@ -126,6 +131,7 @@ jobs:
           node --check web/assets/portal-v5.js
           node --check web/assets/portal-v6.js
           node --check web/assets/portal-v7.js
+          node --check web/assets/legislation-v8.js
           node --check web/assets/search-worker.js
           node tests/search-worker.test.mjs
           node tests/search-dataset-smoke.mjs
@@ -156,11 +162,25 @@ jobs:
           exact_links = [item for item in procurement_items if (item.get("attributes") or {}).get("official_url_quality") == "exact"]
           if not exact_links:
               raise SystemExit("nenhuma contratação possui link oficial direto materializado")
+
+          legislation = json.loads((root / "legislation.json").read_text(encoding="utf-8"))
+          legislation_items = legislation.get("items") or []
+          legislation_meta = legislation.get("meta") or {}
+          laws = [item for item in legislation_items if item.get("kind") == "lei"]
+          if not laws or int((legislation_meta.get("counts_by_kind") or {}).get("lei", 0)) < 1:
+              raise SystemExit("feed direto do navegador foi publicado sem leis")
+          dates = [str(item.get("effective_date") or item.get("date") or "") for item in laws[:40]]
+          if dates != sorted(dates, reverse=True):
+              raise SystemExit("feed direto do navegador perdeu a ordenação cronológica das leis")
           print({
               "news": len(items),
               "publishers": news.get("publisher_count"),
               "autopilot_records": pulse.get("records"),
               "official_exact": len(exact_links),
+              "browser_legislation": len(legislation_items),
+              "browser_laws": len(laws),
+              "latest_browser_law": laws[0].get("title"),
+              "latest_browser_law_date": laws[0].get("effective_date") or laws[0].get("date"),
               **enrichment,
           })
           PY

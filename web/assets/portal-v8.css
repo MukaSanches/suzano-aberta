@@ -1,0 +1,35 @@
+/* Portal v8 — correções específicas da coleção legislativa. */
+
+@media (min-width: 901px) {
+  .legislation-browser-v8 > .filters {
+    scroll-padding-bottom: 1rem !important;
+  }
+
+  .legislation-browser-v8 > .filters .filter-actions {
+    position: static !important;
+    z-index: auto !important;
+    margin: 1rem 0 0 !important;
+    padding: .8rem 0 0 !important;
+    border-top: 1px solid #dce6eb;
+    background: #fff !important;
+    backdrop-filter: none !important;
+  }
+}
+
+.legislation-browser-v8 .legislation-source-error a {
+  font-weight: 800;
+}
+
+.legislation-browser-v8 [data-results] .result-actions > a:not([data-detail-link]) {
+  font-weight: 760;
+}
+
+.legislation-browser-v8 [data-results] .result-meta time {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .legislation-browser-v8 > .filters.is-v7-collapsed {
+    display: none !important;
+  }
+}
