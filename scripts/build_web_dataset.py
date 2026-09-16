@@ -26,6 +26,11 @@ DOCUMENT_KINDS = {
     "lei", "decreto",
 }
 LEGISLATION_KINDS = {"lei", "decreto", "proposicao"}
+SEARCH_CONTEXT_KEYS = (
+    "ementa", "assunto", "tema", "objeto", "descricao", "descricao_complementar",
+    "texto", "texto_integral", "autor", "author", "processo", "numero", "modalidade",
+    "situacao", "contratada", "contractor", "fornecedor", "orgao", "secretaria",
+)
 
 
 def normalize_text(value: str) -> str:
@@ -44,6 +49,42 @@ def flatten(value: Any) -> str:
     if isinstance(value, (list, tuple, set)):
         return " ".join(flatten(item) for item in value)
     return str(value)
+
+
+def search_context(payload: dict[str, Any], *, max_chars: int = 1100) -> str:
+    """Extrai evidência legível para explicar por que um registro apareceu na busca.
+
+    O índice completo continua usando todos os atributos. Este campo é apenas um
+    trecho compacto e de alto sinal para que a interface mostre contexto útil em
+    vez de texto de navegação ou o início arbitrário de uma página.
+    """
+    attributes = payload.get("attributes") or {}
+    if not isinstance(attributes, dict):
+        return ""
+
+    parts: list[str] = []
+    seen: set[str] = set()
+    for key in SEARCH_CONTEXT_KEYS:
+        if key not in attributes:
+            continue
+        text = re.sub(r"\s+", " ", flatten(attributes.get(key))).strip()
+        if not text:
+            continue
+        marker = normalize_text(text[:180])
+        if marker in seen:
+            continue
+        seen.add(marker)
+        label = key.replace("_", " ")
+        parts.append(f"{label}: {text}")
+        if sum(len(part) for part in parts) >= max_chars:
+            break
+
+    if not parts and str(payload.get("kind") or "") not in {"pagina_web", "noticia"}:
+        generic = re.sub(r"\s+", " ", flatten(attributes)).strip()
+        if generic:
+            parts.append(generic)
+
+    return " · ".join(parts)[:max_chars]
 
 
 def tokens_for(payload: dict[str, Any], *, max_tokens: int) -> list[str]:
@@ -191,11 +232,12 @@ def build(database: Path, output: Path, *, max_tokens_per_record: int = 1800) ->
             year_value = None
         summary = str(payload.get("summary") or "")
         kind = str(payload.get("kind") or row["kind"])
+        context = search_context(payload)
         compact = [
             str(payload.get("id") or row["id"]), kind,
             str(payload.get("title") or row["title"]), payload.get("date"), year_value,
             str(source.get("name") or row["source_name"]), str(source.get("url") or row["source_url"]),
-            str(row["last_seen"]), summary[:500], effective, basis,
+            str(row["last_seen"]), summary[:500], effective, basis, context,
         ]
         record_rows.append(compact)
         item = public_item(payload, effective=effective, basis=basis, last_seen=str(row["last_seen"]))
@@ -263,7 +305,7 @@ def build(database: Path, output: Path, *, max_tokens_per_record: int = 1800) ->
         "snapshot": "https://github.com/MukaSanches/suzano-aberta/releases/tag/data-latest",
         "record_fields": [
             "id", "kind", "title", "date", "year", "source_name", "source_url", "last_seen",
-            "summary", "effective_date", "date_basis",
+            "summary", "effective_date", "date_basis", "search_context",
         ],
     }
     write_json(output / "manifest.json", manifest)
