@@ -38,7 +38,7 @@ TOPICS: dict[str, tuple[str, ...]] = {
     "Administração": ("prefeitura", "camara", "câmara", "secretaria", "decreto", "lei", "licitacao", "licitação", "contrato"),
 }
 
-TARGET_ITEMS = 9
+TARGET_ITEMS = 5
 MIN_ITEMS = 5
 MAX_PER_PUBLISHER = 2
 
