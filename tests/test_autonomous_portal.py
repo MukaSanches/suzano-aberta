@@ -87,16 +87,24 @@ def test_editorial_selection_deduplicates_and_limits_publishers() -> None:
             "topic": "Saúde",
         },
     ]
-    for index, publisher in enumerate(["Fonte A", "Fonte A", "Fonte B", "Fonte C", "Fonte D", "Fonte E"], start=1):
+    distinct = [
+        ("Fonte A", "Suzano anuncia mudanças no transporte coletivo municipal", "Mobilidade"),
+        ("Fonte A", "Escolas de Suzano recebem nova programação pedagógica", "Educação"),
+        ("Fonte B", "Suzano divulga novas vagas de emprego para moradores", "Emprego"),
+        ("Fonte C", "Obras de drenagem avançam em bairro de Suzano", "Obras"),
+        ("Fonte D", "Agenda cultural de Suzano ganha exposição neste fim de semana", "Cultura"),
+        ("Fonte E", "Projeto ambiental amplia plantio de árvores em Suzano", "Meio ambiente"),
+    ]
+    for index, (publisher, title, topic) in enumerate(distinct, start=1):
         candidates.append(
             {
-                "title": f"Suzano pauta pública distinta número {index} sobre mobilidade",
+                "title": title,
                 "url": f"https://example.test/{index}",
                 "published_at": (now - timedelta(minutes=index + 2)).isoformat(),
                 "publisher": publisher,
                 "origin": "web",
-                "summary": "Informação pública distinta sobre transporte em Suzano.",
-                "topic": "Mobilidade",
+                "summary": f"Informação pública distinta sobre {topic} em Suzano.",
+                "topic": topic,
             }
         )
 
