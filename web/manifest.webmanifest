@@ -9,7 +9,38 @@
   "display": "standalone",
   "background_color": "#f6f9fb",
   "theme_color": "#081f33",
+  "categories": ["utilities", "productivity", "education"],
   "icons": [
     {"src": "./assets/mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
+  ],
+  "shortcuts": [
+    {
+      "name": "Pesquisar no acervo",
+      "short_name": "Pesquisar",
+      "description": "Pesquisar informação pública indexada",
+      "url": "./explorar.html",
+      "icons": [{"src": "./assets/mark.svg", "sizes": "any", "type": "image/svg+xml"}]
+    },
+    {
+      "name": "Legislação de Suzano",
+      "short_name": "Legislação",
+      "description": "Consultar leis, decretos e proposições",
+      "url": "./legislacao.html",
+      "icons": [{"src": "./assets/mark.svg", "sizes": "any", "type": "image/svg+xml"}]
+    },
+    {
+      "name": "Contratações públicas",
+      "short_name": "Contratações",
+      "description": "Consultar licitações, contratos e fornecedores",
+      "url": "./contratacoes.html",
+      "icons": [{"src": "./assets/mark.svg", "sizes": "any", "type": "image/svg+xml"}]
+    },
+    {
+      "name": "Status do Suzano Aberta",
+      "short_name": "Status",
+      "description": "Ver atualização e disponibilidade do portal",
+      "url": "./status.html",
+      "icons": [{"src": "./assets/mark.svg", "sizes": "any", "type": "image/svg+xml"}]
+    }
   ]
 }
