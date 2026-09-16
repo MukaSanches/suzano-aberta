@@ -1,0 +1,63 @@
+name: Portal v11
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/index.html"
+      - "web/manifest.webmanifest"
+      - "web/sw.js"
+      - "web/assets/portal-v4.css"
+      - "web/assets/portal-v4-core.css"
+      - "web/assets/portal-v11.css"
+      - "web/assets/portal-v11-core.css"
+      - "web/assets/portal-v11-compat.css"
+      - "web/assets/portal-v11.js"
+      - "tests/test_portal_v11.py"
+      - ".github/workflows/portal-v11.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/index.html"
+      - "web/manifest.webmanifest"
+      - "web/sw.js"
+      - "web/assets/portal-v4.css"
+      - "web/assets/portal-v4-core.css"
+      - "web/assets/portal-v11.css"
+      - "web/assets/portal-v11-core.css"
+      - "web/assets/portal-v11-compat.css"
+      - "web/assets/portal-v11.js"
+      - "tests/test_portal_v11.py"
+      - ".github/workflows/portal-v11.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portal-v11-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  civic-interface:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install test runner
+        run: python -m pip install pytest
+
+      - name: Validate Portal v11 contracts
+        run: python -m pytest -q tests/test_portal_v11.py
+
+      - name: Validate JavaScript syntax
+        run: node --check web/assets/portal-v11.js
+
+      - name: Validate legacy portal contracts
+        run: python scripts/check_web.py
