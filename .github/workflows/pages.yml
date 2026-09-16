@@ -13,6 +13,7 @@ on:
       - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
       - "scripts/build_autopilot_digest.py"
+      - "scripts/check_autopilot.py"
       - "scripts/render_web_config.py"
       - "scripts/check_web.py"
       - ".github/workflows/pages.yml"
@@ -28,6 +29,7 @@ on:
       - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
       - "scripts/build_autopilot_digest.py"
+      - "scripts/check_autopilot.py"
       - "scripts/render_web_config.py"
       - "scripts/check_web.py"
       - ".github/workflows/pages.yml"
@@ -64,9 +66,6 @@ jobs:
           python -m pip install -e .
           python -m pip check
 
-      # O portal é uma projeção determinística do último snapshot rolling validado.
-      # O deploy nunca destrói o último portal saudável só porque uma fonte externa
-      # ficou lenta ou indisponível durante uma varredura de notícias.
       - name: Download validated rolling snapshot
         shell: bash
         run: |
@@ -118,6 +117,7 @@ jobs:
       - name: Validate portal
         run: |
           python scripts/check_web.py
+          python scripts/check_autopilot.py
           python -m compileall -q scripts src
           node --check web/assets/app.js
           node --check web/assets/portal-v2.js
@@ -137,13 +137,7 @@ jobs:
           if int(news.get("publisher_count", 0)) < 2:
               raise SystemExit("feed autônomo não possui diversidade mínima de fontes")
           autopilot = json.loads((root / "autopilot.json").read_text(encoding="utf-8"))
-          if autopilot.get("mode") != "deterministic-autopilot":
-              raise SystemExit("briefing autônomo possui modo inesperado")
           pulse = autopilot.get("pulse") or {}
-          if int(pulse.get("records", 0)) < 1 or int(pulse.get("sources", 0)) < 1:
-              raise SystemExit("briefing autônomo não possui cobertura válida")
-          if not autopilot.get("legislation") or not autopilot.get("procurements"):
-              raise SystemExit("radares autônomos não podem ser publicados vazios")
           enrichment = json.loads((root / "enrichment.json").read_text(encoding="utf-8"))
           if enrichment.get("detail_shards") != 16 or enrichment.get("relation_shards") != 16:
               raise SystemExit("camada de detalhes/relacionamentos incompleta")
