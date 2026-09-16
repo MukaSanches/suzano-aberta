@@ -19,7 +19,9 @@ permissions:
   issues: write
 
 concurrency:
-  group: autonomous-rolling-refresh
+  # Compartilha o lock do daily-index para impedir duas rotinas de dados
+  # de substituírem o release data-latest ao mesmo tempo.
+  group: daily-autonomous-index
   cancel-in-progress: false
 
 jobs:
