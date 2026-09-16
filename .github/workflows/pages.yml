@@ -13,6 +13,8 @@ on:
       - "scripts/build_portal_enrichment.py"
       - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
+      - "scripts/build_line11_news_status.py"
+      - "scripts/inject_line11_module.py"
       - "scripts/build_autopilot_digest.py"
       - "scripts/check_autopilot.py"
       - "scripts/render_web_config.py"
@@ -30,6 +32,8 @@ on:
       - "scripts/build_portal_enrichment.py"
       - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
+      - "scripts/build_line11_news_status.py"
+      - "scripts/inject_line11_module.py"
       - "scripts/build_autopilot_digest.py"
       - "scripts/check_autopilot.py"
       - "scripts/render_web_config.py"
@@ -111,6 +115,12 @@ jobs:
       - name: Refresh autonomous news desk
         run: python scripts/build_news_feed.py --database /tmp/suzano-aberta.sqlite3 --output web/data/news.json
 
+      - name: Build Line 11 news estimate
+        run: python scripts/build_line11_news_status.py --output web/data/line11-news-status.json
+
+      - name: Refresh Line 11 homepage module
+        run: python scripts/inject_line11_module.py --page web/index.html
+
       - name: Build autonomous city briefing
         run: python scripts/build_autopilot_digest.py --database /tmp/suzano-aberta.sqlite3 --news web/data/news.json --output web/data/autopilot.json
 
@@ -132,6 +142,9 @@ jobs:
           node --check web/assets/portal-v6.js
           node --check web/assets/portal-v7.js
           node --check web/assets/legislation-v8.js
+          node --check web/assets/legislation-v9.js
+          node --check web/assets/legislation-worker-v9.js
+          node --check web/assets/line11.js
           node --check web/assets/search-worker.js
           node tests/search-worker.test.mjs
           node tests/search-dataset-smoke.mjs
@@ -172,6 +185,17 @@ jobs:
           dates = [str(item.get("effective_date") or item.get("date") or "") for item in laws[:40]]
           if dates != sorted(dates, reverse=True):
               raise SystemExit("feed direto do navegador perdeu a ordenação cronológica das leis")
+
+          line11 = json.loads((root / "line11-news-status.json").read_text(encoding="utf-8"))
+          if line11.get("method") != "news-headline-estimate":
+              raise SystemExit("indicador da Linha 11 não está em modo jornalístico")
+          if line11.get("color") not in {"green", "yellow", "red", "gray"}:
+              raise SystemExit("cor inválida no indicador da Linha 11")
+          if not isinstance(line11.get("evidence"), list):
+              raise SystemExit("indicador da Linha 11 sem lista de evidências")
+          if "Não é telemetria" not in str(line11.get("disclaimer") or ""):
+              raise SystemExit("indicador da Linha 11 perdeu aviso metodológico")
+
           print({
               "news": len(items),
               "publishers": news.get("publisher_count"),
@@ -181,6 +205,8 @@ jobs:
               "browser_laws": len(laws),
               "latest_browser_law": laws[0].get("title"),
               "latest_browser_law_date": laws[0].get("effective_date") or laws[0].get("date"),
+              "line11_color": line11.get("color"),
+              "line11_evidence": len(line11.get("evidence") or []),
               **enrichment,
           })
           PY

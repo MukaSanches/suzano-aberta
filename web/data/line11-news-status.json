@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "generated_at": "2026-09-16T18:15:00+00:00",
+  "refresh_minutes": 30,
+  "stale_after_minutes": 90,
+  "method": "news-headline-estimate",
+  "line": "Linha 11–Coral",
+  "focus_stations": [
+    "Calmon Viana",
+    "Suzano",
+    "Jundiapeba",
+    "Estudantes"
+  ],
+  "availability": "available",
+  "level": "normal",
+  "color": "green",
+  "status": "Última notícia indica normalização",
+  "summary": "Linhas 11-Coral e 12-Safira abrem normalmente após CPTM remanejar fornecimento de energia",
+  "confidence": "média",
+  "affected_segment": "Linha 11–Coral (trecho exato não identificado pela manchete)",
+  "reason": "energia",
+  "latest_news_at": "2026-09-14T00:00:00-03:00",
+  "evidence": [
+    {
+      "title": "Linhas 11-Coral e 12-Safira abrem normalmente após CPTM remanejar fornecimento de energia",
+      "url": "https://www.metrocptm.com.br/linhas-11-coral-e-12-safira-abrem-normalmente-apos-cptm-remanejar-fornecimento-de-energia/",
+      "publisher": "MetrôCPTM",
+      "published_at": "2026-09-14T00:00:00-03:00",
+      "signal": "normal",
+      "reason": "energia",
+      "affected_segment": "Linha 11–Coral (trecho exato não identificado pela manchete)",
+      "query": "seed verificado em 2026-09-16"
+    },
+    {
+      "title": "Linha 11-Coral volta ao normal, mas Linha 12-Safira e Expresso Aeroporto seguem com problemas",
+      "url": "https://www.metrocptm.com.br/linha-11-coral-volta-ao-normal-mas-linha-12-safira-e-expresso-aeroporto-seguem-com-problemas/",
+      "publisher": "MetrôCPTM",
+      "published_at": "2026-09-12T08:25:00-03:00",
+      "signal": "normal",
+      "reason": "energia",
+      "affected_segment": "Linha 11–Coral (trecho exato não identificado pela manchete)",
+      "query": "seed verificado em 2026-09-16"
+    },
+    {
+      "title": "Linha 11-Coral teve falha e causa lotação nos trens nesta sexta",
+      "url": "https://www.metrocptm.com.br/linha-11-coral-tem-falha-nesta-sexta-11/",
+      "publisher": "MetrôCPTM",
+      "published_at": "2026-09-11T14:00:00-03:00",
+      "signal": "disruption",
+      "reason": "energia",
+      "affected_segment": "Linha 11–Coral (trecho exato não identificado pela manchete)",
+      "query": "seed verificado em 2026-09-16"
+    }
+  ],
+  "publishers": [
+    "MetrôCPTM"
+  ],
+  "query_count": 7,
+  "records_scanned": 3,
+  "relevant_items": 3,
+  "failed_requests": 0,
+  "errors": [],
+  "disclaimer": "Estimativa automática baseada em manchetes recentes. Não é telemetria da CPTM, não confirma a circulação em tempo real e não substitui os canais oficiais."
+}

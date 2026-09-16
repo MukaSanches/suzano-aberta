@@ -9,11 +9,11 @@ END = "<!-- line11-module:end -->"
 HOME_SECTION = '''<section class="section line11-home-section" aria-labelledby="linha11-home-title">
   <div class="wrap">
     <div class="section-head">
-      <div><span class="eyebrow">Mobilidade agora</span><h2 id="linha11-home-title">Linha 11–Coral em Suzano</h2></div>
-      <p>Status operacional oficial com foco em Calmon Viana, Suzano, Jundiapeba e Estudantes. Quando a fonte não trouxer dado atual, o portal mostra isso explicitamente.</p>
+      <div><span class="eyebrow">Mobilidade por notícias</span><h2 id="linha11-home-title">Linha 11–Coral em Suzano</h2></div>
+      <p>Estimativa automática baseada nas notícias mais recentes sobre Calmon Viana, Suzano, Jundiapeba e Estudantes. Verde indica ausência de alerta recente ou normalização noticiada; amarelo e vermelho indicam atenção.</p>
     </div>
-    <div class="line11-widget" data-line11-widget data-line11-compact="true" aria-live="polite"><div class="line11-loading" role="status">Consultando fontes oficiais…</div></div>
-    <p class="search-help"><a href="./linha-11.html">Abrir painel completo da Linha 11–Coral</a></p>
+    <div class="line11-widget" data-line11-widget data-line11-compact="true" aria-live="polite"><div class="line11-loading" role="status">Lendo notícias recentes da Linha 11…</div></div>
+    <p class="search-help"><a href="./linha-11.html">Ver notícias usadas e metodologia do indicador</a></p>
   </div>
 </section>'''
 
@@ -21,7 +21,14 @@ HOME_SECTION = '''<section class="section line11-home-section" aria-labelledby="
 def inject_homepage(page: Path) -> bool:
     text = page.read_text(encoding="utf-8")
     if START in text and END in text:
-        return False
+        before, rest = text.split(START, 1)
+        _, after = rest.split(END, 1)
+        updated = f"{before}{START}\n{HOME_SECTION}\n{END}{after}"
+        if updated == text:
+            return False
+        page.write_text(updated, encoding="utf-8")
+        return True
+
     css = '<link rel="stylesheet" href="./assets/line11.css">'
     js = '<script defer src="./assets/line11.js"></script>'
     if css not in text:
@@ -40,7 +47,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Injeta o módulo da Linha 11 na home do portal.")
     parser.add_argument("--page", type=Path, default=Path("web/index.html"))
     args = parser.parse_args()
-    print("updated" if inject_homepage(args.page) else "already-present")
+    print("updated" if inject_homepage(args.page) else "already-current")
 
 
 if __name__ == "__main__":
