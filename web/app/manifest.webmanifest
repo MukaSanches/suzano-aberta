@@ -1,0 +1,15 @@
+{
+  "name": "Suzano Aberta",
+  "short_name": "Suzano Aberta",
+  "description": "Informação pública verificável de Suzano em uma interface móvel independente.",
+  "id": "/suzano-aberta/app/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f6f8fa",
+  "theme_color": "#0b2239",
+  "lang": "pt-BR",
+  "categories": ["government", "news", "utilities"],
+  "icons": [{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
