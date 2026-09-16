@@ -1,4 +1,4 @@
-const CACHE = "suzano-aberta-shell-v4";
+const CACHE = "suzano-aberta-shell-v5";
 const SHELL = [
   "./",
   "./index.html",
@@ -15,10 +15,12 @@ const SHELL = [
   "./assets/portal-v2.css",
   "./assets/portal-v3.css",
   "./assets/portal-v4.css",
+  "./assets/portal-v5.css",
   "./assets/app.js",
   "./assets/portal-v2.js",
   "./assets/portal-v3.js",
   "./assets/portal-v4.js",
+  "./assets/portal-v5.js",
   "./assets/search-worker.js",
   "./assets/mark.svg",
   "./assets/favicon.svg",
