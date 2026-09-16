@@ -46,7 +46,7 @@ const normalized = value => String(value || "")
   .trim();
 
 function effectiveDate(item) {
-  return String(item.effective_date || item.date || "");
+  return String(item?.effective_date || item?.date || "");
 }
 
 function assertNewestFirst(items, label) {
