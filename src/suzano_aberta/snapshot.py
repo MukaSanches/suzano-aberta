@@ -5,6 +5,7 @@ import hashlib
 import os
 import sqlite3
 import tempfile
+import time
 from pathlib import Path
 
 import httpx
@@ -24,6 +25,11 @@ class SnapshotError(RuntimeError):
 def snapshot_checksum_path(destination: str | Path) -> Path:
     """Sidecar local com o checksum do último release instalado."""
     return Path(f"{Path(destination)}.remote.sha256")
+
+
+def snapshot_lock_path(destination: str | Path) -> Path:
+    """Lock compartilhado entre qualquer processo que promova o mesmo snapshot."""
+    return Path(f"{Path(destination)}.sync.lock")
 
 
 def _download(url: str, destination: Path, *, timeout: float) -> str:
@@ -104,6 +110,54 @@ def _write_checksum_sidecar(path: Path, checksum: str) -> None:
     os.replace(temporary, path)
 
 
+def _lock_is_stale(path: Path, *, stale_seconds: float) -> bool:
+    try:
+        return time.time() - path.stat().st_mtime > stale_seconds
+    except OSError:
+        return False
+
+
+def _acquire_sync_lock(path: Path, *, stale_seconds: float) -> bool:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    for _ in range(2):
+        try:
+            descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            if not _lock_is_stale(path, stale_seconds=stale_seconds):
+                return False
+            try:
+                path.unlink()
+            except OSError:
+                return False
+            continue
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(f"pid={os.getpid()}\n")
+        return True
+    return False
+
+
+def _release_sync_lock(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+
+
+def _wait_for_other_sync(
+    target: Path,
+    lock: Path,
+    *,
+    min_records: int,
+    timeout: float,
+) -> int:
+    deadline = time.monotonic() + min(max(timeout, 1.0), 30.0)
+    while lock.exists() and time.monotonic() < deadline:
+        time.sleep(0.1)
+    if target.exists():
+        return _validate_database(target, min_records=min_records)
+    raise SnapshotError("Outra sincronização está em andamento e o banco local ainda não está disponível.")
+
+
 def sync_latest_snapshot(
     destination: str | Path,
     *,
@@ -115,7 +169,8 @@ def sync_latest_snapshot(
 
     Antes de transferir o banco completo, consulta apenas o checksum remoto. Se
     ele for igual ao release já instalado e o banco local passar nas validações,
-    a função retorna sem baixar novamente o snapshot.
+    a função retorna sem baixar novamente o snapshot. Um lock por destino impede
+    promoções concorrentes vindas de múltiplos processos ou workers.
     """
     if min_records < 1:
         raise ValueError("min_records deve ser maior ou igual a 1")
@@ -123,53 +178,67 @@ def sync_latest_snapshot(
     target = Path(destination)
     target.parent.mkdir(parents=True, exist_ok=True)
     checksum_sidecar = snapshot_checksum_path(target)
-    remote_checksum = _fetch_remote_checksum(url, timeout=timeout)
+    lock = snapshot_lock_path(target)
+    stale_seconds = max(300.0, timeout * 2)
 
-    if remote_checksum is not None and target.exists() and checksum_sidecar.exists():
-        try:
-            local_checksum = checksum_sidecar.read_text(encoding="utf-8").strip().split()[0]
-        except (OSError, IndexError):
-            local_checksum = ""
-        if local_checksum.casefold() == remote_checksum.casefold():
+    if not _acquire_sync_lock(lock, stale_seconds=stale_seconds):
+        return _wait_for_other_sync(
+            target,
+            lock,
+            min_records=min_records,
+            timeout=timeout,
+        )
+
+    try:
+        remote_checksum = _fetch_remote_checksum(url, timeout=timeout)
+
+        if remote_checksum is not None and target.exists() and checksum_sidecar.exists():
             try:
-                return _validate_database(target, min_records=min_records)
-            except SnapshotError:
-                # Um sidecar igual não basta para confiar em um banco local corrompido.
-                pass
+                local_checksum = checksum_sidecar.read_text(encoding="utf-8").strip().split()[0]
+            except (OSError, IndexError):
+                local_checksum = ""
+            if local_checksum.casefold() == remote_checksum.casefold():
+                try:
+                    return _validate_database(target, min_records=min_records)
+                except SnapshotError:
+                    # Um sidecar igual não basta para confiar em um banco local corrompido.
+                    pass
 
-    with tempfile.TemporaryDirectory(dir=target.parent) as temp_dir:
-        temp_root = Path(temp_dir)
-        compressed = temp_root / "snapshot.sqlite3.gz"
-        extracted = temp_root / "snapshot.sqlite3"
+        with tempfile.TemporaryDirectory(dir=target.parent) as temp_dir:
+            temp_root = Path(temp_dir)
+            compressed = temp_root / "snapshot.sqlite3.gz"
+            extracted = temp_root / "snapshot.sqlite3"
 
-        try:
-            actual_checksum = _download(url, compressed, timeout=timeout)
-        except (httpx.HTTPError, OSError) as exc:
-            raise SnapshotError(f"Não foi possível baixar o snapshot: {exc}") from exc
-
-        expected_checksum = remote_checksum
-        if expected_checksum is None:
-            expected_checksum = _fetch_remote_checksum(url, timeout=timeout)
-        if expected_checksum and actual_checksum.casefold() != expected_checksum.casefold():
-            raise SnapshotError("Checksum do snapshot não confere; arquivo recusado.")
-
-        try:
-            with gzip.open(compressed, "rb") as source, extracted.open("wb") as output:
-                while chunk := source.read(1024 * 1024):
-                    output.write(chunk)
-        except (OSError, EOFError) as exc:
-            raise SnapshotError("Snapshot compactado inválido.") from exc
-
-        count = _validate_database(extracted, min_records=min_records)
-
-        install_path = temp_root / "install.sqlite3"
-        os.replace(extracted, install_path)
-        for suffix in ("-wal", "-shm"):
-            sidecar = Path(f"{target}{suffix}")
             try:
-                sidecar.unlink()
-            except FileNotFoundError:
-                pass
-        os.replace(install_path, target)
-        _write_checksum_sidecar(checksum_sidecar, actual_checksum)
-        return count
+                actual_checksum = _download(url, compressed, timeout=timeout)
+            except (httpx.HTTPError, OSError) as exc:
+                raise SnapshotError(f"Não foi possível baixar o snapshot: {exc}") from exc
+
+            expected_checksum = remote_checksum
+            if expected_checksum is None:
+                expected_checksum = _fetch_remote_checksum(url, timeout=timeout)
+            if expected_checksum and actual_checksum.casefold() != expected_checksum.casefold():
+                raise SnapshotError("Checksum do snapshot não confere; arquivo recusado.")
+
+            try:
+                with gzip.open(compressed, "rb") as source, extracted.open("wb") as output:
+                    while chunk := source.read(1024 * 1024):
+                        output.write(chunk)
+            except (OSError, EOFError) as exc:
+                raise SnapshotError("Snapshot compactado inválido.") from exc
+
+            count = _validate_database(extracted, min_records=min_records)
+
+            install_path = temp_root / "install.sqlite3"
+            os.replace(extracted, install_path)
+            for suffix in ("-wal", "-shm"):
+                sidecar = Path(f"{target}{suffix}")
+                try:
+                    sidecar.unlink()
+                except FileNotFoundError:
+                    pass
+            os.replace(install_path, target)
+            _write_checksum_sidecar(checksum_sidecar, actual_checksum)
+            return count
+    finally:
+        _release_sync_lock(lock)
