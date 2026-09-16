@@ -40,6 +40,23 @@ def test_resolves_direct_pncp_ata_from_combined_control() -> None:
     )
 
 
+def test_reported_ata_00112_opens_exact_pncp_record() -> None:
+    record = {
+        "id": "pncp:ata:4c4df136eac04341d99c",
+        "kind": "ata",
+        "title": "Ata de registro de preços 00112",
+        "source": {"name": "Portal Nacional de Contratações Públicas (PNCP)", "url": "https://pncp.gov.br/"},
+        "attributes": {
+            "numero_controle_pncp": "46523056000121-1-000049/2026-000001",
+            "numero_controle_pncp_compra": "46523056000121-1-000049/2026",
+        },
+    }
+    assert resolve_official_url(record) == (
+        "https://pncp.gov.br/app/atas/46523056000121/2026/49/1",
+        "exact",
+    )
+
+
 def test_resolves_direct_pncp_ata_from_purchase_and_ata_sequences() -> None:
     record = {
         "kind": "ata",
