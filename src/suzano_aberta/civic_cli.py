@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 from rich.console import Console
@@ -29,6 +29,13 @@ def _parse_datetime(value: str, field: str) -> datetime:
         raise typer.BadParameter(f"{field} deve ser um instante ISO-8601") from exc
 
 
+def _nested_mapping(event: dict[str, object], key: str) -> dict[str, object]:
+    value = event.get(key)
+    if not isinstance(value, dict):
+        return {}
+    return cast(dict[str, object], value)
+
+
 @app.command("quality")
 def quality(
     database: Annotated[Path, typer.Option("--db")] = DEFAULT_DATABASE,
@@ -49,7 +56,10 @@ def quality(
         for finding in report.findings:
             table.add_row(finding.code, finding.severity, finding.message)
         console.print(table)
-        console.print(f"Registros: {report.records} · Fontes: {report.sources} · Contrato: {report.contract_sha256[:12]}")
+        console.print(
+            f"Registros: {report.records} · Fontes: {report.sources} · "
+            f"Contrato: {report.contract_sha256[:12]}"
+        )
     if fail_on_error and not report.ok:
         raise typer.Exit(code=3)
 
@@ -65,7 +75,13 @@ def timeline(
     with Store(database) as store:
         versions = store.history(record_id, limit=limit)
     if as_json:
-        console.print_json(json.dumps([item.model_dump(mode="json") for item in versions], ensure_ascii=False, default=str))
+        console.print_json(
+            json.dumps(
+                [item.model_dump(mode="json") for item in versions],
+                ensure_ascii=False,
+                default=str,
+            )
+        )
         return
     table = Table(title=f"Linha do tempo — {record_id}")
     table.add_column("Versão", justify="right")
@@ -73,7 +89,12 @@ def timeline(
     table.add_column("Hash")
     table.add_column("Título")
     for item in versions:
-        table.add_row(str(item.version), item.observed_at.isoformat(), item.content_hash[:12], item.record.title)
+        table.add_row(
+            str(item.version),
+            item.observed_at.isoformat(),
+            item.content_hash[:12],
+            item.record.title,
+        )
     console.print(table)
 
 
@@ -118,7 +139,10 @@ def diff(
     for item in result.items:
         table.add_row(item.change_type, item.kind, item.record_id, item.observed_at.isoformat())
     console.print(table)
-    console.print(f"Total: {result.total} · novos: {result.new} · alterados: {result.changed} · ausentes: {result.absent}")
+    console.print(
+        f"Total: {result.total} · novos: {result.new} · "
+        f"alterados: {result.changed} · ausentes: {result.absent}"
+    )
 
 
 @app.command("manifest")
@@ -164,8 +188,8 @@ def lineage(
     table.add_column("Job")
     table.add_column("Run ID")
     for event in events:
-        run = event.get("run") if isinstance(event.get("run"), dict) else {}
-        job = event.get("job") if isinstance(event.get("job"), dict) else {}
+        run = _nested_mapping(event, "run")
+        job = _nested_mapping(event, "job")
         table.add_row(
             str(event.get("eventTime") or "—"),
             str(event.get("eventType") or "—"),
@@ -183,8 +207,12 @@ def catalog(
     with ApiRepository(database) as repository:
         stats = repository.stats()
         sources = repository.source_catalog(limit=200)
-    console.print(f"Dataset: {repository.dataset_version() if database.exists() else 'indisponível'}")
-    console.print(f"Registros: {stats['records']} · fontes observadas: {len(sources)} · temporal: {stats.get('temporal_enabled', False)}")
+        dataset_version = repository.dataset_version()
+    console.print(f"Dataset: {dataset_version}")
+    console.print(
+        f"Registros: {stats['records']} · fontes observadas: {len(sources)} · "
+        f"temporal: {stats.get('temporal_enabled', False)}"
+    )
     table = Table(title="Source SDK")
     table.add_column("Chave")
     table.add_column("Fonte")
