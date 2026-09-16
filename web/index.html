@@ -3,19 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Suzano Aberta organiza e cruza informações, documentos, legislação e contratações públicas relacionadas a Suzano, SP.">
-  <meta name="theme-color" content="#102A43">
-  <meta property="og:title" content="Suzano Aberta">
-  <meta property="og:description" content="Informação pública, rastreável e aberta sobre Suzano.">
+  <meta name="description" content="Pesquise leis, documentos, contratações, atos e outras informações públicas relacionadas a Suzano em um acervo rastreável e aberto.">
+  <meta name="theme-color" content="#081f33">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="index,follow">
+  <meta property="og:title" content="Suzano Aberta — informação pública encontrável">
+  <meta property="og:description" content="Pesquise informação pública de Suzano com fonte, cronologia e rastreabilidade.">
   <meta property="og:type" content="website">
-  <title>Suzano Aberta — informação pública de Suzano</title>
+  <meta property="og:url" content="https://mukasanches.github.io/suzano-aberta/">
+  <link rel="canonical" href="https://mukasanches.github.io/suzano-aberta/">
+  <title>Suzano Aberta — informação pública encontrável</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./assets/styles.css">
   <link rel="stylesheet" href="./assets/portal-v2.css">
   <link rel="stylesheet" href="./assets/portal-v3.css">
+  <link rel="stylesheet" href="./assets/portal-v4.css">
   <script defer src="./assets/app.js"></script>
   <script defer src="./assets/portal-v3.js"></script>
+  <script defer src="./assets/portal-v4.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -32,22 +38,38 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div>
-        <span class="eyebrow">Dados públicos de Suzano</span>
-        <h1>Encontre o que está espalhado.</h1>
-        <p class="lead">Leis, proposições, licitações, contratos, atos, documentos e notícias públicas reunidos em um acervo pesquisável, cronológico e ligado às fontes de origem.</p>
+        <span class="eyebrow">Infraestrutura cívica aberta</span>
+        <h1>O dado existe. Agora ele precisa ser encontrado.</h1>
+        <p class="lead">Pesquise leis, proposições, licitações, contratos, atos, documentos e publicações relacionadas a Suzano em um único acervo — sempre com caminho de volta à fonte.</p>
         <form class="search-box" data-search-form data-search-home="true" role="search">
-          <label class="search-label" for="home-q">O que você quer encontrar?</label>
-          <div class="search-row"><input id="home-q" name="q" type="search" required maxlength="200" autocomplete="off" placeholder="Ex.: transporte, escola, contrato, bairro, lei…"><button class="button" type="submit">Pesquisar</button></div>
-          <p class="search-help">Você não precisa saber em qual portal, lei, edital ou PDF a informação está.</p>
+          <label class="search-label" for="home-q">Pesquise por assunto, número, órgão, fornecedor ou documento</label>
+          <div class="search-row"><input id="home-q" name="q" type="search" required maxlength="200" autocomplete="off" placeholder="Ex.: transporte escolar, Lei 123, contrato, UBS…"><button class="button" type="submit">Pesquisar</button></div>
+          <p class="search-help">Você não precisa saber em qual portal, edital, diário ou PDF a informação foi publicada.</p>
+          <div class="hero-quick-links" aria-label="Atalhos"><a href="./legislacao.html">Leis e proposições</a><a href="./contratacoes.html">Contratações</a><a href="./explorar.html?scope=documents">Documentos</a><a href="./explorar.html?sort=date_desc">Mais recentes</a></div>
         </form>
       </div>
-      <div class="hero-card" aria-hidden="true"><img src="./assets/mark.svg" alt=""></div>
+
+      <aside class="hero-intelligence-card" aria-label="Estado atual do acervo">
+        <div class="hero-intelligence-head"><span class="live-pill">Índice público ativo</span><span data-generated>carregando…</span></div>
+        <div class="hero-intelligence-main"><small>Registros pesquisáveis</small><strong data-stat="records">—</strong><span>normalizados e ligados às respectivas fontes</span></div>
+        <div class="hero-intelligence-grid">
+          <div class="hero-intelligence-metric"><strong data-stat="documents">—</strong><span>documentos e arquivos</span></div>
+          <div class="hero-intelligence-metric"><strong data-stat="legislation">—</strong><span>itens legislativos</span></div>
+          <div class="hero-intelligence-metric"><strong data-stat="sources">—</strong><span>fontes distintas</span></div>
+          <div class="hero-intelligence-metric"><strong data-stat="years_covered">—</strong><span>anos com registros</span></div>
+        </div>
+        <div class="hero-pipeline" aria-label="Pipeline de publicação">
+          <div class="hero-pipeline-row"><strong>Coleta</strong><span>fontes municipais e nacionais</span></div>
+          <div class="hero-pipeline-row"><strong>Validação</strong><span>SQLite, checksums e integridade</span></div>
+          <div class="hero-pipeline-row"><strong>Consulta</strong><span>portal, API, Python e CLI</span></div>
+        </div>
+      </aside>
     </div>
   </section>
 
   <section class="section">
     <div class="wrap">
-      <div class="section-head"><div><span class="eyebrow">Acervo</span><h2>Um retrato público que cresce todos os dias</h2></div><p>Os números são calculados a partir do snapshot validado. A coleta preserva a origem do dado e evita totais digitados manualmente.</p></div>
+      <div class="section-head"><div><span class="eyebrow">Acervo</span><h2>Um retrato público que se atualiza sem perder a origem.</h2></div><p>Os números abaixo são derivados do snapshot validado. Não são totais digitados à mão e não substituem as bases oficiais.</p></div>
       <div class="stats" aria-label="Estatísticas do acervo">
         <div class="stat"><span class="stat-value" data-stat="records">—</span><span class="stat-label">registros pesquisáveis</span></div>
         <div class="stat"><span class="stat-value" data-stat="documents">—</span><span class="stat-label">documentos e arquivos</span></div>
@@ -61,7 +83,7 @@
 
   <section class="section section-tint">
     <div class="wrap">
-      <div class="section-head"><div><span class="eyebrow">Agora em Suzano</span><h2>O que está acontecendo na cidade</h2></div><p>Um digest automático das publicações mais recentes, sempre apontando para a fonte original.</p></div>
+      <div class="section-head"><div><span class="eyebrow">Agora em Suzano</span><h2>Publicações recentes, sem virar um feed opaco.</h2></div><p>O digest reúne itens recentes e mantém a fonte visível. Notícias não são usadas como substitutas de documentos oficiais.</p></div>
       <div data-news-list aria-live="polite"><div class="loading">Atualizando notícias…</div></div>
       <div class="news-digest-meta"><strong data-news-source-summary>checando fontes…</strong><span data-news-generated>Nova varredura a cada 30 minutos.</span></div>
     </div>
@@ -69,62 +91,62 @@
 
   <section class="section">
     <div class="wrap">
-      <div class="section-head"><div><span class="eyebrow">Explorar</span><h2>Comece pelo assunto, não pelo órgão</h2></div><p>As coleções especializadas oferecem contexto sem esconder os mesmos registros da busca geral.</p></div>
+      <div class="section-head"><div><span class="eyebrow">Explorar</span><h2>Comece pela pergunta. O sistema cuida do caminho.</h2></div><p>As coleções especializadas usam o mesmo núcleo de dados e deixam claro quando um item é norma, proposição, contratação, arquivo ou publicação institucional.</p></div>
       <div class="cards">
-        <article class="card"><div class="card-kicker">Legislativo</div><h3>Leis e proposições</h3><p>Normas e matérias legislativas com leitura da fonte oficial e vínculos encontrados no acervo.</p><a class="card-link" href="./legislacao.html">Abrir legislação</a></article>
+        <article class="card"><div class="card-kicker">Legislativo</div><h3>Leis e proposições</h3><p>Normas e matérias legislativas com acesso à fonte, metadados e relações encontradas de forma determinística.</p><a class="card-link" href="./legislacao.html">Abrir legislação</a></article>
         <article class="card"><div class="card-kicker">Compras públicas</div><h3>Licitações e contratos</h3><p>Editais, pregões, dispensas, contratos, atas, processos e anexos cruzados entre fontes municipais e nacionais.</p><a class="card-link" href="./contratacoes.html">Abrir contratações</a></article>
-        <article class="card"><div class="card-kicker">Documentos</div><h3>Arquivos públicos</h3><p>PDF, planilhas, documentos de texto e outros arquivos indexados com data e fonte.</p><a class="card-link" href="./explorar.html?scope=documents">Ver documentos</a></article>
+        <article class="card"><div class="card-kicker">Documentos</div><h3>Arquivos públicos</h3><p>PDF, planilhas, documentos de texto e outros arquivos indexados com data, origem e contexto de publicação.</p><a class="card-link" href="./explorar.html?scope=documents">Ver documentos</a></article>
         <article class="card"><div class="card-kicker">Executivo</div><h3>Atos e Diário Oficial</h3><p>Publicações administrativas, imprensa oficial, leis e decretos localizados nas fontes catalogadas.</p><a class="card-link" href="./explorar.html?q=decreto">Pesquisar atos</a></article>
-        <article class="card"><div class="card-kicker">Cidade</div><h3>Serviços e secretarias</h3><p>Informações institucionais preservadas para facilitar a navegação por temas municipais.</p><a class="card-link" href="./explorar.html?q=secretaria">Pesquisar secretarias</a></article>
-        <article class="card"><div class="card-kicker">Aberto</div><h3>Dados para reutilizar</h3><p>Data API, biblioteca Python, CLI, snapshots e conjuntos derivados para pesquisa e desenvolvimento.</p><a class="card-link" href="./desenvolvedores.html">Usar os dados</a></article>
+        <article class="card"><div class="card-kicker">Cidade</div><h3>Serviços e secretarias</h3><p>Informações institucionais preservadas para facilitar a navegação por temas e estruturas municipais.</p><a class="card-link" href="./explorar.html?q=secretaria">Pesquisar secretarias</a></article>
+        <article class="card"><div class="card-kicker">Dados abertos</div><h3>Reutilize o acervo</h3><p>Data API, biblioteca Python, CLI, snapshots e conjuntos derivados para pesquisa, jornalismo de dados e desenvolvimento.</p><a class="card-link" href="./desenvolvedores.html">Usar os dados</a></article>
       </div>
     </div>
   </section>
 
   <section class="section section-tint">
     <div class="wrap">
-      <div class="section-head"><div><span class="eyebrow">Cruzamentos</span><h2>O registro não termina no documento</h2></div><p>Vínculos são criados de forma determinística quando duas publicações compartilham evidências verificáveis.</p></div>
+      <div class="section-head"><div><span class="eyebrow">Relações explicáveis</span><h2>O registro não termina no documento.</h2></div><p>Conexões só são exibidas quando há evidências verificáveis como número de processo, CNPJ, identificador, norma citada ou fonte comum.</p></div>
       <div class="crosswalk">
-        <div class="crosswalk-item"><strong>Processo ↔ licitação ↔ contrato</strong><span>Números de processo e identificadores conectam etapas da contratação.</span></div>
-        <div class="crosswalk-item"><strong>Fornecedor ↔ contratos</strong><span>CNPJ e razão social permitem localizar relações com outras publicações.</span></div>
+        <div class="crosswalk-item"><strong>Processo ↔ licitação ↔ contrato</strong><span>Números de processo e identificadores ajudam a conectar etapas da contratação.</span></div>
+        <div class="crosswalk-item"><strong>Fornecedor ↔ contratos</strong><span>CNPJ e razão social permitem localizar menções compatíveis em outras publicações.</span></div>
         <div class="crosswalk-item"><strong>Lei ↔ documento citado</strong><span>Referências explícitas a normas conectam registros legislativos e administrativos.</span></div>
-        <div class="crosswalk-item"><strong>Fonte ↔ anexos</strong><span>Editais, pareceres, atas e outros arquivos permanecem associados à publicação que os originou.</span></div>
+        <div class="crosswalk-item"><strong>Fonte ↔ anexos</strong><span>Editais, pareceres, atas e arquivos permanecem associados à publicação de origem.</span></div>
       </div>
     </div>
   </section>
 
   <section class="section">
     <div class="wrap">
-      <div class="section-head"><div><span class="eyebrow">Confiança</span><h2>O dado precisa poder ser conferido</h2></div><p>O portal ajuda a localizar evidências e relações; a publicação do órgão responsável continua sendo a referência jurídica.</p></div>
+      <div class="section-head"><div><span class="eyebrow">Confiança</span><h2>Uma resposta só é útil quando pode ser conferida.</h2></div><p>O portal reduz o trabalho de localizar informações; a publicação mantida pelo órgão responsável continua sendo a referência.</p></div>
       <div class="trust-grid">
-        <div class="trust-item"><strong>Fonte em cada registro</strong><span>Resultados apontam para a publicação de origem.</span></div>
-        <div class="trust-item"><strong>Data explicável</strong><span>A ordenação diferencia data do registro, ano conhecido e data de observação.</span></div>
-        <div class="trust-item"><strong>Atualização automática</strong><span>Coleta, notícias, validação e publicação são recorrentes.</span></div>
-        <div class="trust-item"><strong>Código aberto</strong><span>Arquitetura, metodologia e código podem ser auditados no GitHub.</span></div>
+        <div class="trust-item"><strong>Fonte em cada registro</strong><span>Resultados apontam para a publicação de origem sempre que ela está disponível.</span></div>
+        <div class="trust-item"><strong>Datas explicáveis</strong><span>O sistema diferencia data do registro, ano conhecido e data de observação.</span></div>
+        <div class="trust-item"><strong>Atualização recorrente</strong><span>Coleta, notícias, validação e publicação usam rotinas independentes.</span></div>
+        <div class="trust-item"><strong>Código auditável</strong><span>Arquitetura, metodologia e implementação ficam abertas no GitHub.</span></div>
       </div>
     </div>
   </section>
 
   <section class="section section-tint">
     <div class="wrap">
-      <div class="section-head"><div><span class="eyebrow">Cronologia</span><h2>Itens com data mais recente</h2></div><a href="./explorar.html">Ver todo o acervo</a></div>
+      <div class="section-head"><div><span class="eyebrow">Cronologia</span><h2>Últimos itens datados no acervo.</h2></div><a href="./explorar.html">Ver todo o acervo</a></div>
       <ul class="result-list" data-latest-list><li class="loading">Carregando publicações mais recentes…</li></ul>
     </div>
   </section>
 
   <section class="section">
     <div class="wrap">
-      <div class="section-head"><div><span class="eyebrow">Como funciona</span><h2>Da fonte pública à consulta cruzada</h2></div><p>Coleta, enriquecimento, validação e publicação são etapas separadas para reduzir erros e preservar rastreabilidade.</p></div>
+      <div class="section-head"><div><span class="eyebrow">Arquitetura</span><h2>Da fonte pública até uma consulta reproduzível.</h2></div><p>Descoberta, normalização, relacionamento, validação e distribuição são etapas separadas para que uma falha não esconda a origem nem destrua o último acervo válido.</p></div>
       <div class="architecture">
-        <div class="arch-row"><strong>1. Descobrir</strong><span>Prefeitura, Câmara, PNCP, Compras.gov.br, transparência, legislação, sitemaps, documentos e índices públicos.</span></div>
-        <div class="arch-row"><strong>2. Enriquecer</strong><span>Páginas e APIs de detalhe fornecem processo, modalidade, anexos, situação, valores, fornecedores e outros metadados.</span></div>
-        <div class="arch-row"><strong>3. Relacionar</strong><span>CNPJ, processo, fornecedor, número de controle PNCP, norma e URL criam vínculos explicáveis entre registros.</span></div>
-        <div class="arch-row"><strong>4. Validar</strong><span>SQLite, busca, detalhes, relações, checksums e portal são verificados antes da publicação.</span></div>
-        <div class="arch-row"><strong>5. Servir</strong><span>Portal, Data API, Python, CLI e snapshots usam o mesmo núcleo de dados.</span></div>
+        <div class="arch-row"><strong>Descobrir</strong><span>Prefeitura, Câmara, PNCP, Compras.gov.br, transparência, legislação, sitemaps, documentos e índices públicos.</span></div>
+        <div class="arch-row"><strong>Enriquecer</strong><span>Páginas e APIs de detalhe fornecem processo, modalidade, anexos, situação, valores, fornecedores e outros metadados.</span></div>
+        <div class="arch-row"><strong>Relacionar</strong><span>CNPJ, processo, fornecedor, número de controle, norma e URL criam vínculos explicáveis entre registros.</span></div>
+        <div class="arch-row"><strong>Validar</strong><span>SQLite, busca, detalhes, relações, checksums e portal são verificados antes da publicação.</span></div>
+        <div class="arch-row"><strong>Servir</strong><span>Portal, Data API, Python, CLI e snapshots reutilizam o mesmo núcleo normalizado.</span></div>
       </div>
     </div>
   </section>
 </main>
-<footer class="footer"><div class="wrap"><div class="footer-grid"><div><h2>Suzano Aberta</h2><p>Infraestrutura cívica aberta para tornar informações públicas de Suzano mais localizáveis, verificáveis e reutilizáveis.</p></div><div><h3>Acervo</h3><ul><li><a href="./explorar.html">Pesquisar</a></li><li><a href="./legislacao.html">Legislação</a></li><li><a href="./contratacoes.html">Contratações</a></li><li><a href="./status.html">Status</a></li></ul></div><div><h3>Projeto</h3><ul><li><a href="./sobre.html">Sobre</a></li><li><a href="./acessibilidade.html">Acessibilidade</a></li><li><a href="https://github.com/MukaSanches/suzano-aberta">GitHub</a></li></ul></div><div><h3>Desenvolvedores</h3><ul><li><a href="./desenvolvedores.html">API e dados</a></li><li><a href="https://github.com/MukaSanches/suzano-aberta/releases/tag/data-latest">Snapshot</a></li></ul></div></div><div class="footer-small">Projeto independente, sem vínculo institucional com a Prefeitura Municipal ou a Câmara Municipal de Suzano. Em caso de divergência, prevalece a fonte responsável pela publicação.</div></div></footer>
+<footer class="footer"><div class="wrap"><div class="footer-grid"><div><h2>Suzano Aberta</h2><p>Infraestrutura cívica aberta para tornar informação pública relacionada a Suzano mais localizável, verificável e reutilizável.</p></div><div><h3>Acervo</h3><ul><li><a href="./explorar.html">Pesquisar</a></li><li><a href="./legislacao.html">Legislação</a></li><li><a href="./contratacoes.html">Contratações</a></li><li><a href="./status.html">Status</a></li></ul></div><div><h3>Projeto</h3><ul><li><a href="./sobre.html">Sobre</a></li><li><a href="./acessibilidade.html">Acessibilidade</a></li><li><a href="https://github.com/MukaSanches/suzano-aberta">GitHub</a></li></ul></div><div><h3>Desenvolvedores</h3><ul><li><a href="./desenvolvedores.html">API e dados</a></li><li><a href="https://github.com/MukaSanches/suzano-aberta/releases/tag/data-latest">Snapshot</a></li></ul></div></div><div class="footer-small">Projeto independente, sem vínculo institucional com a Prefeitura Municipal ou a Câmara Municipal de Suzano. Em caso de divergência, prevalece a fonte responsável pela publicação.</div></div></footer>
 </body>
 </html>
