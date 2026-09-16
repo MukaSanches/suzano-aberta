@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata
+import sqlite3
 from pathlib import Path
 
-from .api.repository import ApiRepository
 from .content_store import (
     ManifestVerification,
     SnapshotManifest,
@@ -34,6 +34,42 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _snapshot_metadata(path: Path) -> tuple[int, int, str]:
+    """Obtém metadados de release sem importar a camada HTTP/API.
+
+    Esta função deliberadamente usa apenas sqlite3 para que a geração de
+    manifestos permaneça uma primitive de armazenamento e não crie ciclos de
+    import com o FastAPI.
+    """
+    uri = f"file:{path.resolve().as_posix()}?mode=ro"
+    connection = sqlite3.connect(uri, uri=True)
+    connection.row_factory = sqlite3.Row
+    try:
+        row = connection.execute(
+            """
+            SELECT COUNT(*) AS records,
+                   COUNT(DISTINCT source_name) AS sources,
+                   MAX(last_seen) AS last_seen
+            FROM records
+            WHERE active=1
+            """
+        ).fetchone()
+        if row is None:
+            records = 0
+            sources = 0
+            last_seen = ""
+        else:
+            records = int(row["records"])
+            sources = int(row["sources"])
+            last_seen = str(row["last_seen"] or "")
+    finally:
+        connection.close()
+
+    raw = "|".join((str(records), str(sources), last_seen, str(path.stat().st_size)))
+    dataset_version = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+    return records, sources, dataset_version
+
+
 def build_snapshot_manifest(
     database: str | Path,
     *,
@@ -46,9 +82,7 @@ def build_snapshot_manifest(
     if not report.ok:
         raise ValueError("O snapshot não atende ao contrato de dados e não pode receber manifesto de release.")
 
-    with ApiRepository(path) as repository:
-        stats = repository.stats()
-        dataset_version = repository.dataset_version()
+    records, sources, dataset_version = _snapshot_metadata(path)
     previous_sha: str | None = None
     if previous_manifest is not None and Path(previous_manifest).exists():
         previous_sha = load_manifest(previous_manifest).sha256()
@@ -58,8 +92,8 @@ def build_snapshot_manifest(
         dataset_version=dataset_version,
         database_sha256=_sha256_file(path),
         database_bytes=path.stat().st_size,
-        records=int(stats["records"]),
-        sources=len(repository_sources(path)),
+        records=records,
+        sources=sources,
         contract_status=report.status,
         contract_sha256=report.contract_sha256,
         previous_manifest_sha256=previous_sha,
@@ -69,8 +103,16 @@ def build_snapshot_manifest(
 
 
 def repository_sources(database: str | Path) -> list[str]:
-    with ApiRepository(database) as repository:
-        return [name for name, _ in repository.source_counts(limit=100_000)]
+    path = Path(database)
+    uri = f"file:{path.resolve().as_posix()}?mode=ro"
+    connection = sqlite3.connect(uri, uri=True)
+    try:
+        rows = connection.execute(
+            "SELECT DISTINCT source_name FROM records WHERE active=1 ORDER BY source_name"
+        ).fetchall()
+    finally:
+        connection.close()
+    return [str(row[0]) for row in rows]
 
 
 def write_snapshot_manifest(
