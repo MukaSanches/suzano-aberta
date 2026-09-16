@@ -9,6 +9,7 @@ import httpx
 from pydantic import ValidationError
 
 from .api.schemas import (
+    AutopilotResponse,
     CapabilitiesResponse,
     ChangesResponse,
     HealthResponse,
@@ -55,7 +56,7 @@ class SuzanoClient:
         base_url: str = "http://127.0.0.1:8000",
         *,
         timeout: float = 20.0,
-        user_agent: str = "suzano-aberta-python/0.6",
+        user_agent: str = "suzano-aberta-python/0.9",
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         normalized = base_url.rstrip("/") + "/"
@@ -153,6 +154,10 @@ class SuzanoClient:
     def readiness(self) -> HealthResponse:
         response = self._get("/health/ready", allow_status=frozenset({503}))
         return HealthResponse.model_validate(self._json(response))
+
+    def autopilot(self) -> AutopilotResponse:
+        """Consulta o estado de frescor e atualização automática da API."""
+        return AutopilotResponse.model_validate(self._json(self._get("/v1/autopilot")))
 
     def capabilities(self) -> CapabilitiesResponse:
         return CapabilitiesResponse.model_validate(self._json(self._get("/v1/capabilities")))

@@ -90,6 +90,24 @@ class HealthResponse(BaseModel):
     detail: str | None = None
 
 
+class AutopilotResponse(BaseModel):
+    database: str
+    database_exists: bool
+    records: int = Field(ge=0)
+    due: bool
+    fresh: bool
+    locked: bool
+    last_attempt_at: str | None = None
+    last_success_at: str | None = None
+    last_error: str | None = None
+    consecutive_failures: int = Field(ge=0)
+    successful_checks: int = Field(ge=0)
+    updates: int = Field(ge=0)
+    remote_checksum: str | None = None
+    database_modified_at: str | None = None
+    next_check_at: str | None = None
+
+
 class ServiceResponse(BaseModel):
     name: str
     api_version: str

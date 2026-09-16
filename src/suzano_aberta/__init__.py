@@ -1,3 +1,9 @@
+from .autopilot import (
+    AutoUpdatePolicy,
+    AutonomousDataManager,
+    AutopilotResult,
+    AutopilotStatus,
+)
 from .client import SuzanoApiError, SuzanoClient
 from .core import Suzano, explain
 from .diagnostics import DiagnosticCheck, LocalDiagnostic, human_bytes, inspect_local_environment
@@ -16,6 +22,10 @@ from .quality import QualityReport, quality_report
 from .snapshot import LATEST_SNAPSHOT_URL, SnapshotError
 
 __all__ = [
+    "AutoUpdatePolicy",
+    "AutonomousDataManager",
+    "AutopilotResult",
+    "AutopilotStatus",
     "DiagnosticCheck",
     "Entity",
     "EntityGraph",
@@ -45,4 +55,4 @@ __all__ = [
     "quality_report",
     "record_provenance",
 ]
-__version__ = "0.8.0"
+__version__ = "0.9.0"

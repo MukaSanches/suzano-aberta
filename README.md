@@ -11,7 +11,7 @@
   <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Licença Apache 2.0" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-102A43"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-0B6E4F">
-  <img alt="Biblioteca 0.8.0" src="https://img.shields.io/badge/library-0.8.0-102A43">
+  <img alt="Biblioteca 0.9.0" src="https://img.shields.io/badge/library-0.9.0-102A43">
   <img alt="API 1.2" src="https://img.shields.io/badge/API-1.2-0B6E4F">
   <img alt="SQLite local-first" src="https://img.shields.io/badge/storage-SQLite-102A43">
   <img alt="Windows CMD" src="https://img.shields.io/badge/Windows-CMD-0B6E4F">
@@ -87,7 +87,7 @@ Não é necessário decorar a sintaxe de busca: no console, texto que não corre
 
 ---
 
-# O que a versão 0.8 entrega
+# O que a versão 0.9 entrega
 
 | Camada | Capacidade |
 | --- | --- |
@@ -96,15 +96,16 @@ Não é necessário decorar a sintaxe de busca: no console, texto que não corre
 | Normalização | `PublicRecord` + `SourceRef` com origem preservada |
 | Persistência | SQLite local-first com histórico e fingerprints determinísticos |
 | Busca | FTS5 Unicode, remoção de diacríticos, prefixos e BM25 |
-| Snapshot | distribuição rolling validada por checksum e integridade SQLite |
+| Snapshot | distribuição rolling validada, checksum-first e instalação atômica |
+| Autopilot | política de frescor, locks, backoff, last-known-good e estado persistente |
 | Windows | instalador verificado, launcher UTF-8, console navegável e autorreparo |
 | Diagnóstico | inspeção local de Python, disco, SQLite, FTS5, JSON1 e `quick_check` |
-| Python | `Suzano`, `SuzanoIndex`, `SuzanoClient` e modelos tipados |
-| HTTP | API v1.2 somente leitura com OpenAPI e Problem Details |
+| Python | `Suzano`, `SuzanoIndex`, `SuzanoClient`, `AutonomousDataManager` e modelos tipados |
+| HTTP | API v1.2 somente leitura, OpenAPI, Problem Details e estado do Autopilot |
 | Proveniência | metadados por registro e representação interoperável |
 | Entidades | IDs canônicos determinísticos e menções com evidência |
 | Qualidade | métricas técnicas reproduzíveis sobre conjuntos de registros |
-| Portal | interface pública API-first com fallback estático |
+| Portal | interface pública API-first com fallback estático e operação autônoma |
 | Engenharia | CI multi-Python, mypy strict, testes, build, container e CodeQL |
 
 O núcleo de coleta e consulta não depende de IA. O objetivo é que resultados importantes possam ser reproduzidos e auditados com regras explícitas.
@@ -166,7 +167,7 @@ suzano sincronizar
 
 # Console interativo
 
-O console 0.8 mantém estado apenas durante a sessão para facilitar navegação. A última lista de resultados pode ser referenciada por posição, sem alterar o ID real do registro.
+O console mantém estado apenas durante a sessão para facilitar navegação. A última lista de resultados pode ser referenciada por posição, sem alterar o ID real do registro.
 
 ```text
 suzano› ajuda
@@ -198,13 +199,16 @@ A abertura do navegador é sempre explícita. Uma busca normal não abre página
 
 # CLI
 
-O CLI continua adequado para scripts, automação e uso técnico.
+O CLI continua adequado para scripts, automação e uso técnico. A partir da 0.9, a manutenção automática do snapshot é uma superfície de primeira classe.
 
 ```text
 suzano inicio
 suzano diagnostico
 suzano recentes
 suzano console
+suzano auto status
+suzano auto agora
+suzano auto vigiar
 suzano fontes
 suzano doctor
 suzano integridade
@@ -224,6 +228,9 @@ Exemplos:
 
 ```bash
 suzano inicio
+suzano auto status
+suzano auto agora
+suzano auto vigiar --intervalo 900
 suzano diagnostico --json
 suzano recentes --limite 25
 suzano coletar --ano 2026
@@ -238,11 +245,11 @@ suzano integridade --json
 suzano exportar acervo.json
 ```
 
-`ver` usa o ID exato do registro. `acervo-maximo` amplia os limites de descoberta e inclui índices históricos; é propositalmente mais pesado que a atualização normal.
+`auto vigiar` mantém um processo verificando novas gerações do snapshot enquanto estiver ativo. Após falha transitória usa backoff menor; após sucesso retorna à cadência normal. `ver` usa o ID exato do registro. `acervo-maximo` amplia os limites de descoberta e inclui índices históricos; é propositalmente mais pesado que a atualização normal.
 
 ---
 
-# Diagnóstico local 0.8
+# Diagnóstico local
 
 O projeto diferencia problemas da máquina local de problemas das fontes na internet.
 
@@ -338,9 +345,9 @@ Leitura recomendada: [Fontes](docs/fontes.md), [Metodologia](docs/metodologia.md
 
 ---
 
-# Snapshot
+# Snapshot e Autopilot
 
-Coletar é mais caro que pesquisar. Por isso, o projeto pode publicar um snapshot SQLite já indexado:
+Coletar é mais caro que pesquisar. Por isso, o projeto publica um snapshot SQLite já indexado:
 
 ```text
 suzano-aberta.sqlite3.gz
@@ -354,7 +361,9 @@ O comando:
 suzano sincronizar
 ```
 
-baixa a geração publicada e valida checksum quando disponível, cabeçalho SQLite e integridade antes de instalar o arquivo local. A instalação é feita de forma a evitar que uma geração inválida substitua silenciosamente um banco válido.
+consulta primeiro o checksum remoto. Se o release instalado ainda for o atual e o SQLite local estiver íntegro, o banco completo não é transferido de novo. Quando existe uma geração nova, o candidato passa por checksum, cabeçalho SQLite, `PRAGMA quick_check`, cobertura mínima e consistência FTS antes de uma substituição atômica.
+
+A biblioteca usa a mesma política automaticamente nas operações de leitura. Estado, falhas e próxima checagem ficam disponíveis em `suzano auto status` e programaticamente por `AutonomousDataManager`.
 
 Para processamento do corpus inteiro, o snapshot é preferível a paginar milhares de respostas pela API.
 
@@ -362,7 +371,7 @@ Para processamento do corpus inteiro, o snapshot é preferível a paginar milhar
 
 # Python
 
-## `Suzano` — coleta e operação
+## `Suzano` — coleta e operação autônoma
 
 ```python
 from suzano_aberta import Suzano
@@ -371,9 +380,25 @@ with Suzano() as suzano:
     resultados = suzano.search("educação", limit=20)
     for registro in resultados:
         print(registro.id, registro.title, registro.source.url)
+    print(suzano.autopilot_status())
 ```
 
-Atualização programática:
+Com `auto_sync=True` (padrão), leituras verificam periodicamente se há snapshot validado mais novo. A checagem é limitada por intervalo e normalmente consulta apenas o checksum.
+
+Controle explícito:
+
+```python
+from suzano_aberta import AutoUpdatePolicy, AutonomousDataManager
+
+manager = AutonomousDataManager(
+    "suzano-aberta.sqlite3",
+    policy=AutoUpdatePolicy(check_interval_seconds=900),
+)
+result = manager.ensure_fresh()
+print(result.action, result.records)
+```
+
+Atualização pesada programática continua disponível separadamente:
 
 ```python
 from suzano_aberta import Suzano
@@ -409,11 +434,12 @@ with SuzanoClient("http://127.0.0.1:8000") as client:
     pagina = client.search("educação", year=2026)
     for registro in pagina.items:
         print(registro.title)
+    print(client.autopilot().fresh)
 ```
 
 Falhas HTTP estruturadas são representadas por `SuzanoApiError`.
 
-Guia: [Interfaces Python](docs/python-client.md).
+Guia: [Interfaces Python](docs/python-client.md) e [Núcleo autônomo](docs/autonomous-core.md).
 
 ---
 
@@ -497,18 +523,19 @@ GET /v1/capabilities
 GET /v1/catalog
 GET /v1/records/{id}/provenance
 GET /v1/snapshot
+GET /v1/autopilot
 GET /health/live
 GET /health/ready
 GET /metrics
 ```
 
-A API é deliberadamente **somente leitura**. Não existem endpoints públicos para disparar crawlers, alterar registros, apagar dados ou reindexar o banco.
+A API é deliberadamente **somente leitura** para clientes HTTP. Não existem endpoints públicos para disparar crawlers, alterar registros, apagar dados ou reindexar o banco. A manutenção do snapshot ocorre internamente, por padrão a cada 900 segundos, usando a mesma estratégia checksum-first.
 
-Ela inclui limites de paginação, filtros, ordenação, `ETag`, cache HTTP, request ID, `Server-Timing`, erros compatíveis com Problem Details, proveniência JSON-LD e catálogo orientado a interoperabilidade.
+Ela inclui limites de paginação, filtros, ordenação, `ETag`, cache HTTP, request ID, `Server-Timing`, erros compatíveis com Problem Details, proveniência JSON-LD, catálogo orientado a interoperabilidade e status observável do Autopilot.
 
-A versão do pacote (`0.8.0`) e a versão do contrato HTTP (`1.2.0`) são independentes.
+A versão do pacote (`0.9.0`) e a versão do contrato HTTP (`1.2.0`) são independentes.
 
-Detalhes: [API pública](docs/api.md), [Contrato](docs/API-CONTRACT.md) e [Governança da API](docs/api-governance.md).
+Detalhes: [API pública](docs/api.md), [Núcleo autônomo](docs/autonomous-core.md), [Contrato](docs/API-CONTRACT.md) e [Governança da API](docs/api-governance.md).
 
 ---
 
@@ -539,16 +566,17 @@ A implementação prioriza navegação responsiva, acessibilidade, origem visív
 
 Portal: https://mukasanches.github.io/suzano-aberta/
 
-Detalhes: [Portal web](docs/portal-web.md).
+Detalhes: [Portal web](docs/portal-web.md) e [Autopilot do portal](docs/autopilot.md).
 
 ---
 
 # Saúde, integridade e segurança
 
-Há três perguntas diferentes:
+Há quatro perguntas diferentes:
 
 ```text
 suzano diagnostico  -> minha instalação local está funcional?
+suzano auto status  -> meu dataset local está fresco e atualizando?
 suzano doctor       -> as fontes catalogadas estão acessíveis agora?
 suzano integridade  -> uma verificação específica encontrou referência externa inesperada?
 ```
@@ -597,10 +625,13 @@ suzano-aberta/
 ├── src/suzano_aberta/
 │   ├── api/               API HTTP somente leitura
 │   ├── sources/           adaptadores de fontes públicas
+│   ├── autopilot.py       política e estado de atualização automática
+│   ├── autopilot_cli.py   comandos `suzano auto`
 │   ├── cli.py             CLI para uso direto e automação
 │   ├── console.py         experiência interativa navegável
 │   ├── diagnostics.py     saúde local reproduzível
 │   ├── core.py            coleta e operações principais
+│   ├── snapshot.py        instalação validada e checksum-first
 │   ├── store.py           persistência, histórico e FTS5
 │   ├── index.py           consulta SQLite tipada
 │   ├── client.py          cliente HTTP tipado
@@ -652,6 +683,8 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md) antes de alterar parsers ou fontes.
 - [Windows e CMD](docs/windows-cmd.md)
 - [Arquitetura](docs/arquitetura.md)
 - [Autonomia e busca](docs/autonomia-e-busca.md)
+- [Núcleo autônomo](docs/autonomous-core.md)
+- [Autopilot do portal](docs/autopilot.md)
 - [Modelo de dados](docs/modelo-de-dados.md)
 - [Entidades e relações](docs/entidades-e-relacoes.md)
 - [Qualidade de dados](docs/qualidade-de-dados.md)

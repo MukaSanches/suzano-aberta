@@ -4,7 +4,35 @@ Todas as mudanças relevantes do Suzano Aberta são registradas aqui. O formato 
 
 ## [Unreleased]
 
-Sem mudanças ainda após a preparação da 0.8.0.
+Sem mudanças ainda após a preparação da 0.9.0.
+
+## [0.9.0] - 2026-09-16
+
+### Núcleo autônomo
+
+- novo `AutonomousDataManager` compartilhando política de frescor, estado persistente, retry/backoff e last-known-good entre usos locais;
+- sincronização de snapshots passa a consultar o checksum remoto antes do download pesado e evita transferências quando o release não mudou;
+- candidatos são validados por cabeçalho SQLite, `PRAGMA quick_check`, cobertura mínima e consistência FTS antes da promoção;
+- substituição do banco continua atômica e passa a usar lock cross-process para suportar múltiplos processos e workers da API com segurança;
+- a fachada `Suzano` passa a verificar frescor automaticamente nas operações de leitura, respeitando intervalo configurável;
+- novos `Suzano.ensure_fresh()` e `Suzano.autopilot_status()` para integração programática;
+- falha de rede ou candidato degradado preserva o último banco válido e registra estado operacional local.
+
+### CLI e API
+
+- novo grupo `suzano auto` com `status`, `agora` e `vigiar`;
+- modo `vigiar` usa cadência normal após sucesso e backoff menor após falha;
+- API passa a ter sincronização periódica habilitada por padrão em intervalo de 900 segundos, beneficiada pelo checksum-first;
+- novo endpoint somente leitura `GET /v1/autopilot` com frescor, lock, falhas, checksum, última atualização e próxima checagem;
+- `SuzanoClient.autopilot()` expõe o estado da automação de forma tipada;
+- contrato HTTP continua sem rotas públicas de mutação.
+
+### Engenharia
+
+- pacote elevado para `0.9.0` e entrypoint principal atualizado para expor o grupo Autopilot no wheel instalado;
+- testes cobrem throttling, persistência de estado, falha preservando banco, lock, checksum sem download, queda anormal de cobertura e contrato HTTP do Autopilot;
+- CI valida os novos comandos e interfaces em Python 3.11, 3.12, 3.13, wheel, container e OpenAPI;
+- documentação técnica adicionada em `docs/autonomous-core.md`.
 
 ## [0.8.0] - 2026-09-15
 

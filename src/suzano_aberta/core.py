@@ -7,6 +7,7 @@ from types import TracebackType
 from typing import Literal
 
 from .archive import ArchiveDiscovery
+from .autopilot import AutoUpdatePolicy, AutonomousDataManager, AutopilotResult, AutopilotStatus
 from .catalog import EXPANSION_SEEDS, SOURCES
 from .discovery import WebDiscovery
 from .http import PoliteHttpClient
@@ -19,7 +20,7 @@ from .models import (
     RefreshReport,
     SourceStatus,
 )
-from .snapshot import SnapshotError, sync_latest_snapshot
+from .snapshot import SnapshotError
 from .sources import CamaraSource, ComprasGovSource, LegislacaoSource, PncpSource, PrefeituraSource
 from .store import Store
 
@@ -29,7 +30,12 @@ Collector = tuple[str, Callable[[], list[PublicRecord]]]
 
 
 class Suzano:
-    """Fachada principal da biblioteca."""
+    """Fachada principal da biblioteca.
+
+    Por padrão, leituras verificam periodicamente se existe um snapshot validado
+    mais novo. A checagem é limitada por intervalo e transfere o banco completo
+    somente quando o checksum remoto mudou.
+    """
 
     def __init__(
         self,
@@ -38,6 +44,7 @@ class Suzano:
         timeout: float = 20.0,
         min_interval: float = 0.15,
         auto_sync: bool = True,
+        auto_sync_interval_seconds: int = 900,
     ) -> None:
         self.database = Path(database)
         self.http = PoliteHttpClient(timeout=timeout, min_interval=min_interval)
@@ -48,6 +55,10 @@ class Suzano:
         self.comprasgov = ComprasGovSource(self.http)
         self.auto_sync = auto_sync
         self.last_bootstrap_error: str | None = None
+        self.autopilot = AutonomousDataManager(
+            self.database,
+            policy=AutoUpdatePolicy(check_interval_seconds=auto_sync_interval_seconds),
+        )
 
     def close(self) -> None:
         self.http.close()
@@ -275,8 +286,19 @@ class Suzano:
         )
 
     def sync(self) -> int:
-        """Instala o snapshot público pré-indexado mais recente."""
-        return sync_latest_snapshot(self.database)
+        """Instala ou confirma o snapshot público pré-indexado mais recente."""
+        result = self.autopilot.ensure_fresh(force=True)
+        if result.action == "failed":
+            raise SnapshotError(result.error or "Falha desconhecida ao sincronizar snapshot.")
+        return result.records
+
+    def ensure_fresh(self, *, force: bool = False) -> AutopilotResult:
+        """Executa uma checagem de frescor conforme a política local."""
+        return self.autopilot.ensure_fresh(force=force)
+
+    def autopilot_status(self) -> AutopilotStatus:
+        """Retorna o estado operacional da atualização automática local."""
+        return self.autopilot.status()
 
     def reindex(self) -> int:
         with Store(self.database) as store:
@@ -311,26 +333,19 @@ class Suzano:
     def _bootstrap_search_database(self) -> None:
         if not self.auto_sync:
             return
-        needs_snapshot = not self.database.exists()
-        if not needs_snapshot:
-            try:
-                with Store(self.database) as store:
-                    needs_snapshot = store.count_records() == 0
-            except Exception:
-                needs_snapshot = True
-        if not needs_snapshot:
-            return
-        try:
-            self.sync()
+        result = self.autopilot.ensure_fresh()
+        if result.action == "failed":
+            self.last_bootstrap_error = result.error
+        elif result.action != "busy":
             self.last_bootstrap_error = None
-        except (SnapshotError, OSError) as exc:
-            self.last_bootstrap_error = str(exc)
 
     def snapshot(self) -> dict[str, int]:
+        self._bootstrap_search_database()
         with Store(self.database) as store:
             return store.counts_by_kind()
 
     def changes(self, *, limit: int = 50) -> list[Change]:
+        self._bootstrap_search_database()
         with Store(self.database) as store:
             return store.latest_changes(limit=limit)
 
