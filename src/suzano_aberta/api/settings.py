@@ -34,7 +34,9 @@ def _env_csv(name: str, default: tuple[str, ...] = ()) -> tuple[str, ...]:
 class ApiSettings:
     database: Path = Path("suzano-aberta.sqlite3")
     auto_sync: bool = True
-    sync_interval_seconds: int = 0
+    # A checagem é barata: o sincronizador consulta primeiro o checksum remoto
+    # e só transfere o snapshot completo quando o release realmente mudou.
+    sync_interval_seconds: int = 900
     cors_origins: tuple[str, ...] = ()
     allowed_hosts: tuple[str, ...] = ("*",)
     metrics_enabled: bool = True
@@ -44,7 +46,7 @@ class ApiSettings:
         return cls(
             database=Path(os.getenv("SUZANO_API_DATABASE", "suzano-aberta.sqlite3")),
             auto_sync=_env_bool("SUZANO_API_AUTO_SYNC", True),
-            sync_interval_seconds=_env_int("SUZANO_API_SYNC_INTERVAL_SECONDS", 0),
+            sync_interval_seconds=_env_int("SUZANO_API_SYNC_INTERVAL_SECONDS", 900),
             cors_origins=_env_csv("SUZANO_API_CORS_ORIGINS"),
             allowed_hosts=_env_csv("SUZANO_API_ALLOWED_HOSTS", ("*",)),
             metrics_enabled=_env_bool("SUZANO_API_METRICS", True),
