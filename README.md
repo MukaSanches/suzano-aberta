@@ -11,9 +11,11 @@
   <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml/badge.svg"></a>
   <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/pages.yml"><img alt="Portal" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/pages.yml/badge.svg"></a>
   <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/android-app.yml"><img alt="Android" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/android-app.yml/badge.svg"></a>
+  <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/ios-app.yml"><img alt="iOS" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/ios-app.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Apache License 2.0" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-102A43"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-0B6E4F">
   <img alt="Android API 36" src="https://img.shields.io/badge/Android-API%2036-0B6E4F">
+  <img alt="iOS 16+" src="https://img.shields.io/badge/iOS-16%2B-102A43">
   <img alt="SQLite local-first" src="https://img.shields.io/badge/storage-SQLite-102A43">
 </p>
 
@@ -25,14 +27,20 @@ O **Suzano Aberta** transforma informação pública fragmentada em uma infraest
 
 Portais, páginas, APIs, PDFs, diários oficiais, sistemas de contratação, notícias e outras fontes continuam sendo as referências de origem. O projeto preserva essa origem, normaliza o que pode ser normalizado, registra mudanças e oferece interfaces mais simples para consulta pública.
 
-O mesmo núcleo abastece biblioteca Python, CLI, API HTTP, portal público, web app e aplicativo Android. A operação rotineira é automatizada por código e GitHub Actions: **o funcionamento normal não depende do ChatGPT nem de qualquer IA generativa**.
+O mesmo núcleo abastece biblioteca Python, CLI, API HTTP, portal, Web App, Android e iOS. A operação rotineira é automatizada por código e GitHub Actions: **o funcionamento normal não depende do ChatGPT nem de qualquer IA generativa**.
 
-## Acesse
+## Acesso rápido
 
-- **Portal:** https://mukasanches.github.io/suzano-aberta/
-- **Aplicativo web/mobile:** https://mukasanches.github.io/suzano-aberta/app/
-- **Repositório:** https://github.com/MukaSanches/suzano-aberta
-- **Linha 11–Coral:** https://mukasanches.github.io/suzano-aberta/linha-11.html
+| Produto | Endereço / instalação |
+| --- | --- |
+| Portal público | https://mukasanches.github.io/suzano-aberta/ |
+| Web App | https://mukasanches.github.io/suzano-aberta/app/ |
+| Android | https://github.com/MukaSanches/suzano-aberta/releases/latest/download/suzano-aberta-android.apk |
+| iPhone / iPad | abra o Web App no Safari e use **Compartilhar → Adicionar à Tela de Início** |
+| Linha 11–Coral | https://mukasanches.github.io/suzano-aberta/linha-11.html |
+| Código-fonte | https://github.com/MukaSanches/suzano-aberta |
+
+Guias detalhados: [Android](ANDROID.md) · [iOS](IOS.md) · [App móvel](docs/mobile-app.md)
 
 # Princípios
 
@@ -41,7 +49,8 @@ O mesmo núcleo abastece biblioteca Python, CLI, API HTTP, portal público, web 
 3. **Histórico importa.** Mudanças relevantes devem poder ser comparadas ao longo do tempo.
 4. **Automação não elimina transparência.** Toda classificação automatizada precisa ser explicável e auditável.
 5. **Falha segura.** Quando uma fonte quebra, o último estado saudável deve sobreviver sem inventar dados.
-6. **Uma infraestrutura, várias interfaces.** Portal, API, CLI, biblioteca e app não devem criar verdades paralelas.
+6. **Uma infraestrutura, várias interfaces.** Portal, API, CLI, biblioteca, Web App, Android e iOS não devem criar verdades paralelas.
+7. **Distribuição reproduzível.** Builds, validações e artefatos devem ser gerados por processos verificáveis no repositório.
 
 # Arquitetura
 
@@ -71,13 +80,17 @@ SQLite + FTS5
       ▼
 manifesto + SHA-256 + last-known-good
       │
- ┌────┼────────┬──────────┬──────────┬─────────┐
- ▼    ▼        ▼          ▼          ▼         ▼
-CLI  Python   API       Portal     Web App   Android
-                                           remote-first
-                                                +
-                                         fallback local
+ ┌────┼────────┬──────────┬──────────┬─────────┬─────────┐
+ ▼    ▼        ▼          ▼          ▼         ▼         ▼
+CLI  Python   API       Portal     Web App   Android    iOS
+                                           remote-    remote-
+                                            first      first
+                                              +          +
+                                           fallback   fallback
+                                            local      local
 ```
+
+A interface móvel canônica vive em `web/app/`. Android e iOS usam essa mesma camada visual e de dados, mas acrescentam um wrapper nativo e um fallback empacotado. Isso reduz divergência funcional e mantém uma única origem de verdade para a experiência móvel.
 
 Em paralelo, módulos especializados podem gerar artefatos públicos derivados. O acompanhamento da Linha 11–Coral, por exemplo, produz um JSON estático a partir de notícias recentes e o publica junto com o portal.
 
@@ -101,9 +114,10 @@ Em paralelo, módulos especializados podem gerar artefatos públicos derivados. 
 | API | leitura, busca, histórico, diff, qualidade, manifesto, catálogo e status |
 | Portal | interface pública construída a partir dos artefatos validados |
 | Mobilidade | estimativa transparente da Linha 11–Coral baseada em notícias recentes |
-| Web App | experiência mobile com busca, briefing, favoritos, status e resiliência |
-| Android | wrapper nativo endurecido, Android 16/API 36 e fallback empacotado |
-| Engenharia | Python 3.11–3.13, mypy strict, Hypothesis, container, CodeQL e Android Lint |
+| Web App | experiência móvel instalável, busca, briefing, favoritos, status e resiliência |
+| Android | wrapper nativo, Android 16/API 36, release em GitHub e fallback local |
+| iOS | wrapper SwiftUI + WKWebView, iOS/iPadOS 16+, XcodeGen e fallback local |
+| Engenharia | Python 3.11–3.13, mypy strict, Hypothesis, container, CodeQL, Android Lint e Xcode build |
 
 # Aplicativo Suzano Aberta
 
@@ -153,14 +167,15 @@ O app foi desenhado para continuar útil sem operação manual rotineira:
 - atualiza periodicamente enquanto está visível;
 - usa a API quando a capacidade consultada estiver disponível;
 - recorre ao índice estático publicado quando necessário;
-- usa Service Worker para resiliência do web app;
-- mantém uma shell local dentro do APK como último fallback.
+- usa Service Worker na experiência web;
+- mantém shell local empacotada nos wrappers Android e iOS como último fallback;
+- preserva favoritos e pesquisas salvas no armazenamento local.
 
-Favoritos e pesquisas salvas ficam no armazenamento local. Não há conta obrigatória, publicidade ou rastreador de terceiros como requisito de funcionamento.
+Não há conta obrigatória, publicidade ou rastreador de terceiros como requisito de funcionamento.
 
 # Android
 
-O wrapper nativo está em [`mobile/android/`](mobile/android/).
+O wrapper Android está em [`mobile/android/`](mobile/android/).
 
 ```text
 package: br.com.suzanoaberta.app
@@ -183,10 +198,59 @@ Proteções principais:
 - links externos enviados ao navegador do sistema;
 - suporte ao retorno preditivo nas versões modernas do Android;
 - compatibilidade mantida a partir da API 26;
-- recursos específicos de versões novas isolados por nível de API;
 - fallback local para falha de rede.
 
-O workflow [`Android App`](.github/workflows/android-app.yml) valida JavaScript, testa a shell mobile, sincroniza o fallback, executa Android Lint e compila o APK.
+## Instalar no Android
+
+Download público:
+
+```text
+https://github.com/MukaSanches/suzano-aberta/releases/latest/download/suzano-aberta-android.apk
+```
+
+O workflow [`Android App`](.github/workflows/android-app.yml) valida a shell, executa os testes móveis, sincroniza o fallback, executa Android Lint, compila o APK Release, verifica assinatura, gera SHA-256 e publica a versão quando aplicável.
+
+Mais detalhes: [ANDROID.md](ANDROID.md).
+
+# iOS / iPadOS
+
+O wrapper nativo está em [`mobile/ios/`](mobile/ios/) e usa **SwiftUI + WKWebView**.
+
+```text
+bundle id: br.com.suzanoaberta.app
+deployment target: iOS 16.0
+dispositivos: iPhone + iPad
+projeto: XcodeGen
+interface: web/app compartilhada
+fallback: shell local empacotada
+```
+
+A aplicação também é **remote-first**. O host principal do Suzano Aberta permanece dentro do app; links externos são entregues ao sistema. O wrapper oferece gesto de voltar, pull-to-refresh, carregamento remoto e fallback local.
+
+## Instalar no iPhone ou iPad sem custo
+
+A forma pública e sem taxa de instalação é o Web App:
+
+1. abra `https://mukasanches.github.io/suzano-aberta/app/` no Safari;
+2. toque em **Compartilhar**;
+3. escolha **Adicionar à Tela de Início**;
+4. confirme a adição.
+
+O ícone passa a ficar disponível na Tela de Início e a experiência abre em modo de aplicativo.
+
+## Build nativo
+
+O workflow [`iOS App`](.github/workflows/ios-app.yml) usa um runner macOS para:
+
+1. validar JavaScript e os testes móveis compartilhados;
+2. instalar XcodeGen;
+3. gerar o projeto Xcode a partir de `mobile/ios/project.yml`;
+4. compilar com `xcodebuild` para iOS Simulator;
+5. empacotar e publicar um artifact de simulador em builds da `main`.
+
+Um `.app` de simulador **não é instalável em iPhones físicos**. Distribuição nativa em aparelho real exige assinatura/provisionamento Apple; publicação ampla pode ser feita futuramente via TestFlight/App Store quando houver a conta e os certificados apropriados.
+
+Mais detalhes: [IOS.md](IOS.md).
 
 # Linha 11–Coral
 
@@ -509,7 +573,7 @@ Proteções:
 - manifesto de geração;
 - promoção atômica.
 
-Biblioteca, CLI, API, portal e app podem permanecer atualizados sem operação manual rotineira.
+Biblioteca, CLI, API, portal e aplicativos podem permanecer atualizados sem operação manual rotineira.
 
 # Portal público
 
@@ -524,15 +588,16 @@ A reconstrução é automatizada por GitHub Actions. Briefings, notícias agrega
 # Estrutura do repositório
 
 ```text
-.github/workflows/   CI, segurança, portal, snapshots e Android
+.github/workflows/   CI, segurança, portal, snapshots, Android e iOS
 brand/               identidade visual
 config/              configuração de fontes e operação
 docs/                documentação técnica e operacional
-mobile/android/      aplicativo Android nativo
+mobile/android/      wrapper Android nativo
+mobile/ios/          wrapper iOS/iPadOS nativo em SwiftUI + WKWebView
 scripts/             automação, geração e utilitários
 src/suzano_aberta/   biblioteca, engine, CLI e API
 tests/               testes unitários, integração e contratos
-web/                 portal público e web app
+web/                 portal público e Web App canônico
 ```
 
 # Engenharia e testes
@@ -556,7 +621,11 @@ CodeQL Python + JavaScript
 validação do portal
 Node tests do app
 Android Lint
-build do APK
+build do APK Release
+verificação de assinatura Android
+XcodeGen
+xcodebuild para iOS Simulator
+artifact iOS de simulador
 ```
 
 A intenção é detectar regressões em invariantes e contratos, não apenas verificar se a interface abre.
@@ -572,7 +641,9 @@ A intenção é detectar regressões em invariantes e contratos, não apenas ver
 - o status da Linha 11 é estimativa por notícias, não telemetria da operadora;
 - OpenTelemetry/OpenLineage são observabilidade, não dependências de disponibilidade;
 - o último snapshot saudável deve sobreviver a falhas de rede, fonte, validação ou promoção;
-- o app Android não aceita HTTP em claro nem mixed content;
+- o app Android bloqueia HTTP em claro e mixed content;
+- o wrapper iOS restringe a navegação interna ao host do Suzano Aberta e entrega links externos ao sistema;
+- o Web App continua disponível mesmo sem distribuição por loja;
 - a operação normal do sistema não depende de IA generativa.
 
 # Desenvolvimento
@@ -585,19 +656,33 @@ pytest
 python -m build
 ```
 
-Validação mobile:
+Validação mobile compartilhada:
 
 ```bash
 node --check web/app/app.js
 node --check web/app/sw.js
 node --test tests/mobile-app.test.mjs
-python scripts/sync_mobile_shell.py --check-after-copy
 ```
 
 Build Android, dentro de `mobile/android/`:
 
 ```bash
-gradle :app:lintDebug :app:assembleDebug
+gradle :app:lintRelease :app:assembleRelease
+```
+
+Build iOS, em macOS com XcodeGen e Xcode instalados:
+
+```bash
+cd mobile/ios
+xcodegen generate
+xcodebuild \
+  -project SuzanoAberta.xcodeproj \
+  -scheme SuzanoAberta \
+  -configuration Debug \
+  -destination "generic/platform=iOS Simulator" \
+  CODE_SIGNING_ALLOWED=NO \
+  CODE_SIGNING_REQUIRED=NO \
+  clean build
 ```
 
 # Contribuição, governança e segurança
@@ -609,6 +694,8 @@ Leia também:
 - [SECURITY.md](SECURITY.md)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - [CHANGELOG.md](CHANGELOG.md)
+- [ANDROID.md](ANDROID.md)
+- [IOS.md](IOS.md)
 - [`docs/`](docs/)
 
 # Licença
@@ -619,4 +706,4 @@ Dados, notícias e documentos provenientes de terceiros continuam sujeitos às r
 
 ---
 
-**Suzano Aberta** — infraestrutura independente para tornar informação pública local mais encontrável, verificável, preservável e reutilizável.
+**Suzano Aberta** — infraestrutura independente para tornar informação pública local mais encontrável, verificável, preservável e reutilizável em web, Android e iOS.
