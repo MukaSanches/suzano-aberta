@@ -139,6 +139,10 @@ class AutopilotResponse(BaseModel):
     remote_checksum: str | None = None
     database_modified_at: str | None = None
     next_check_at: str | None = None
+    quality_status: str | None = None
+    quality_score: int | None = Field(default=None, ge=0, le=100)
+    manifest_sha256: str | None = None
+    lineage_run_id: str | None = None
 
 
 class ServiceResponse(BaseModel):
