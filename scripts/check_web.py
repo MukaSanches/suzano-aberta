@@ -6,6 +6,7 @@ import re
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path("web")
 PAGES = [
@@ -20,6 +21,7 @@ PAGES = [
     "acessibilidade.html",
     "404.html",
 ]
+V5_PAGES = {"explorar.html", "contratacoes.html"}
 
 
 class Inspector(HTMLParser):
@@ -89,6 +91,11 @@ def inspect_page(path: Path) -> None:
         fail(f"{path}: camada visual portal-v4.css ausente")
     if "./assets/portal-v4.js" not in parser.scripts:
         fail(f"{path}: camada de interação portal-v4.js ausente")
+    if path.name in V5_PAGES:
+        if "./assets/portal-v5.css" not in parser.stylesheets:
+            fail(f"{path}: camada corretiva portal-v5.css ausente")
+        if "./assets/portal-v5.js" not in parser.scripts:
+            fail(f"{path}: camada corretiva portal-v5.js ausente")
     if "javascript:" in text.casefold():
         fail(f"{path}: javascript: inline não permitido")
     if re.search(r"\son[a-z]+\s*=", text, re.I):
@@ -109,6 +116,20 @@ def inspect_page(path: Path) -> None:
         target = (path.parent / clean).resolve()
         if not target.exists():
             fail(f"{path}: link local quebrado {href}")
+
+
+def _is_exact_pncp_url(value: str) -> bool:
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return False
+    if parsed.scheme not in {"http", "https"} or parsed.netloc.casefold() != "pncp.gov.br":
+        return False
+    path = parsed.path.rstrip("/")
+    return bool(
+        re.fullmatch(r"/app/(?:editais|contratos)/\d{14}/\d{4}/\d+", path)
+        or re.fullmatch(r"/app/atas/\d{14}/\d{4}/\d+/\d+", path)
+    )
 
 
 def validate_generated_data_api() -> None:
@@ -138,8 +159,21 @@ def validate_generated_data_api() -> None:
 
     with gzip.open(api_root / "v1" / "contratacoes.json.gz", "rt", encoding="utf-8") as handle:
         procurement = json.load(handle)
-    if not isinstance(procurement.get("items"), list):
+    items = procurement.get("items")
+    if not isinstance(items, list):
         fail("Coleção de contratações não possui lista de itens")
+    exact = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        attrs = item.get("attributes") or {}
+        if attrs.get("official_url_quality") == "exact":
+            url = str(attrs.get("official_url") or "")
+            if not _is_exact_pncp_url(url) and "pncp" in str(item.get("source") or "").casefold():
+                fail(f"link PNCP marcado como exato possui rota inesperada: {url}")
+            exact += 1
+    if items and exact < 1:
+        fail("Coleção de contratações não possui nenhum link oficial direto")
 
 
 def validate_portal_data() -> None:
@@ -175,6 +209,15 @@ def validate_manifest() -> None:
         fail("manifest.webmanifest precisa declarar pelo menos um ícone")
 
 
+def validate_service_worker() -> None:
+    text = (ROOT / "sw.js").read_text(encoding="utf-8")
+    if "suzano-aberta-shell-v5" not in text:
+        fail("service worker não usa cache v5")
+    for asset in ("portal-v5.css", "portal-v5.js"):
+        if asset not in text:
+            fail(f"service worker não inclui {asset}")
+
+
 def main() -> None:
     for name in PAGES:
         path = ROOT / name
@@ -191,10 +234,12 @@ def main() -> None:
         ROOT / "assets" / "portal-v2.css",
         ROOT / "assets" / "portal-v3.css",
         ROOT / "assets" / "portal-v4.css",
+        ROOT / "assets" / "portal-v5.css",
         ROOT / "assets" / "app.js",
         ROOT / "assets" / "portal-v2.js",
         ROOT / "assets" / "portal-v3.js",
         ROOT / "assets" / "portal-v4.js",
+        ROOT / "assets" / "portal-v5.js",
         ROOT / "assets" / "search-worker.js",
         ROOT / "manifest.webmanifest",
         ROOT / "sw.js",
@@ -204,9 +249,10 @@ def main() -> None:
             fail(f"asset ausente ou vazio: {required}")
 
     validate_manifest()
+    validate_service_worker()
     validate_generated_data_api()
     validate_portal_data()
-    print("Portal v4, HTML, PWA, detalhes, relações e Data API validados.")
+    print("Portal v5, HTML, PWA, links oficiais, detalhes, relações e Data API validados.")
 
 
 if __name__ == "__main__":
