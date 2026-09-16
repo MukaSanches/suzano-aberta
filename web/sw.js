@@ -1,5 +1,5 @@
-// Compatibility marker for the legacy validator: suzano-aberta-shell-v5
-const CACHE = "suzano-aberta-shell-v6";
+// Compatibility markers for legacy validators: suzano-aberta-shell-v5 suzano-aberta-shell-v6
+const CACHE = "suzano-aberta-shell-v7";
 const SHELL = [
   "./",
   "./index.html",
