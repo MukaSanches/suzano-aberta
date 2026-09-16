@@ -4,7 +4,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
-from ..models import Change, PublicRecord
+from ..content_store import ManifestVerification, SnapshotManifest
+from ..contracts import ContractReport
+from ..models import Change, PublicRecord, RecordVersion
 
 
 class PageInfo(BaseModel):
@@ -46,6 +48,36 @@ class ChangesResponse(BaseModel):
     meta: ResponseMeta | None = None
 
 
+class RecordHistoryResponse(BaseModel):
+    record_id: str
+    page: PageInfo
+    items: list[RecordVersion]
+    meta: ResponseMeta | None = None
+
+
+class TemporalDiffResponse(BaseModel):
+    from_time: str
+    to_time: str
+    total: int = Field(ge=0)
+    new: int = Field(ge=0)
+    changed: int = Field(ge=0)
+    absent: int = Field(ge=0)
+    page: PageInfo
+    items: list[Change]
+    meta: ResponseMeta | None = None
+
+
+class QualityResponse(BaseModel):
+    report: ContractReport
+    meta: ResponseMeta | None = None
+
+
+class ManifestResponse(BaseModel):
+    manifest: SnapshotManifest
+    verification: ManifestVerification
+    meta: ResponseMeta | None = None
+
+
 class SourceCount(BaseModel):
     name: str
     records: int = Field(ge=0)
@@ -72,6 +104,7 @@ class StatsResponse(BaseModel):
     first_seen: str | None = None
     last_seen: str | None = None
     fts_enabled: bool
+    temporal_enabled: bool = False
     database_bytes: int = Field(ge=0)
     sqlite_version: str
     dataset_version: str
