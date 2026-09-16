@@ -34,10 +34,14 @@ A operação normal não depende do ChatGPT. Atualização de conteúdo, valida�
 
 ## Segurança
 
-O wrapper Android bloqueia tráfego HTTP em claro, mixed content e cookies de terceiros. Domínios externos são enviados ao navegador do sistema em vez de permanecerem dentro da WebView.
+O wrapper Android bloqueia tráfego HTTP em claro, mixed content e cookies de terceiros. Domínios externos são enviados ao navegador do sistema em vez de permanecerem dentro da WebView. Dependências de GitHub Actions são fixadas por commit para reduzir risco de supply chain.
+
+## Compatibilidade Android
+
+A versão 1.0 compila e mira Android 16 (API 36), atendendo ao requisito vigente para novos aplicativos enviados ao Google Play desde 31 de agosto de 2026. O projeto usa AGP 9.4, Gradle 9.6 e JDK 17.
 
 ## Build Android
 
-O workflow `Android App` valida a shell, sincroniza o fallback local, instala o toolchain Android e compila um APK debug instalável como artifact do GitHub Actions.
+O workflow `Android App` valida a shell, executa os testes, sincroniza o fallback local, roda Android Lint e compila um APK debug instalável como artifact do GitHub Actions.
 
 Para publicação futura na Play Store, a mesma base pode produzir um Android App Bundle assinado; a chave de assinatura deve ser guardada fora do repositório.
