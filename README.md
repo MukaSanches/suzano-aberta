@@ -3,26 +3,38 @@
 </p>
 
 <p align="center">
-  <strong>Civic Data Engine local-first para coletar, preservar, versionar, verificar, pesquisar e distribuir dados públicos relacionados a Suzano, SP.</strong>
+  <strong>Infraestrutura cívica aberta para coletar, preservar, verificar, pesquisar e distribuir dados públicos relacionados a Suzano, SP.</strong>
 </p>
 
 <p align="center">
   <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/codeql.yml/badge.svg"></a>
+  <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/portal.yml"><img alt="Portal" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/portal.yml/badge.svg"></a>
+  <a href="https://github.com/MukaSanches/suzano-aberta/actions/workflows/android-app.yml"><img alt="Android" src="https://github.com/MukaSanches/suzano-aberta/actions/workflows/android-app.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Licença Apache 2.0" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-102A43"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-0B6E4F">
-  <img alt="Biblioteca 1.0.0" src="https://img.shields.io/badge/library-1.0.0-102A43">
-  <img alt="API 1.2" src="https://img.shields.io/badge/API-1.2-0B6E4F">
+  <img alt="Android API 36" src="https://img.shields.io/badge/Android-API%2036-0B6E4F">
   <img alt="SQLite local-first" src="https://img.shields.io/badge/storage-SQLite-102A43">
 </p>
 
 > **Projeto cívico independente.** O Suzano Aberta não é um portal oficial da Prefeitura Municipal de Suzano, da Câmara Municipal de Suzano, de mandato, partido ou candidatura. Em caso de divergência, a publicação da fonte responsável é a referência.
 
-# Suzano Aberta 1.0 — Civic Data Engine
+# Suzano Aberta
 
-Informação pública costuma estar fragmentada entre portais, APIs, páginas, PDFs, diários, sistemas de contratação e arquivos históricos. O Suzano Aberta transforma esse material em uma infraestrutura comum sem apagar a origem de cada registro.
+O Suzano Aberta transforma informação pública fragmentada em uma infraestrutura única, verificável e reutilizável.
 
-A versão 1.0 adiciona uma camada de confiança e memória ao sistema: **contratos de dados, histórico temporal completo, manifestos verificáveis, armazenamento endereçado por conteúdo, lineage, observabilidade e um Source SDK extensível**.
+Portais, páginas, APIs, PDFs, diários oficiais, sistemas de contratação e outras fontes continuam sendo as referências de origem. O projeto preserva essa origem, cria uma camada comum de consulta e mantém histórico suficiente para que mudanças possam ser auditadas ao longo do tempo.
+
+O mesmo núcleo abastece biblioteca Python, CLI, API HTTP, portal público e aplicativo Android. A operação cotidiana é automatizada por código e GitHub Actions; o funcionamento normal **não depende de ChatGPT ou de qualquer IA generativa**.
+
+## Acesse
+
+- **Portal:** https://mukasanches.github.io/suzano-aberta/
+- **Aplicativo web/mobile:** https://mukasanches.github.io/suzano-aberta/app/
+- **Repositório:** https://github.com/MukaSanches/suzano-aberta
+- **API:** disponibilizada a partir da mesma infraestrutura de leitura do projeto
+
+# Arquitetura
 
 ```text
 FONTES PÚBLICAS
@@ -31,7 +43,7 @@ FONTES PÚBLICAS
 Source SDK + Registry
       │
       ▼
-coleta / descoberta
+coleta / descoberta / normalização
       │
       ▼
 PublicRecord + SourceRef
@@ -42,7 +54,7 @@ PublicRecord + SourceRef
 Data Contract Engine
       │
       ├──────────────► OpenLineage journal
-      ├──────────────► OpenTelemetry
+      ├──────────────► OpenTelemetry opcional
       │
       ▼
 SQLite + FTS5
@@ -50,34 +62,149 @@ SQLite + FTS5
       ▼
 manifesto + SHA-256 + last-known-good
       │
- ┌────┼────────┬─────────┬─────────────┐
- ▼    ▼        ▼         ▼             ▼
-CLI  Python   API       Portal       Snapshot
+ ┌────┼────────┬───────────┬────────────┬─────────────┐
+ ▼    ▼        ▼           ▼            ▼             ▼
+CLI  Python   API        Portal      Web App       Android
+                                              remote-first
+                                                  +
+                                           fallback local
 ```
 
-## O que existe na 1.0
+A regra principal é simples: **quanto mais sofisticada a infraestrutura fica por dentro, mais simples deve ser verificar o que aconteceu por fora**.
+
+# O que o projeto entrega
 
 | Camada | Capacidade |
 | --- | --- |
-| Coleta | adaptadores para fontes municipais e nacionais |
+| Coleta | adaptadores para fontes municipais, estaduais e nacionais relevantes |
 | Source SDK | registry extensível e plugins via entry points Python |
 | Persistência | SQLite local-first, FTS5 e fingerprints determinísticos |
-| Tempo | versões completas de registros, consulta histórica e diff |
+| Histórico | versões completas de registros, consulta temporal e diff |
 | Qualidade | Data Contracts determinísticos e score reproduzível |
-| Snapshot | checksum-first, cobertura mínima, FTS, quick_check e promoção atômica |
-| Manifesto | identidade do dataset, SHA-256, tamanho, contrato e metadados de geração |
-| CAS | armazenamento imutável endereçado por SHA-256 |
-| Lineage | journal local compatível com o modelo OpenLineage |
-| Observabilidade | instrumentação OpenTelemetry opcional e vendor-neutral |
+| Snapshot | checksum-first, cobertura mínima, FTS, `quick_check` e promoção atômica |
+| Manifesto | identidade do dataset, SHA-256, tamanho, contrato e metadados da geração |
+| CAS | armazenamento imutável endereçado por conteúdo |
+| Lineage | journal local compatível com conceitos OpenLineage |
+| Observabilidade | OpenTelemetry opcional e vendor-neutral |
 | Autopilot | frescor, locks, backoff, last-known-good e estado persistente |
-| CLI | consulta, operação autônoma e central `suzano data` |
-| Python | `Suzano`, `SuzanoIndex`, `SuzanoClient` e primitives 1.0 |
-| HTTP | API somente leitura, OpenAPI, histórico, diff, qualidade e manifesto |
-| Feed | Atom de mudanças observadas |
-| Windows | instalador, launcher CMD, console interativo e autorreparo |
-| Engenharia | Python 3.11–3.13, mypy strict, Hypothesis, container e CodeQL |
+| CLI | consulta, diagnóstico, sincronização e operação autônoma |
+| Python | `Suzano`, `SuzanoIndex`, `SuzanoClient` e primitives do engine |
+| API | leitura, busca, histórico, diff, qualidade, manifesto, catálogo e mobilidade |
+| Portal | interface pública derivada do snapshot validado |
+| App | experiência mobile com busca, briefing, favoritos, status e resiliência offline |
+| Android | wrapper nativo endurecido, Android 16/API 36 e fallback empacotado |
+| Engenharia | Python 3.11–3.13, mypy strict, Hypothesis, container, CodeQL e Android Lint |
 
-O caminho de confiança não depende de IA. Regras que decidem se um snapshot pode ser promovido são determinísticas e auditáveis.
+# Aplicativo Suzano Aberta
+
+O aplicativo usa a mesma base do portal; ele não cria uma segunda verdade sobre a cidade.
+
+A navegação principal é:
+
+```text
+Início
+  ├─ Suzano, agora
+  ├─ pulso público
+  ├─ últimas mudanças
+  ├─ notícias
+  └─ acessos rápidos
+
+Explorar
+  ├─ busca unificada
+  ├─ legislação
+  ├─ documentos
+  └─ contratações
+
+Acompanhar
+  ├─ favoritos
+  └─ pesquisas salvas
+
+Status
+  ├─ registros
+  ├─ fontes
+  ├─ cobertura
+  ├─ API
+  └─ geração atual
+
+Mais
+  ├─ desenvolvedores
+  ├─ metodologia
+  ├─ acessibilidade
+  └─ sobre o projeto
+```
+
+## Atualização autônoma
+
+O app atualiza conteúdo sem depender de intervenção manual:
+
+- sincroniza ao abrir;
+- sincroniza quando a conexão volta;
+- sincroniza quando retorna ao primeiro plano;
+- atualiza periodicamente enquanto está visível;
+- consulta a API quando disponível;
+- usa o índice estático publicado como fallback;
+- usa Service Worker para resiliência no web app;
+- mantém uma shell local empacotada no Android como último fallback.
+
+Favoritos e pesquisas salvas ficam no armazenamento local do usuário. Não há conta obrigatória, publicidade ou rastreador de terceiros como requisito de funcionamento.
+
+## Android
+
+Código nativo em [`mobile/android/`](mobile/android/).
+
+Parâmetros principais:
+
+```text
+package: br.com.suzanoaberta.app
+compileSdk: 36
+targetSdk: 36
+minSdk: 26
+JDK: 17
+AGP: 9.4
+Gradle: 9.6
+```
+
+O wrapper Android é **remote-first**: abre a versão publicada em GitHub Pages para receber evolução de interface e conteúdo sem reinstalação do APK. Se a camada remota falhar, abre a cópia local empacotada.
+
+Proteções aplicadas:
+
+- HTTP em claro bloqueado;
+- mixed content bloqueado;
+- cookies de terceiros desativados;
+- debugging da WebView desativado;
+- navegação externa enviada ao navegador do sistema;
+- suporte ao gesto preditivo de retorno do Android moderno;
+- shell local disponível para falha de rede.
+
+O workflow [`Android App`](.github/workflows/android-app.yml) valida JavaScript, testes do app, sincroniza a shell offline, executa Android Lint e compila o APK.
+
+# Mobilidade — Linha 11-Coral
+
+A API possui uma camada específica para situação operacional da Linha 11-Coral com foco nas estações:
+
+```text
+Calmon Viana
+Suzano
+Jundiapeba
+Estudantes
+```
+
+Rota:
+
+```text
+GET /v1/transit/line-11
+```
+
+A implementação consulta apenas fontes explicitamente verificadas e diferencia:
+
+- estado disponível;
+- dado antigo (`stale`);
+- indisponibilidade da fonte;
+- operação normal;
+- alteração operacional;
+- ocorrência e trecho afetado quando a fonte oferece evidência suficiente.
+
+A ausência de um dado não é convertida em afirmação positiva. Quando as fontes não sustentam um estado operacional, a API informa indisponibilidade em vez de inventar uma conclusão.
 
 # Começar no Windows
 
@@ -123,7 +250,7 @@ Para desenvolver:
 python -m pip install -e ".[dev]"
 ```
 
-Para exportadores OpenTelemetry e cliente OpenLineage opcionais:
+Para integrações opcionais de observabilidade:
 
 ```bash
 python -m pip install -e ".[observability]"
@@ -147,8 +274,6 @@ suzano auto vigiar
 
 ## Civic Data Engine
 
-A versão 1.0 adiciona a central `data`:
-
 ```bash
 suzano data quality
 suzano data timeline <ID>
@@ -161,11 +286,11 @@ suzano data catalog
 suzano data archive arquivo.pdf
 ```
 
-`quality` executa o contrato do dataset. `timeline` mostra todas as versões preservadas. `at` reconstrói o registro no instante solicitado. `diff` resume mudanças observadas. `manifest` cria uma descrição verificável do snapshot e `verify` confere se o banco ainda corresponde ao manifesto.
+`quality` executa o contrato do dataset. `timeline` mostra versões preservadas. `at` reconstrói o registro no instante solicitado. `diff` resume mudanças observadas. `manifest` descreve o snapshot e `verify` confere se os bytes continuam correspondendo à geração publicada.
 
 # Modelo temporal
 
-`PublicRecord` continua sendo a unidade normalizada. A partir da 1.0, mudanças substantivas também preservam uma `RecordVersion` completa.
+`PublicRecord` é a unidade normalizada. Mudanças substantivas podem gerar `RecordVersion` completa:
 
 ```text
 record_id
@@ -175,7 +300,7 @@ content_hash
 record
 ```
 
-Isso permite duas operações fundamentais:
+Exemplo:
 
 ```python
 from datetime import datetime
@@ -183,33 +308,28 @@ from suzano_aberta import SuzanoIndex
 
 with SuzanoIndex("suzano-aberta.sqlite3") as index:
     versions = index.history("meu-id")
-    old = index.record_at("meu-id", datetime.fromisoformat("2026-09-01T12:00:00+00:00"))
+    old = index.record_at(
+        "meu-id",
+        datetime.fromisoformat("2026-09-01T12:00:00+00:00"),
+    )
 ```
 
-E um diff de intervalo:
-
-```python
-with SuzanoIndex("suzano-aberta.sqlite3") as index:
-    changes = index.diff(start, end)
-    print(changes.new, changes.changed, changes.absent)
-```
-
-O sistema registra observações; ele não transforma ausência temporária em conclusão automática sobre revogação, cancelamento ou exclusão jurídica.
+O sistema registra observações. Ausência temporária não vira automaticamente conclusão sobre revogação, cancelamento, exclusão jurídica ou inexistência no mundo real.
 
 # Data Contracts
 
-O `DataContract` protege o caminho de promoção do snapshot. Entre as invariantes avaliadas estão:
+O `DataContract` protege a promoção do snapshot.
+
+Entre as invariantes avaliadas:
 
 - `PRAGMA quick_check`;
-- registros ativos mínimos;
+- quantidade mínima de registros ativos;
 - diversidade mínima de fontes;
 - IDs duplicados;
 - campos obrigatórios;
 - consistência entre `records` e FTS5;
 - regressão anormal de cobertura;
 - frescor quando aplicável.
-
-Uso local:
 
 ```python
 from suzano_aberta import validate_database_contract
@@ -218,11 +338,11 @@ report = validate_database_contract("suzano-aberta.sqlite3")
 print(report.status, report.score, report.findings)
 ```
 
-O contrato é uma primitive do projeto. Integrações externas de qualidade podem ser adicionadas, mas a segurança básica do snapshot não depende delas.
+A segurança básica do snapshot é determinística. Integrações externas de qualidade podem complementar o sistema, mas não substituem o contrato interno.
 
 # Manifestos e integridade
 
-Cada geração pode possuir um manifesto determinístico com informações como:
+Cada geração pode publicar metadados como:
 
 ```text
 software_version
@@ -236,14 +356,7 @@ lineage_run_id
 generated_at
 ```
 
-Gerar e verificar:
-
-```bash
-suzano data manifest
-suzano data verify
-```
-
-O snapshot rolling publica:
+Artefatos rolling:
 
 ```text
 suzano-aberta.sqlite3.gz
@@ -252,17 +365,15 @@ suzano-aberta.manifest.json
 data-latest.json
 ```
 
-Antes de promover uma geração, o pipeline valida SQLite, FTS, cobertura e contrato. Em falha, preserva o último estado conhecido como saudável.
+Antes da promoção, o pipeline valida SQLite, FTS, cobertura e contrato. Se a nova geração não passar, o último estado conhecido como saudável permanece disponível.
 
 # Content-Addressed Storage
 
-Objetos podem ser arquivados por conteúdo, não por nome:
+Objetos podem ser arquivados pelo próprio conteúdo:
 
 ```bash
 suzano data archive documento.pdf
 ```
-
-ou:
 
 ```python
 from suzano_aberta import ContentAddressedStore
@@ -274,31 +385,23 @@ print(obj.sha256, obj.path)
 
 O mesmo conteúdo produz a mesma identidade SHA-256 e não precisa ser armazenado repetidamente.
 
-# Lineage
+# Lineage e observabilidade
 
-Cada execução importante pode registrar eventos `START`, `COMPLETE` e `FAIL` no journal local. O formato usa conceitos compatíveis com OpenLineage: run, job, inputs e outputs.
+Execuções importantes podem registrar eventos `START`, `COMPLETE` e `FAIL` no journal local, com conceitos compatíveis com OpenLineage: run, job, inputs e outputs.
 
 ```bash
 suzano data lineage
 ```
 
-Quando configurado, os eventos também podem ser encaminhados a um backend OpenLineage. A indisponibilidade desse backend não interrompe coleta ou sincronização.
-
-# OpenTelemetry
-
-O core usa a API OpenTelemetry de forma opcional. Sem SDK/exporter configurado, a instrumentação é no-op. Isso permite adicionar traces e métricas em produção sem acoplar o projeto a um fornecedor específico de observabilidade.
-
-O objetivo é observar operações como sincronização, validação de contrato e promoção sem transformar telemetria em dependência de disponibilidade.
+OpenTelemetry é opcional. Sem SDK/exporter configurado, a instrumentação é no-op. Telemetria e lineage não fazem parte do caminho crítico de disponibilidade.
 
 # Source SDK
 
-Fontes implementam uma definição e um coletor. O registry padrão inclui as integrações do próprio projeto e também descobre plugins instalados pelo grupo Python:
+Fontes implementam uma definição e um coletor. O registry padrão inclui integrações do próprio projeto e descobre plugins instalados pelo grupo Python:
 
 ```text
 suzano_aberta.sources
 ```
-
-Uma integração externa pode ser distribuída como pacote separado sem editar o core.
 
 ```python
 from suzano_aberta import default_source_registry
@@ -307,6 +410,8 @@ registry = default_source_registry()
 for source in registry.registrations():
     print(source.definition.key, source.origin)
 ```
+
+Isso permite adicionar integração em pacote separado sem editar o core.
 
 # Python
 
@@ -336,9 +441,9 @@ with SuzanoClient("https://sua-api.example") as client:
 
 # API HTTP
 
-A API pública permanece **somente leitura**. A versão 1.0 da biblioteca adiciona recursos de engine sem quebrar a família `/v1` existente.
+A API pública é **somente leitura**.
 
-Principais rotas:
+Rotas principais:
 
 ```text
 GET /health/live
@@ -362,16 +467,17 @@ GET /v1/catalog
 GET /v1/sources
 GET /v1/stats
 GET /v1/snapshot
+GET /v1/transit/line-11
 GET /metrics
 ```
 
-O serviço usa OpenAPI, Problem Details, request IDs, ETags, limites explícitos e snapshots imutáveis de leitura. Não há endpoint público para disparar coleta, editar registros ou substituir o banco.
+O serviço usa OpenAPI, Problem Details, request IDs, ETags, limites explícitos e snapshots imutáveis de leitura. Não existe endpoint público para editar registros ou substituir o banco.
 
 # Autopilot
 
-A coleta pesada é centralizada nos workflows públicos. Instalações locais fazem verificação checksum-first e só transferem o banco completo quando a geração muda.
+A coleta pesada é centralizada nos workflows públicos. Instalações locais verificam checksums e só transferem o banco completo quando a geração muda.
 
-Proteções principais:
+Proteções:
 
 - lock cross-process;
 - backoff após falhas;
@@ -381,22 +487,38 @@ Proteções principais:
 - SQLite `quick_check`;
 - consistência FTS;
 - Data Contract;
-- manifesto da geração;
+- manifesto de geração;
 - promoção atômica.
 
-Isso permite que biblioteca, CLI e API permaneçam atualizadas sem depender de intervenção manual rotineira.
+Biblioteca, CLI, API, portal e app podem permanecer atualizados sem operação manual rotineira.
 
-# Portal
+# Portal público
 
-Portal público:
+O portal em GitHub Pages utiliza o mesmo dataset validado, links para fontes de origem, busca e produtos derivados da infraestrutura comum.
 
+```text
 https://mukasanches.github.io/suzano-aberta/
+```
 
-A interface usa o mesmo dataset validado e mantém links para fontes oficiais. Notícias e briefing autônomo são derivados de fontes e regras verificáveis; automação não deve ser apresentada como autoria humana quando não houver autoria humana.
+O portal é reconstruído automaticamente pelo pipeline. Briefings, notícias agregadas e indicadores devem continuar rastreáveis às fontes que sustentam cada informação.
+
+# Estrutura do repositório
+
+```text
+.github/workflows/   CI, segurança, portal, snapshots e Android
+brand/               identidade visual
+config/              configuração de fontes e operação
+docs/                documentação técnica e operacional
+mobile/android/      aplicativo Android nativo
+scripts/             automação e utilitários de build/sync
+src/suzano_aberta/   biblioteca, engine, CLI e API
+tests/               testes unitários, integração e contratos
+web/                 portal público e web app
+```
 
 # Engenharia e testes
 
-Antes de integrar mudanças na `main`, o repositório executa:
+Antes de integrar mudanças, o repositório pode executar:
 
 ```text
 Python 3.11
@@ -404,31 +526,34 @@ Python 3.12
 Python 3.13
 compileall
 ruff
-mypy --strict
+mypy strict
 pytest
 Hypothesis property-based tests
 wheel + sdist
 instalação do wheel construído
-smoke tests CLI/API/lib
-container
+smoke tests CLI / API / biblioteca
+build do container
 CodeQL Python + JavaScript
 validação do portal
+Node tests do app
+Android Lint
+build do APK
 ```
 
-Os testes de propriedades procuram automaticamente entradas que violem invariantes de normalização, IDs, CAS, manifestos e outras primitives.
+A intenção é detectar regressões em invariantes, não apenas verificar se o programa "abre".
 
 # Segurança e limites
 
 - conteúdo externo é tratado como dado, não como comando;
 - a API pública é read-only;
-- URLs de fontes são preservadas para auditoria;
-- hashes demonstram integridade de bytes, não autenticidade jurídica;
+- URLs de origem são preservadas para auditoria;
+- hashes demonstram integridade dos bytes, não autenticidade jurídica;
 - ausência numa coleta não prova ausência no mundo real;
 - relacionamentos só devem ser publicados quando houver evidência nos registros;
 - OpenTelemetry/OpenLineage são observabilidade, não componentes do caminho crítico;
-- o último snapshot saudável deve sobreviver a falhas de rede, fonte, validação ou promoção.
-
-Leia também [SECURITY.md](SECURITY.md), [GOVERNANCE.md](GOVERNANCE.md) e a documentação em [`docs/`](docs/).
+- o último snapshot saudável deve sobreviver a falha de rede, fonte, validação ou promoção;
+- o app Android não aceita HTTP em claro nem mixed content;
+- a operação normal do sistema não depende de IA generativa.
 
 # Desenvolvimento
 
@@ -440,10 +565,38 @@ pytest
 python -m build
 ```
 
-Princípio de engenharia do projeto:
+Validação da camada móvel:
 
-> Quanto mais sofisticada a infraestrutura fica por dentro, mais simples e verificável deve ficar para quem usa.
+```bash
+node --check web/app/app.js
+node --check web/app/sw.js
+node --test tests/mobile-app.test.mjs
+python scripts/sync_mobile_shell.py --check-after-copy
+```
+
+Build Android, dentro de `mobile/android/`:
+
+```bash
+gradle :app:lintDebug :app:assembleDebug
+```
+
+# Contribuição, governança e segurança
+
+Leia:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [GOVERNANCE.md](GOVERNANCE.md)
+- [SECURITY.md](SECURITY.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [CHANGELOG.md](CHANGELOG.md)
+- [`docs/`](docs/)
 
 # Licença
 
-Apache License 2.0. Veja [LICENSE](LICENSE).
+Código distribuído sob a [Apache License 2.0](LICENSE), salvo quando um arquivo ou componente indicar condição diferente.
+
+Dados e documentos provenientes de terceiros continuam sujeitos às regras, licenças, direitos e condições das respectivas fontes.
+
+---
+
+**Suzano Aberta** — infraestrutura independente para tornar informação pública local mais encontrável, verificável, preservável e reutilizável.
