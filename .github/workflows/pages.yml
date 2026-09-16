@@ -128,6 +128,7 @@ jobs:
           node --check web/assets/portal-v7.js
           node --check web/assets/search-worker.js
           node tests/search-worker.test.mjs
+          node tests/search-dataset-smoke.mjs
           node --check web/sw.js
           python - <<'PY'
           import gzip, json, pathlib
