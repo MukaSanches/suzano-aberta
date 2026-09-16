@@ -74,21 +74,43 @@ jobs:
       - name: Synchronize bundled offline shell
         run: python scripts/sync_mobile_shell.py --check-after-copy
 
+      - name: Configure release signing
+        if: github.event_name != 'pull_request'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "No production keystore configured; using the Android development signing key for direct GitHub installation."
+            exit 0
+          fi
+
+          keystore="$RUNNER_TEMP/suzano-aberta-release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          echo "ANDROID_KEYSTORE_FILE=$keystore" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
         with:
           gradle-version: "9.6.0"
 
-      - name: Lint and build installable APK
+      - name: Lint and build installable release APK
         working-directory: mobile/android
-        run: gradle --no-daemon --stacktrace :app:lintDebug :app:assembleDebug
+        run: gradle --no-daemon --stacktrace :app:lintRelease :app:assembleRelease
 
       - name: Prepare public APK
         if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
-          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk suzano-aberta-android.apk
+          cp mobile/android/app/build/outputs/apk/release/app-release.apk suzano-aberta-android.apk
           sha256sum suzano-aberta-android.apk > suzano-aberta-android.sha256
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs suzano-aberta-android.apk > suzano-aberta-android-signature.txt
 
