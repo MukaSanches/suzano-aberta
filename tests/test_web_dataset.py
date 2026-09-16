@@ -29,7 +29,7 @@ def make_db(path: Path) -> None:
             "summary": "Transporte escolar",
             "date": "2026-05-10",
             "year": 2026,
-            "attributes": {"tema": "educação pública"},
+            "attributes": {"tema": "educação pública", "ementa": "Política municipal de transporte escolar"},
             "source": {"name": "Fonte de teste", "url": "https://example.test/proposicao"},
         },
         {
@@ -89,6 +89,7 @@ def test_build_web_dataset(tmp_path: Path) -> None:
     assert manifest["years_covered"] == 2
     assert manifest["schema"] == 2
     assert manifest["default_sort"] == "date_desc"
+    assert manifest["record_fields"][-1] == "search_context"
 
     lexicon = read_gzip_json(output / "lexicon.json.gz")
     assert "educacao" in lexicon
@@ -99,6 +100,9 @@ def test_build_web_dataset(tmp_path: Path) -> None:
     assert [row[0] for row in records] == ["lei:1", "proposicao:1", "arquivo:1"]
     assert records[0][9] == "2026-09-15"
     assert records[0][10] == "record"
+    assert len(records[1]) == 12
+    assert "transporte escolar" in records[1][11].casefold()
+    assert "educação pública" in records[1][11].casefold()
 
     api_root = output.parent / "api"
     ready = json.loads((api_root / "health" / "ready.json").read_text(encoding="utf-8"))
