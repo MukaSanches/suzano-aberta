@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "account": {
+    "username": "suzanoaberta",
+    "display_name": "Suzano Aberta | Informação Pública",
+    "bio": "Informação pública de Suzano, organizada e rastreável.\nNotícias, dados e fontes para entender a cidade.\nIndependente e apartidário.\n↓ Acesse o portal",
+    "category_preference": [
+      "Site de notícias e mídia",
+      "Organização comunitária"
+    ],
+    "link_strategy": [
+      "portal",
+      "github",
+      "metodologia",
+      "fontes"
+    ]
+  },
+  "highlights": [
+    {"order": 1, "name": "COMECE AQUI", "purpose": "onboarding do projeto"},
+    {"order": 2, "name": "NOTÍCIAS", "purpose": "atualizações locais relevantes"},
+    {"order": 3, "name": "CÂMARA", "purpose": "legislativo municipal"},
+    {"order": 4, "name": "PREFEITURA", "purpose": "atos, serviços e gestão municipal"},
+    {"order": 5, "name": "CONTRATOS", "purpose": "licitações, compras e contratos"},
+    {"order": 6, "name": "SERVIÇOS", "purpose": "utilidade pública"},
+    {"order": 7, "name": "FONTES", "purpose": "rastreabilidade e metodologia"},
+    {"order": 8, "name": "SOBRE", "purpose": "independência, código aberto e contato"}
+  ],
+  "pinned_posts": [
+    {"slot": 1, "title": "Comece Aqui", "goal": "converter visita em follow"},
+    {"slot": 2, "title": "Como Funciona", "goal": "provar rastreabilidade e utilidade"},
+    {"slot": 3, "title": "Guia de Suzano", "goal": "entregar valor evergreen compartilhável"}
+  ],
+  "brand": {
+    "navy": "#102A43",
+    "green": "#0B6E4F",
+    "yellow": "#F0B429",
+    "off_white": "#F8FAF9"
+  },
+  "canva": {
+    "highlights_design_id": "DAHVXrpaI7k",
+    "highlights_edit_url": "https://www.canva.com/d/AJkkym6QrY8EvZT",
+    "highlights_page_count": 8
+  },
+  "references": [
+    "social/instagram/PROFILE.md",
+    "skills/suzano-aberta-instagram/SKILL.md"
+  ]
+}
