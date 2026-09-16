@@ -124,3 +124,35 @@ def test_client_readiness_preserves_degraded_response() -> None:
 
     assert readiness.ready is False
     assert readiness.status == "degraded"
+
+
+def test_client_reads_typed_autopilot_status() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/autopilot"
+        return httpx.Response(
+            200,
+            json={
+                "database": "suzano-aberta.sqlite3",
+                "database_exists": True,
+                "records": 9003,
+                "due": False,
+                "fresh": True,
+                "locked": False,
+                "last_attempt_at": "2026-09-16T12:00:00+00:00",
+                "last_success_at": "2026-09-16T12:00:00+00:00",
+                "last_error": None,
+                "consecutive_failures": 0,
+                "successful_checks": 10,
+                "updates": 3,
+                "remote_checksum": "a" * 64,
+                "database_modified_at": "2026-09-16T12:00:00+00:00",
+                "next_check_at": "2026-09-16T12:15:00+00:00",
+            },
+        )
+
+    with SuzanoClient("https://api.example.test", transport=httpx.MockTransport(handler)) as client:
+        status = client.autopilot()
+
+    assert status.fresh is True
+    assert status.records == 9003
+    assert status.consecutive_failures == 0
