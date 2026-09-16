@@ -1,18 +1,45 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Conheça a missão, arquitetura e princípios do Suzano Aberta."><meta name="theme-color" content="#102A43"><title>Sobre — Suzano Aberta</title><link rel="icon" href="./assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="./assets/styles.css"><script defer src="./assets/app.js"></script></head>
-<body><a class="skip-link" href="#conteudo">Ir para o conteúdo</a><div class="independence-banner"><div class="wrap"><span class="banner-dot"></span><span><strong>Projeto cívico independente.</strong> Não representa nenhum órgão municipal.</span></div></div><header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav" aria-label="Navegação principal"><a href="./explorar.html">Explorar</a><a aria-current="page" href="./sobre.html">Sobre</a><a href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
-<main id="conteudo"><section class="page-hero"><div class="wrap"><span class="eyebrow">Projeto</span><h1>Informação pública precisa ser encontrável.</h1><p class="lead">O Suzano Aberta reúne tecnologia de coleta, preservação, pesquisa e distribuição para reduzir a distância entre “o dado existe” e “qualquer pessoa consegue encontrá-lo”.</p></div></section><section class="section"><div class="wrap prose">
-<h2>O problema</h2><p>Informações públicas podem estar corretas e legalmente disponíveis, mas espalhadas entre páginas, PDFs, planilhas, portais diferentes e endereços que mudam com o tempo. A proposta do Suzano Aberta é criar uma camada de organização e pesquisa sem esconder a origem.</p>
-<h2>O que o projeto faz</h2><p>O sistema descobre fontes, coleta registros públicos, extrai conteúdo de documentos compatíveis, registra proveniência e mudanças, cria um índice de busca e publica versões verificáveis do acervo. O mesmo núcleo pode ser consultado pela linha de comando, pela biblioteca Python, pela API e por este portal.</p>
-<h2>O que o projeto não faz</h2><ul><li>Não se apresenta como site oficial da Prefeitura ou da Câmara.</li><li>Não atribui automaticamente culpa, irregularidade ou nota a agentes públicos.</li><li>Não substitui documentos oficiais, pareceres técnicos ou análise jurídica.</li><li>Não tenta contornar controles de acesso de portais que bloqueiam automação.</li></ul>
-<h2>Princípios</h2><div class="architecture"><div class="arch-row"><strong>Clareza</strong><span>Linguagem direta e interfaces previsíveis.</span></div><div class="arch-row"><strong>Rastreabilidade</strong><span>Cada resultado preserva o vínculo com sua fonte.</span></div><div class="arch-row"><strong>Acessibilidade</strong><span>Semântica, teclado, contraste, zoom e movimento reduzido são requisitos de projeto.</span></div><div class="arch-row"><strong>Resiliência</strong><span>Portal, API e coleta são desacoplados; uma falha não deve destruir o acervo publicado.</span></div><div class="arch-row"><strong>Neutralidade</strong><span>O software organiza evidências públicas e evita inferências políticas automáticas.</span></div></div>
-<h2>Arquitetura</h2><pre>fontes públicas
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Conheça a missão, limites, arquitetura e princípios do Suzano Aberta.">
+  <meta name="theme-color" content="#081f33">
+  <meta name="color-scheme" content="light">
+  <title>Sobre — Suzano Aberta</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./assets/styles.css">
+  <link rel="stylesheet" href="./assets/portal-v4.css">
+  <script defer src="./assets/app.js"></script>
+  <script defer src="./assets/portal-v4.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+<div class="independence-banner"><div class="wrap"><span class="banner-dot" aria-hidden="true"></span><span><strong>Projeto cívico independente.</strong> Não representa nenhum órgão municipal, mandato, partido ou candidatura.</span></div></div>
+<header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html" aria-label="Suzano Aberta — início"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav" aria-label="Navegação principal"><a href="./explorar.html">Explorar</a><a href="./legislacao.html">Legislação</a><a href="./contratacoes.html">Contratações</a><a aria-current="page" href="./sobre.html">Sobre</a><a href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
+<main id="conteudo">
+  <section class="page-hero"><div class="wrap"><span class="eyebrow">Projeto</span><h1>Informação pública não deveria exigir uma caça ao tesouro.</h1><p class="lead">O Suzano Aberta reduz a distância entre “a publicação existe” e “uma pessoa consegue encontrá-la, conferir a origem e reutilizar o dado”.</p></div></section>
+  <section class="section section-tint"><div class="wrap"><div class="trust-grid"><div class="trust-item"><strong>Localizável</strong><span>Um índice único pesquisa fontes que normalmente vivem em portais, páginas, PDFs e APIs diferentes.</span></div><div class="trust-item"><strong>Rastreável</strong><span>A origem permanece associada ao registro para que a pessoa possa voltar ao documento responsável.</span></div><div class="trust-item"><strong>Reutilizável</strong><span>O mesmo núcleo alimenta portal, API, Python, CLI e snapshot SQLite.</span></div><div class="trust-item"><strong>Conservador</strong><span>Dado ausente não é completado por suposição e relação textual não vira acusação.</span></div></div></div></section>
+  <section class="section"><div class="wrap prose">
+    <h2>O problema</h2><p>Informações públicas podem estar legalmente disponíveis e ainda assim ser difíceis de localizar. O material pode aparecer em páginas institucionais, PDFs, planilhas, portais diferentes, sistemas nacionais ou endereços que mudam ao longo do tempo.</p>
+    <h2>O que o projeto faz</h2><p>O sistema descobre fontes públicas, coleta registros, extrai conteúdo de documentos compatíveis, preserva proveniência e mudanças, cria um índice de busca e publica versões verificáveis do acervo. A experiência web é uma camada sobre essa infraestrutura — não um banco isolado feito só para a interface.</p>
+    <h2>O que o projeto não faz</h2><ul><li>Não se apresenta como site oficial da Prefeitura ou da Câmara.</li><li>Não atribui automaticamente culpa, irregularidade, desempenho ou intenção a agentes públicos.</li><li>Não substitui documentos oficiais, pareceres técnicos ou análise jurídica.</li><li>Não contorna autenticação ou bloqueios para fingir que uma fonte é pública.</li><li>Não promete cobertura absoluta de toda informação existente.</li></ul>
+    <h2>Princípios</h2><div class="architecture"><div class="arch-row"><strong>Clareza</strong><span>Linguagem direta e interfaces previsíveis antes de efeitos visuais.</span></div><div class="arch-row"><strong>Rastreabilidade</strong><span>Cada resultado deve manter o caminho até a origem.</span></div><div class="arch-row"><strong>Acessibilidade</strong><span>Teclado, foco, contraste, zoom, semântica e movimento reduzido são requisitos de engenharia.</span></div><div class="arch-row"><strong>Resiliência</strong><span>Coleta, snapshot, API e portal são desacoplados; uma falha não deve destruir o último acervo válido.</span></div><div class="arch-row"><strong>Neutralidade</strong><span>O software organiza evidências públicas e evita inferências políticas automáticas.</span></div></div>
+    <h2>Arquitetura</h2><pre>fontes públicas
       ↓
 coleta + documentos + histórico
       ↓
-SQLite + FTS5 + proveniência
+normalização + SQLite + FTS5
+      ↓
+proveniência + relações determinísticas
       ↓
 validação + checksum + snapshot
       ↓
-API v1 ── portal web ── Python ── CLI</pre>
-<p>Todo o código e a metodologia ficam disponíveis no <a href="https://github.com/MukaSanches/suzano-aberta">repositório do projeto</a>.</p>
-</div></section></main><footer class="footer"><div class="wrap"><div class="footer-small">Em caso de divergência, prevalece a publicação da fonte responsável.</div></div></footer></body></html>
+portal ── API HTTP ── Data API ── Python ── CLI</pre>
+    <p>Todo o código e a metodologia ficam disponíveis no <a href="https://github.com/MukaSanches/suzano-aberta">repositório do projeto</a>.</p>
+  </div></section>
+</main>
+<footer class="footer"><div class="wrap"><div class="footer-grid"><div><h2>Suzano Aberta</h2><p>Infraestrutura cívica independente para tornar informação pública mais encontrável e verificável.</p></div><div><h3>Acervo</h3><ul><li><a href="./explorar.html">Pesquisar</a></li><li><a href="./legislacao.html">Legislação</a></li><li><a href="./contratacoes.html">Contratações</a></li></ul></div><div><h3>Projeto</h3><ul><li><a href="./acessibilidade.html">Acessibilidade</a></li><li><a href="https://github.com/MukaSanches/suzano-aberta">GitHub</a></li></ul></div><div><h3>Dados</h3><ul><li><a href="./desenvolvedores.html">Desenvolvedores</a></li><li><a href="./status.html">Status</a></li></ul></div></div><div class="footer-small">Em caso de divergência, prevalece a publicação da fonte responsável.</div></div></footer>
+</body>
+</html>
