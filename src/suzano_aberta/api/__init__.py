@@ -6,7 +6,6 @@ from .app import API_VERSION, SCHEMA_VERSION, create_app as _create_base_app
 from .autopilot import install_autopilot_routes
 from .civic import install_civic_routes
 from .settings import ApiSettings
-from .transit import install_transit_routes
 
 
 def create_app(settings: ApiSettings | None = None) -> FastAPI:
@@ -19,7 +18,6 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         api_version=API_VERSION,
         schema_version=SCHEMA_VERSION,
     )
-    install_transit_routes(application, resolved)
     return application
 
 
