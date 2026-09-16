@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Iterable
 from hashlib import sha256
 from urllib.parse import urljoin, urlsplit
 
@@ -140,9 +141,6 @@ class PrefeituraLegislationSource(BaseSource):
                 if len(records) >= max_records:
                     return self._sorted(records.values())
 
-            # A listagem oficial é cronológica. Depois que uma página inteira já
-            # está abaixo da faixa desejada, páginas seguintes não podem voltar a
-            # conter atos mais novos.
             if page_years and max(page_years) < from_year and page_added == 0:
                 break
             if oldest_seen is not None and oldest_seen < from_year - 1 and page_added == 0:
@@ -172,7 +170,9 @@ class PrefeituraLegislationSource(BaseSource):
 
             title = clean_text(anchor.get_text(" ", strip=True))
             container = anchor.find_parent(["article", "li", "div"])
-            context = clean_text(container.get_text(" ", strip=True) if isinstance(container, Tag) else title)
+            context = clean_text(
+                container.get_text(" ", strip=True) if isinstance(container, Tag) else title
+            )
             signal = clean_text(f"{title} {context}")
             if _ACT_RE.search(signal) is None:
                 continue
@@ -317,7 +317,7 @@ class PrefeituraLegislationSource(BaseSource):
         return text[:4000]
 
     @staticmethod
-    def _sorted(records: object) -> list[PublicRecord]:
-        values = list(records)  # type: ignore[arg-type]
+    def _sorted(records: Iterable[PublicRecord]) -> list[PublicRecord]:
+        values = list(records)
         values.sort(key=lambda record: (record.date or "", record.id), reverse=True)
         return values
