@@ -52,13 +52,7 @@ class PublicRecord(BaseModel):
     source: SourceRef
 
     def canonical_payload(self) -> dict[str, Any]:
-        """Payload estável usado para detectar alteração substantiva.
-
-        Metadados operacionais ou de catalogação da fonte ficam fora desta
-        impressão digital para que uma evolução de proveniência não reescreva o
-        histórico de milhares de registros como se o conteúdo público tivesse
-        mudado.
-        """
+        """Payload estável usado para detectar alteração substantiva."""
         return {
             "id": self.id,
             "kind": self.kind,
@@ -82,6 +76,14 @@ class PublicRecord(BaseModel):
             default=str,
         ).encode("utf-8")
         return sha256(raw).hexdigest()
+
+
+class RecordVersion(BaseModel):
+    record_id: str
+    version: int = Field(ge=1)
+    observed_at: datetime
+    content_hash: str
+    record: PublicRecord
 
 
 class SourceStatus(BaseModel):
@@ -123,6 +125,16 @@ class Change(BaseModel):
     observed_at: datetime
     previous_hash: str | None = None
     current_hash: str | None = None
+
+
+class TemporalDiff(BaseModel):
+    from_time: datetime
+    to_time: datetime
+    total: int = Field(ge=0)
+    new: int = Field(ge=0)
+    changed: int = Field(ge=0)
+    absent: int = Field(ge=0)
+    items: list[Change] = Field(default_factory=list)
 
 
 class CollectionReport(BaseModel):
