@@ -10,6 +10,7 @@ on:
       - "src/suzano_aberta/catalog.py"
       - "scripts/build_web_dataset.py"
       - "scripts/build_portal_enrichment.py"
+      - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
       - "scripts/render_web_config.py"
       - "scripts/check_web.py"
@@ -23,6 +24,7 @@ on:
       - "src/suzano_aberta/catalog.py"
       - "scripts/build_web_dataset.py"
       - "scripts/build_portal_enrichment.py"
+      - "scripts/enrich_official_links.py"
       - "scripts/build_news_feed.py"
       - "scripts/render_web_config.py"
       - "scripts/check_web.py"
@@ -98,6 +100,9 @@ jobs:
       - name: Build cross-record relations and detail collections
         run: python scripts/build_portal_enrichment.py --database /tmp/suzano-aberta.sqlite3 --output web/data
 
+      - name: Materialize canonical official links
+        run: python scripts/enrich_official_links.py --root web
+
       - name: Refresh five latest web news
         run: python scripts/build_news_feed.py --output web/data/news.json
 
@@ -114,6 +119,7 @@ jobs:
           node --check web/assets/portal-v2.js
           node --check web/assets/portal-v3.js
           node --check web/assets/portal-v4.js
+          node --check web/assets/portal-v5.js
           node --check web/assets/search-worker.js
           node --check web/sw.js
           python - <<'PY'
@@ -131,9 +137,13 @@ jobs:
               raise SystemExit("snapshot rolling não possui cobertura multi-fonte suficiente")
           with gzip.open("web/api/v1/contratacoes.json.gz", "rt", encoding="utf-8") as handle:
               payload = json.load(handle)
-          if not payload.get("items"):
+          items = payload.get("items") or []
+          if not items:
               raise SystemExit("coleção pública de contratações está vazia")
-          print({"news": 5, **enrichment})
+          exact_links = [item for item in items if (item.get("attributes") or {}).get("official_url_quality") == "exact"]
+          if not exact_links:
+              raise SystemExit("nenhuma contratação possui link oficial direto materializado")
+          print({"news": 5, "official_exact": len(exact_links), **enrichment})
           PY
 
       - name: Configure Pages
