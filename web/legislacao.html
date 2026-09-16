@@ -12,32 +12,36 @@
   <link rel="stylesheet" href="./assets/styles.css">
   <link rel="stylesheet" href="./assets/portal-v2.css">
   <link rel="stylesheet" href="./assets/portal-v4.css">
+  <link rel="stylesheet" href="./assets/portal-v5.css">
+  <link rel="stylesheet" href="./assets/portal-v7.css">
   <script defer src="./assets/app.js"></script>
   <script defer src="./assets/portal-v2.js"></script>
   <script defer src="./assets/portal-v4.js"></script>
+  <script defer src="./assets/portal-v5.js"></script>
+  <script defer src="./assets/portal-v7.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 <div class="independence-banner"><div class="wrap"><span class="banner-dot" aria-hidden="true"></span><span><strong>Consulta legislativa independente.</strong> Situação jurídica, vigência e tramitação devem ser confirmadas na fonte oficial.</span></div></div>
 <header class="site-header"><div class="wrap header-inner"><a class="brand" href="./index.html" aria-label="Suzano Aberta — início"><img src="./assets/mark.svg" alt=""><span class="brand-name"><span>Suzano</span><span>Aberta</span></span></a><nav class="nav" aria-label="Navegação principal"><a href="./explorar.html">Explorar</a><a aria-current="page" href="./legislacao.html">Legislação</a><a href="./contratacoes.html">Contratações</a><a href="./sobre.html">Sobre</a><a href="./desenvolvedores.html">Desenvolvedores</a><a href="./status.html">Status</a></nav></div></header>
 <main id="conteudo">
-  <section class="page-hero"><div class="wrap"><span class="eyebrow">Legislação municipal</span><h1>Normas e proposições com contexto, não só uma lista de links.</h1><p class="lead">Pesquise leis, decretos e proposições, abra a publicação oficial e veja metadados e relações documentais encontradas sem transformar proposição em lei por suposição.</p></div></section>
+  <section class="page-hero"><div class="wrap"><span class="eyebrow">Legislação municipal</span><h1>Normas e proposições com contexto, não só uma lista de links.</h1><p class="lead">Pesquise exatamente pelo tema, número ou autor que você tem em mente. O portal preserva sua consulta, prioriza correspondências reais e mantém a fonte oficial a um clique.</p></div></section>
   <section class="section section-tint"><div class="wrap"><div class="trust-grid"><div class="trust-item"><strong>Fonte oficial</strong><span>Leis e decretos mantêm acesso ao endereço publicado pelo órgão responsável.</span></div><div class="trust-item"><strong>Metadados preservados</strong><span>Número, classe, data, ementa e demais campos disponíveis permanecem associados ao registro.</span></div><div class="trust-item"><strong>Relações explicáveis</strong><span>Normas podem ser ligadas a documentos e processos quando há referência verificável.</span></div><div class="trust-item"><strong>Estados não são presumidos</strong><span>Proposições continuam identificadas como proposições até que outra situação esteja publicada.</span></div></div></div></section>
   <section class="section"><div class="wrap results-shell">
     <form class="filters" data-search-form data-explore-form role="search" aria-label="Filtros da legislação">
       <input type="hidden" name="scope" value="legislation">
-      <div class="field"><label for="q">Assunto, número ou autor</label><input id="q" name="q" type="search" maxlength="200" autocomplete="off" placeholder="Ex.: mobilidade, 123/2026"></div>
+      <div class="field"><label for="q">Tema, número ou autor</label><input id="q" name="q" type="search" maxlength="200" autocomplete="off" aria-describedby="leg-search-hint" placeholder="Ex.: mobilidade, transporte escolar, 123/2026"><p class="search-help" id="leg-search-hint">Digite o termo como você quer encontrá-lo. A interface preserva exatamente o texto informado e o índice não substitui o tema por sinônimos.</p></div>
       <div class="field"><label for="kind">Tipo</label><select id="kind" name="kind"><option value="">Leis, decretos e proposições</option><option value="lei">Leis</option><option value="decreto">Decretos</option><option value="proposicao">Proposições</option></select></div>
       <div class="field"><label for="date_from">De</label><input id="date_from" name="date_from" type="date"></div>
       <div class="field"><label for="date_to">Até</label><input id="date_to" name="date_to" type="date"></div>
       <div class="field"><label for="year">Ano</label><input id="year" name="year" type="number" min="1900" max="2100" inputmode="numeric" placeholder="2026"></div>
       <div class="field"><label for="sort">Ordenar</label><select id="sort" name="sort"><option value="relevance">Melhor correspondência</option><option value="date_desc">Mais recentes primeiro</option><option value="date_asc">Mais antigos primeiro</option></select></div>
-      <button class="button" type="submit">Aplicar filtros</button>
-      <p class="search-help">Buscas por assunto priorizam a melhor correspondência. <a href="./explorar.html">Voltar ao acervo completo</a> · pressione <strong>/</strong> para a pesquisa rápida.</p>
+      <button class="button" type="submit">Pesquisar legislação</button>
+      <p class="search-help">Os filtros permanecem ativos até você removê-los. <a href="./explorar.html">Voltar ao acervo completo</a> · pressione <strong>/</strong> para a pesquisa rápida.</p>
     </form>
-    <div>
+    <div data-results-column>
       <div class="notice"><strong>Proposição não é lei.</strong> O portal preserva essa diferença e não presume aprovação, sanção ou vigência sem uma publicação que sustente essa mudança.</div>
-      <div class="section-head" style="margin-top:2rem"><div><span class="eyebrow">Coleção legislativa</span><h2 style="font-size:clamp(1.65rem,3vw,2.3rem)">Pesquise primeiro. Verifique a fonte depois.</h2><p class="result-count" data-result-count>Carregando coleção legislativa…</p><p class="search-help">Clique em lei ou decreto para abrir leitura assistida, metadados e vínculos encontrados.</p></div></div>
+      <div class="section-head" style="margin-top:2rem"><div><span class="eyebrow">Coleção legislativa</span><h2 style="font-size:clamp(1.65rem,3vw,2.3rem)">Pesquise primeiro. Verifique a fonte depois.</h2><p class="result-count" data-result-count>Carregando coleção legislativa…</p><p class="search-help">Quando a correspondência estiver em metadados estruturados, o trecho mais útil é exibido no resultado. Clique em lei ou decreto para abrir leitura assistida, metadados e vínculos encontrados.</p></div></div>
       <div data-results aria-live="polite"><p class="loading" role="status">Carregando leis e proposições…</p></div>
     </div>
   </div></section>
