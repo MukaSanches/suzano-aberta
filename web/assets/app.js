@@ -4,6 +4,7 @@ const state = {
   worker: null,
   pending: new Map(),
   requestId: 0,
+  searchSequence: 0,
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -16,6 +17,7 @@ const KIND_LABELS = {
   arquivo: "Arquivo",
   arquivo_historico: "Arquivo histórico",
   ato_oficial: "Ato oficial",
+  ata: "Ata de preços",
   comissao: "Comissão",
   contrato: "Contrato",
   decreto: "Decreto",
@@ -108,6 +110,10 @@ function initWorker() {
     state.pending.delete(event.data.id);
     event.data.ok ? handler.resolve(event.data.result) : handler.reject(new Error(event.data.error));
   };
+  worker.onerror = error => {
+    for (const [, handler] of state.pending) handler.reject(error);
+    state.pending.clear();
+  };
   state.worker = worker;
   return worker;
 }
@@ -156,11 +162,37 @@ async function apiSearch(payload) {
   };
 }
 
-function renderResults(target, data, mode) {
+function renderPagination(target, data, form, payload) {
+  const pages = Math.max(1, Math.ceil(data.total / payload.limit));
+  const current = Math.min(pages, Math.floor(payload.offset / payload.limit) + 1);
+  if (pages <= 1) return;
+
+  const nav = document.createElement("nav");
+  nav.className = "pagination";
+  nav.setAttribute("aria-label", "Paginação dos resultados");
+  nav.innerHTML = `
+    <span class="pagination-status">Página <strong>${nf.format(current)}</strong> de <strong>${nf.format(pages)}</strong></span>
+    <div class="pagination-group">
+      <button type="button" data-page-offset="${Math.max(0, payload.offset - payload.limit)}" ${current <= 1 ? "disabled" : ""}>← Anterior</button>
+      <button type="button" data-page-offset="${payload.offset + payload.limit}" ${current >= pages ? "disabled" : ""}>Próxima →</button>
+    </div>`;
+  nav.addEventListener("click", event => {
+    const button = event.target.closest("button[data-page-offset]");
+    if (!button || button.disabled) return;
+    form.dataset.offset = String(Number(button.dataset.pageOffset || 0));
+    runSearch(form).then(() => {
+      const top = target.getBoundingClientRect().top + scrollY - 120;
+      scrollTo({ top: Math.max(0, top), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    });
+  });
+  target.append(nav);
+}
+
+function renderResults(target, data, mode, form, payload) {
   const count = $("[data-result-count]");
   if (count) count.textContent = `${nf.format(data.total)} resultado${data.total === 1 ? "" : "s"}`;
   const modeNode = $("[data-search-mode]");
-  if (modeNode) modeNode.textContent = mode === "api" ? "API consultiva v1.1" : "índice público publicado";
+  if (modeNode) modeNode.textContent = mode === "api" ? "API consultiva v1.2" : "índice público publicado";
   if (!data.items.length) {
     target.innerHTML = `<div class="empty"><strong>Nenhum resultado encontrado.</strong><p>Tente remover filtros, ampliar o período ou verificar outra grafia.</p></div>`;
     return;
@@ -176,10 +208,12 @@ function renderResults(target, data, mode) {
       ${item.summary ? `<p>${escapeHtml(item.summary).slice(0, 420)}</p>` : ""}
       <div class="result-actions"><a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">Abrir fonte original</a><span>${escapeHtml(item.source_name || "Fonte pública")}</span></div>
     </li>`).join("")}</ul>`;
+  renderPagination(target, data, form, payload);
 }
 
 function formPayload(form) {
   const read = name => form.querySelector(`[name="${name}"]`)?.value?.trim?.() || "";
+  const rawOffset = Number(form.dataset.offset || 0);
   return {
     query: read("q"),
     scope: read("scope"),
@@ -189,30 +223,35 @@ function formPayload(form) {
     date_to: read("date_to"),
     sort: read("sort") || "date_desc",
     limit: 40,
-    offset: 0,
+    offset: Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0,
   };
+}
+
+function updateSearchUrl(payload) {
+  if (!location.pathname.endsWith("explorar.html") && !location.pathname.endsWith("legislacao.html")) return;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(payload)) {
+    if (["limit", "offset"].includes(key) || !value || (key === "sort" && value === "date_desc")) continue;
+    params.set(key === "query" ? "q" : key, String(value));
+  }
+  if (payload.offset > 0) params.set("page", String(Math.floor(payload.offset / payload.limit) + 1));
+  history.replaceState(null, "", params.size ? `?${params}` : location.pathname.split("/").pop());
 }
 
 async function runSearch(form, { updateUrl = true } = {}) {
   const target = $("[data-results]");
   if (!target) return;
   const payload = formPayload(form);
+  const sequence = ++state.searchSequence;
 
   if (payload.date_from && payload.date_to && payload.date_from > payload.date_to) {
     target.innerHTML = `<div class="empty"><strong>Período inválido.</strong><p>A data inicial precisa ser anterior ou igual à data final.</p></div>`;
     return;
   }
 
-  if (updateUrl && (location.pathname.endsWith("explorar.html") || location.pathname.endsWith("legislacao.html"))) {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(payload)) {
-      if (["limit", "offset"].includes(key) || !value || (key === "sort" && value === "date_desc")) continue;
-      params.set(key === "query" ? "q" : key, String(value));
-    }
-    history.replaceState(null, "", params.size ? `?${params}` : location.pathname.split("/").pop());
-  }
-
+  if (updateUrl) updateSearchUrl(payload);
   target.innerHTML = `<p class="loading" role="status">Pesquisando o acervo…</p>`;
+
   let result;
   let mode = "api";
   try {
@@ -222,11 +261,14 @@ async function runSearch(form, { updateUrl = true } = {}) {
     try {
       result = await staticSearch(payload);
     } catch (error) {
+      if (sequence !== state.searchSequence) return;
       target.innerHTML = `<div class="empty"><strong>Não foi possível abrir o índice de pesquisa.</strong><p>${escapeHtml(error.message)}</p></div>`;
       return;
     }
   }
-  renderResults(target, result, mode);
+
+  if (sequence !== state.searchSequence) return;
+  renderResults(target, result, mode, form, payload);
 }
 
 function wireSearch() {
@@ -238,6 +280,7 @@ function wireSearch() {
         if (query) location.href = `./explorar.html?q=${encodeURIComponent(query)}`;
         return;
       }
+      form.dataset.offset = "0";
       runSearch(form);
     });
   });
@@ -249,7 +292,12 @@ function wireSearch() {
       const element = explore.querySelector(`[name="${name}"]`);
       if (element && params.get(name)) element.value = params.get(name);
     }
-    $$('select, input[type="date"]', explore).forEach(element => element.addEventListener("change", () => runSearch(explore)));
+    const page = Math.max(1, Number(params.get("page") || 1));
+    explore.dataset.offset = String(Number.isFinite(page) ? (page - 1) * 40 : 0);
+    $$('select, input[type="date"]', explore).forEach(element => element.addEventListener("change", () => {
+      explore.dataset.offset = "0";
+      runSearch(explore);
+    }));
     runSearch(explore, { updateUrl: false });
   }
 }
