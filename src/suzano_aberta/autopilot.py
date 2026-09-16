@@ -332,5 +332,9 @@ class AutonomousDataManager:
             result = self.ensure_fresh()
             if on_result is not None:
                 on_result(result)
-            wait_for = max(1, self.policy.check_interval_seconds)
-            stopper.wait(wait_for)
+            interval = (
+                self.policy.failure_backoff_seconds
+                if result.action == "failed"
+                else self.policy.check_interval_seconds
+            )
+            stopper.wait(max(1, interval))
