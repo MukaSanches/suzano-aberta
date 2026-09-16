@@ -2,6 +2,16 @@
 
 O Suzano Aberta App é a interface móvel do projeto cívico independente Suzano Aberta. Ele não cria uma segunda base de dados: reutiliza a mesma infraestrutura pública, rastreável e verificável do portal.
 
+## Download Android
+
+A distribuição pública para Android fica em **GitHub Releases**.
+
+- APK direto: https://github.com/MukaSanches/suzano-aberta/releases/latest/download/suzano-aberta-android.apk
+- Releases: https://github.com/MukaSanches/suzano-aberta/releases
+- Guia de instalação: [`ANDROID.md`](../ANDROID.md)
+
+O usuário final não precisa abrir o GitHub Actions nem compilar o projeto.
+
 ## Arquitetura
 
 ```text
@@ -36,12 +46,36 @@ A operação normal não depende do ChatGPT. Atualização de conteúdo, valida�
 
 O wrapper Android bloqueia tráfego HTTP em claro, mixed content e cookies de terceiros. Domínios externos são enviados ao navegador do sistema em vez de permanecerem dentro da WebView. Dependências de GitHub Actions são fixadas por commit para reduzir risco de supply chain.
 
+Cada release público inclui o APK, um SHA-256 e o certificado reportado pelo `apksigner` durante a build.
+
 ## Compatibilidade Android
 
-A versão 1.0 compila e mira Android 16 (API 36), atendendo ao requisito vigente para novos aplicativos enviados ao Google Play desde 31 de agosto de 2026. O projeto usa AGP 9.4, Gradle 9.6 e JDK 17.
+A versão 1.0 compila e mira Android 16 (API 36), atendendo ao requisito vigente para novos aplicativos enviados ao Google Play desde 31 de agosto de 2026. O projeto usa AGP 9.4, Gradle 9.6 e JDK 17. O mínimo suportado é Android 8.0 / API 26.
 
-## Build Android
+## Build e publicação
 
-O workflow `Android App` valida a shell, executa os testes, sincroniza o fallback local, roda Android Lint e compila um APK debug instalável como artifact do GitHub Actions.
+O workflow `Android App`:
 
-Para publicação futura na Play Store, a mesma base pode produzir um Android App Bundle assinado; a chave de assinatura deve ser guardada fora do repositório.
+1. valida a shell e executa os testes;
+2. sincroniza o fallback local;
+3. executa Android Lint na variant Release;
+4. compila um APK Release otimizado;
+5. verifica a assinatura com `apksigner`;
+6. gera SHA-256;
+7. mantém artifact de CI;
+8. publica a versão em GitHub Releases quando a build vem da `main`.
+
+A tag de distribuição segue `android-v<versionName>`. Um release já publicado não é silenciosamente substituído por outro commit com a mesma versão; para uma nova versão nativa, `versionName` e `versionCode` devem ser incrementados.
+
+## Assinatura
+
+O pipeline está preparado para uma chave de produção armazenada fora do repositório por GitHub Actions Secrets:
+
+```text
+ANDROID_KEYSTORE_BASE64
+ANDROID_KEYSTORE_PASSWORD
+ANDROID_KEY_ALIAS
+ANDROID_KEY_PASSWORD
+```
+
+Sem esses secrets, a build direta usa a assinatura de desenvolvimento do Android para produzir um APK instalável. Para distribuição definitiva em loja e atualizações nativas garantidas no mesmo pacote, deve ser usada uma chave de release estável e privada.
