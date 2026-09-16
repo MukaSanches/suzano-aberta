@@ -15,6 +15,6 @@ services:
       - key: SUZANO_API_AUTO_SYNC
         value: "true"
       - key: SUZANO_API_SYNC_INTERVAL_SECONDS
-        value: "3600"
+        value: "900"
       - key: SUZANO_API_CORS_ORIGINS
         value: https://mukasanches.github.io
