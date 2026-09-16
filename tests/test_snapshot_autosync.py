@@ -9,18 +9,24 @@ import httpx
 import pytest
 import respx
 
+from suzano_aberta.models import PublicRecord, SourceRef
 from suzano_aberta.snapshot import SnapshotError, snapshot_checksum_path, sync_latest_snapshot
+from suzano_aberta.store import Store
 
 
 def _database(path: Path, count: int) -> None:
-    connection = sqlite3.connect(path)
-    connection.execute("CREATE TABLE records (id TEXT PRIMARY KEY, active INTEGER NOT NULL)")
-    connection.executemany(
-        "INSERT INTO records(id, active) VALUES (?, 1)",
-        [(f"id:{index}",) for index in range(count)],
-    )
-    connection.commit()
-    connection.close()
+    records = [
+        PublicRecord(
+            id=f"id:{index}",
+            kind="pagina_web",
+            title=f"Registro {index}",
+            source=SourceRef(name="Fonte de teste", url="https://example.test/source"),
+        )
+        for index in range(count)
+    ]
+    with Store(path) as store:
+        store.upsert_many(records)
+        store.optimize()
 
 
 def _count(path: Path) -> int:

@@ -1,24 +1,28 @@
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
 
 import pytest
 
 import suzano_aberta.autopilot as autopilot_module
 from suzano_aberta.autopilot import AutoUpdatePolicy, AutonomousDataManager
+from suzano_aberta.models import PublicRecord, SourceRef
 from suzano_aberta.snapshot import SnapshotError, snapshot_checksum_path
+from suzano_aberta.store import Store
 
 
 def _database(path: Path, count: int = 3) -> None:
-    connection = sqlite3.connect(path)
-    connection.execute("CREATE TABLE records (id TEXT PRIMARY KEY, active INTEGER NOT NULL)")
-    connection.executemany(
-        "INSERT INTO records(id, active) VALUES (?, 1)",
-        [(f"record:{index}",) for index in range(count)],
-    )
-    connection.commit()
-    connection.close()
+    records = [
+        PublicRecord(
+            id=f"record:{index}",
+            kind="pagina_web",
+            title=f"Registro {index}",
+            source=SourceRef(name="Fonte de teste", url="https://example.test/source"),
+        )
+        for index in range(count)
+    ]
+    with Store(path) as store:
+        store.upsert_many(records)
 
 
 def test_manager_throttles_checks_and_persists_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -50,6 +54,8 @@ def test_manager_throttles_checks_and_persists_state(tmp_path: Path, monkeypatch
     assert status.successful_checks == 1
     assert status.updates == 1
     assert status.remote_checksum == "a" * 64
+    assert status.quality_status in {"pass", "warn"}
+    assert status.manifest_sha256 is not None
 
 
 def test_manager_preserves_existing_database_after_sync_failure(

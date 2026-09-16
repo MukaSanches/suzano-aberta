@@ -17,7 +17,7 @@ jobs:
   test:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     strategy:
       fail-fast: false
       matrix:
@@ -36,41 +36,39 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
       - name: Compile
-        run: python -m compileall -q src tests
+        run: python -m compileall -q src tests scripts
       - name: Static correctness checks
         run: ruff check --select E,F --ignore E501 .
       - name: Type check
         run: mypy src/suzano_aberta
-      - name: Tests
+      - name: Tests + property-based invariants
         run: pytest --cov=suzano_aberta --cov-report=term-missing
       - name: CLI, API and library smoke tests
         run: |
           suzano --help
           suzano auto --help
-          suzano auto status --help
-          suzano auto agora --help
-          suzano auto vigiar --help
+          suzano data --help
+          suzano data quality --help
+          suzano data timeline --help
+          suzano data at --help
+          suzano data diff --help
+          suzano data manifest --help
+          suzano data verify --help
+          suzano data lineage --help
+          suzano data catalog --help
+          suzano data archive --help
           suzano inicio --help
           suzano diagnostico --help
           suzano recentes --help
           suzano console --help
-          suzano fontes --help
-          suzano doctor --help
-          suzano integridade --help
-          suzano atualizar --help
-          suzano acervo-maximo --help
-          suzano sincronizar --help
-          suzano reindexar --help
-          suzano buscar --help
           suzano-api --help
-          python -c "from suzano_aberta import AutoUpdatePolicy, AutonomousDataManager, SuzanoClient, SuzanoIndex, build_entity_graph, inspect_local_environment, quality_report; assert AutoUpdatePolicy and AutonomousDataManager and SuzanoClient and SuzanoIndex and build_entity_graph and inspect_local_environment and quality_report"
-          python -c "from suzano_aberta import inspect_local_environment; report=inspect_local_environment('missing-ci.sqlite3'); assert report.records == 0 and report.database_bytes == 0"
-          python -c "from suzano_aberta.api import app; schema=app.openapi(); assert schema['info']['version'] == '1.2.0'; required={'/v1/documents','/v1/legislation','/v1/procurements','/v1/capabilities','/v1/sources','/v1/catalog','/v1/records/{record_id}/provenance','/v1/autopilot'}; assert required.issubset(schema['paths'])"
+          python -c "import suzano_aberta as s; assert s.__version__ == '1.0.0'; assert s.DataContract and s.ContentAddressedStore and s.LineageJournal and s.SuzanoIndex and s.SuzanoClient"
+          python -c "from suzano_aberta.api import app; schema=app.openapi(); assert schema['info']['version'] == '1.2.0'; required={'/v1/autopilot','/v1/quality','/v1/manifest','/v1/diff','/v1/records/{record_id}/history','/v1/records/{record_id}/at','/v1/feed/changes.atom'}; assert required.issubset(schema['paths'])"
 
   package:
     name: Build package
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -87,16 +85,12 @@ jobs:
         run: |
           python -m pip install dist/*.whl
           python -m pip check
-          python -c "import importlib.metadata as m, suzano_aberta; assert suzano_aberta.__version__ == m.version('suzano-aberta') == '0.9.0'"
-          python -c "from suzano_aberta import AutoUpdatePolicy, AutonomousDataManager, SuzanoClient, SuzanoIndex, build_entity_graph, inspect_local_environment, quality_report; assert AutoUpdatePolicy and AutonomousDataManager and SuzanoClient and SuzanoIndex and build_entity_graph and inspect_local_environment and quality_report"
-          python -c "from suzano_aberta.api import app; schema=app.openapi(); assert schema['info']['version'] == '1.2.0'; assert '/v1/search' in schema['paths']; assert '/v1/procurements' in schema['paths']; assert '/v1/catalog' in schema['paths']; assert '/v1/autopilot' in schema['paths']"
+          python -c "import importlib.metadata as m, suzano_aberta as s; assert s.__version__ == m.version('suzano-aberta') == '1.0.0'"
+          python -c "from suzano_aberta import ContentAddressedStore, DataContract, LineageJournal, SuzanoClient, SuzanoIndex; assert ContentAddressedStore and DataContract and LineageJournal and SuzanoClient and SuzanoIndex"
+          python -c "from suzano_aberta.api import app; schema=app.openapi(); required={'/v1/quality','/v1/manifest','/v1/diff','/v1/records/{record_id}/history','/v1/records/{record_id}/at'}; assert required.issubset(schema['paths'])"
           suzano --help
           suzano auto --help
-          suzano auto status --help
-          suzano inicio --help
-          suzano diagnostico --help
-          suzano recentes --help
-          suzano console --help
+          suzano data --help
           suzano-api --help
 
   container:
@@ -112,3 +106,4 @@ jobs:
         run: |
           docker run --rm suzano-aberta-api:ci suzano-api --help
           docker run --rm suzano-aberta-api:ci suzano auto --help
+          docker run --rm suzano-aberta-api:ci suzano data --help

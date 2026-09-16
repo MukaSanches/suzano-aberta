@@ -9,7 +9,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Literal, cast
 
-from .models import Change, PublicRecord
+from .models import Change, PublicRecord, RecordVersion, TemporalDiff
 
 
 SCHEMA = """
@@ -43,6 +43,16 @@ CREATE TABLE IF NOT EXISTS changes (
     current_hash TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_changes_observed_at ON changes(observed_at);
+CREATE TABLE IF NOT EXISTS record_versions (
+    record_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    observed_at TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    PRIMARY KEY(record_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_record_versions_observed_at ON record_versions(observed_at);
+CREATE INDEX IF NOT EXISTS idx_record_versions_record_time ON record_versions(record_id, observed_at DESC);
 """
 
 FTS_SCHEMA = """
@@ -74,6 +84,17 @@ def _fts_query(query: str) -> str:
     return " AND ".join(f'"{token.replace(chr(34), chr(34) * 2)}"*' for token in tokens)
 
 
+def _change_from_row(row: sqlite3.Row) -> Change:
+    return Change(
+        record_id=str(row["record_id"]),
+        kind=str(row["kind"]),
+        change_type=cast(Literal["novo", "alterado", "ausente"], str(row["change_type"])),
+        observed_at=datetime.fromisoformat(str(row["observed_at"])),
+        previous_hash=str(row["previous_hash"]) if row["previous_hash"] else None,
+        current_hash=str(row["current_hash"]) if row["current_hash"] else None,
+    )
+
+
 class Store:
     def __init__(self, path: str | Path = "suzano-aberta.sqlite3") -> None:
         self.path = Path(path)
@@ -81,6 +102,7 @@ class Store:
         self._conn = sqlite3.connect(self.path)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(SCHEMA)
+        self._backfill_versions()
         self._fts_enabled = self._initialize_fts()
 
     def close(self) -> None:
@@ -100,6 +122,39 @@ class Store:
     @property
     def fts_enabled(self) -> bool:
         return self._fts_enabled
+
+    def _backfill_versions(self) -> None:
+        """Migração aditiva: snapshots antigos passam a ter uma versão-base."""
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT OR IGNORE INTO record_versions(record_id, version, observed_at, content_hash, payload_json)
+                SELECT id, 1, first_seen, content_hash, payload_json
+                FROM records
+                """
+            )
+
+    def _next_version(self, record_id: str) -> int:
+        row = self._conn.execute(
+            "SELECT MAX(version) FROM record_versions WHERE record_id=?",
+            (record_id,),
+        ).fetchone()
+        return int(row[0] or 0) + 1 if row is not None else 1
+
+    def _append_version(self, record: PublicRecord, *, observed_at: datetime, content_hash: str) -> None:
+        self._conn.execute(
+            """
+            INSERT INTO record_versions(record_id, version, observed_at, content_hash, payload_json)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                record.id,
+                self._next_version(record.id),
+                observed_at.isoformat(),
+                content_hash,
+                record.model_dump_json(),
+            ),
+        )
 
     def _initialize_fts(self) -> bool:
         try:
@@ -189,6 +244,7 @@ class Store:
                             payload,
                         ),
                     )
+                    self._append_version(record, observed_at=now, content_hash=content_hash)
                     self._index_record(record)
                     changes.append(
                         Change(
@@ -223,6 +279,7 @@ class Store:
                 )
                 self._index_record(record)
                 if changed:
+                    self._append_version(record, observed_at=now, content_hash=content_hash)
                     changes.append(
                         Change(
                             record_id=record.id,
@@ -258,6 +315,79 @@ class Store:
         if row is None:
             return None
         return PublicRecord.model_validate_json(str(row["payload_json"]))
+
+    def get_at(self, record_id: str, at: datetime) -> PublicRecord | None:
+        moment = at.astimezone(UTC) if at.tzinfo is not None else at.replace(tzinfo=UTC)
+        row = self._conn.execute(
+            """
+            SELECT payload_json FROM record_versions
+            WHERE record_id=? AND observed_at<=?
+            ORDER BY observed_at DESC, version DESC
+            LIMIT 1
+            """,
+            (record_id, moment.isoformat()),
+        ).fetchone()
+        if row is None:
+            return None
+        return PublicRecord.model_validate_json(str(row["payload_json"]))
+
+    def history(self, record_id: str, *, limit: int = 100) -> list[RecordVersion]:
+        rows = self._conn.execute(
+            """
+            SELECT record_id,version,observed_at,content_hash,payload_json
+            FROM record_versions
+            WHERE record_id=?
+            ORDER BY version DESC
+            LIMIT ?
+            """,
+            (record_id, limit),
+        ).fetchall()
+        return [
+            RecordVersion(
+                record_id=str(row["record_id"]),
+                version=int(row["version"]),
+                observed_at=datetime.fromisoformat(str(row["observed_at"])),
+                content_hash=str(row["content_hash"]),
+                record=PublicRecord.model_validate_json(str(row["payload_json"])),
+            )
+            for row in rows
+        ]
+
+    def diff(self, start: datetime, end: datetime, *, kind: str | None = None, limit: int = 500) -> TemporalDiff:
+        start_utc = start.astimezone(UTC) if start.tzinfo is not None else start.replace(tzinfo=UTC)
+        end_utc = end.astimezone(UTC) if end.tzinfo is not None else end.replace(tzinfo=UTC)
+        if start_utc > end_utc:
+            raise ValueError("start não pode ser posterior a end")
+        clauses = ["observed_at>?", "observed_at<=?"]
+        params: list[object] = [start_utc.isoformat(), end_utc.isoformat()]
+        if kind:
+            clauses.append("kind=?")
+            params.append(kind)
+        where = " AND ".join(clauses)
+        rows = self._conn.execute(
+            f"SELECT * FROM changes WHERE {where} ORDER BY seq DESC LIMIT ?",
+            [*params, limit],
+        ).fetchall()
+        items = [_change_from_row(row) for row in rows]
+        totals = self._conn.execute(
+            f"""
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN change_type='novo' THEN 1 ELSE 0 END) AS new_count,
+                   SUM(CASE WHEN change_type='alterado' THEN 1 ELSE 0 END) AS changed_count,
+                   SUM(CASE WHEN change_type='ausente' THEN 1 ELSE 0 END) AS absent_count
+            FROM changes WHERE {where}
+            """,
+            params,
+        ).fetchone()
+        return TemporalDiff(
+            from_time=start_utc,
+            to_time=end_utc,
+            total=int(totals["total"] or 0) if totals else 0,
+            new=int(totals["new_count"] or 0) if totals else 0,
+            changed=int(totals["changed_count"] or 0) if totals else 0,
+            absent=int(totals["absent_count"] or 0) if totals else 0,
+            items=items,
+        )
 
     def search(self, query: str, *, limit: int = 50) -> list[PublicRecord]:
         clean_query = query.strip()
@@ -300,7 +430,6 @@ class Store:
         return [PublicRecord.model_validate_json(str(row["payload_json"])) for row in rows]
 
     def web_seed_urls(self, *, limit: int = 5000) -> list[str]:
-        """Retorna páginas previamente descobertas para o próximo ciclo continuar de onde parou."""
         rows = self._conn.execute(
             """
             SELECT source_url
@@ -317,24 +446,7 @@ class Store:
         rows = self._conn.execute(
             "SELECT * FROM changes ORDER BY seq DESC LIMIT ?", (limit,)
         ).fetchall()
-        return [
-            Change(
-                record_id=str(row["record_id"]),
-                kind=str(row["kind"]),
-                change_type=cast(
-                    Literal["novo", "alterado", "ausente"],
-                    str(row["change_type"]),
-                ),
-                observed_at=datetime.fromisoformat(str(row["observed_at"])),
-                previous_hash=str(row["previous_hash"])
-                if row["previous_hash"]
-                else None,
-                current_hash=str(row["current_hash"])
-                if row["current_hash"]
-                else None,
-            )
-            for row in rows
-        ]
+        return [_change_from_row(row) for row in rows]
 
     def counts_by_kind(self) -> dict[str, int]:
         rows = self._conn.execute(

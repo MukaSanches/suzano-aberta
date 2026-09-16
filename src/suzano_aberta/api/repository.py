@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from datetime import datetime
+from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Literal, TypedDict, cast
 
-from ..models import Change, PublicRecord, RecordKind
+from ..models import Change, PublicRecord, RecordKind, RecordVersion, TemporalDiff
 
 SortMode = Literal["date_desc", "date_asc", "relevance"]
 DateMode = Literal["effective", "record", "observed"]
@@ -37,6 +37,21 @@ def _fts_query(query: str) -> str:
     return " AND ".join(f'"{token.replace(chr(34), chr(34) * 2)}"*' for token in tokens)
 
 
+def _as_utc(value: datetime) -> datetime:
+    return value.astimezone(UTC) if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+def _change_from_row(row: sqlite3.Row) -> Change:
+    return Change(
+        record_id=str(row["record_id"]),
+        kind=str(row["kind"]),
+        change_type=cast(Literal["novo", "alterado", "ausente"], str(row["change_type"])),
+        observed_at=datetime.fromisoformat(str(row["observed_at"])),
+        previous_hash=str(row["previous_hash"]) if row["previous_hash"] else None,
+        current_hash=str(row["current_hash"]) if row["current_hash"] else None,
+    )
+
+
 class ApiRepository:
     """Camada de leitura da API sobre snapshot SQLite imutável."""
 
@@ -51,11 +66,12 @@ class ApiRepository:
         self._conn.execute("PRAGMA trusted_schema=OFF")
         self._conn.execute("PRAGMA busy_timeout=1000")
         self._fts_enabled = self._table_exists("records_fts")
+        self._temporal_enabled = self._table_exists("record_versions")
 
     def close(self) -> None:
         self._conn.close()
 
-    def __enter__(self) -> "ApiRepository":
+    def __enter__(self) -> ApiRepository:
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -64,6 +80,10 @@ class ApiRepository:
     @property
     def fts_enabled(self) -> bool:
         return self._fts_enabled
+
+    @property
+    def temporal_enabled(self) -> bool:
+        return self._temporal_enabled
 
     def _table_exists(self, name: str) -> bool:
         row = self._conn.execute(
@@ -174,6 +194,93 @@ class ApiRepository:
             "last_seen": str(row["last_seen"]),
             "content_hash": str(row["content_hash"]),
         }
+
+    def record_at(self, record_id: str, at: datetime) -> PublicRecord | None:
+        if not self._temporal_enabled:
+            return None
+        moment = _as_utc(at)
+        row = self._conn.execute(
+            """
+            SELECT payload_json FROM record_versions
+            WHERE record_id=? AND observed_at<=?
+            ORDER BY observed_at DESC, version DESC LIMIT 1
+            """,
+            (record_id, moment.isoformat()),
+        ).fetchone()
+        return PublicRecord.model_validate_json(str(row["payload_json"])) if row else None
+
+    def record_history(self, record_id: str, *, limit: int = 100, offset: int = 0) -> tuple[list[RecordVersion], int]:
+        if not self._temporal_enabled:
+            current = self.get(record_id)
+            if current is None:
+                return [], 0
+            metadata = self.record_storage_metadata(record_id)
+            observed = datetime.fromisoformat(metadata["first_seen"]) if metadata else datetime.now(UTC)
+            return [RecordVersion(record_id=record_id, version=1, observed_at=observed, content_hash=current.fingerprint(), record=current)], 1
+        total = int(self._conn.execute("SELECT COUNT(*) FROM record_versions WHERE record_id=?", (record_id,)).fetchone()[0])
+        rows = self._conn.execute(
+            """
+            SELECT record_id,version,observed_at,content_hash,payload_json
+            FROM record_versions WHERE record_id=?
+            ORDER BY version DESC LIMIT ? OFFSET ?
+            """,
+            (record_id, limit, offset),
+        ).fetchall()
+        items = [
+            RecordVersion(
+                record_id=str(row["record_id"]),
+                version=int(row["version"]),
+                observed_at=datetime.fromisoformat(str(row["observed_at"])),
+                content_hash=str(row["content_hash"]),
+                record=PublicRecord.model_validate_json(str(row["payload_json"])),
+            )
+            for row in rows
+        ]
+        return items, total
+
+    def temporal_diff(
+        self,
+        start: datetime,
+        end: datetime,
+        *,
+        kind: str | None = None,
+        limit: int = 500,
+        offset: int = 0,
+    ) -> TemporalDiff:
+        start_utc = _as_utc(start)
+        end_utc = _as_utc(end)
+        if start_utc > end_utc:
+            raise ValueError("start não pode ser posterior a end")
+        clauses = ["observed_at>?", "observed_at<=?"]
+        params: list[object] = [start_utc.isoformat(), end_utc.isoformat()]
+        if kind:
+            clauses.append("kind=?")
+            params.append(kind)
+        where = " AND ".join(clauses)
+        rows = self._conn.execute(
+            f"SELECT * FROM changes WHERE {where} ORDER BY seq DESC LIMIT ? OFFSET ?",
+            [*params, limit, offset],
+        ).fetchall()
+        items = [_change_from_row(row) for row in rows]
+        totals = self._conn.execute(
+            f"""
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN change_type='novo' THEN 1 ELSE 0 END) AS new_count,
+                   SUM(CASE WHEN change_type='alterado' THEN 1 ELSE 0 END) AS changed_count,
+                   SUM(CASE WHEN change_type='ausente' THEN 1 ELSE 0 END) AS absent_count
+            FROM changes WHERE {where}
+            """,
+            params,
+        ).fetchone()
+        return TemporalDiff(
+            from_time=start_utc,
+            to_time=end_utc,
+            total=int(totals["total"] or 0) if totals else 0,
+            new=int(totals["new_count"] or 0) if totals else 0,
+            changed=int(totals["changed_count"] or 0) if totals else 0,
+            absent=int(totals["absent_count"] or 0) if totals else 0,
+            items=items,
+        )
 
     def list_records(
         self,
@@ -309,6 +416,7 @@ class ApiRepository:
             "first_seen": str(row["first_seen"]) if row and row["first_seen"] else None,
             "last_seen": str(row["last_seen"]) if row and row["last_seen"] else None,
             "fts_enabled": self._fts_enabled,
+            "temporal_enabled": self._temporal_enabled,
             "database_bytes": self.path.stat().st_size,
             "sqlite_version": sqlite3.sqlite_version,
         }
@@ -334,14 +442,4 @@ class ApiRepository:
             f"SELECT * FROM changes {where} ORDER BY seq DESC LIMIT ? OFFSET ?",
             [*params, limit, offset],
         ).fetchall()
-        items = [
-            Change(
-                record_id=str(row["record_id"]), kind=str(row["kind"]),
-                change_type=cast(Literal["novo", "alterado", "ausente"], str(row["change_type"])),
-                observed_at=datetime.fromisoformat(str(row["observed_at"])),
-                previous_hash=str(row["previous_hash"]) if row["previous_hash"] else None,
-                current_hash=str(row["current_hash"]) if row["current_hash"] else None,
-            )
-            for row in rows
-        ]
-        return items, total
+        return [_change_from_row(row) for row in rows], total

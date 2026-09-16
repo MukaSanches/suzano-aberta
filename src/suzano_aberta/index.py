@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from types import TracebackType
 from typing import Literal, cast
@@ -9,15 +9,16 @@ from typing import Literal, cast
 from pydantic import BaseModel, Field
 
 from .api.repository import ApiRepository
-from .models import Change, PublicRecord, RecordKind
+from .content_store import ManifestVerification, SnapshotManifest, load_manifest, verify_manifest
+from .contracts import ContractReport, validate_database_contract
+from .models import Change, PublicRecord, RecordKind, RecordVersion, TemporalDiff
+from .release import build_snapshot_manifest, manifest_path_for
 
 SortMode = Literal["date_desc", "date_asc", "relevance"]
 DateMode = Literal["effective", "record", "observed"]
 
 
 class LocalPage(BaseModel):
-    """Página de resultados da consulta local."""
-
     total: int = Field(ge=0)
     limit: int = Field(ge=1)
     offset: int = Field(ge=0)
@@ -38,10 +39,16 @@ class LocalStats(BaseModel):
     first_seen: str | None = None
     last_seen: str | None = None
     fts_enabled: bool
+    temporal_enabled: bool = False
     database_bytes: int = Field(ge=0)
     sqlite_version: str
     dataset_version: str
     kinds: dict[str, int]
+
+
+class LocalManifest(BaseModel):
+    manifest: SnapshotManifest
+    verification: ManifestVerification
 
 
 def _date_value(value: date | str | None) -> str | None:
@@ -62,13 +69,7 @@ def _page(items: list[PublicRecord], total: int, *, limit: int, offset: int) -> 
 
 
 class SuzanoIndex:
-    """Fachada tipada e somente leitura para consultar um snapshot local.
-
-    Use esta classe quando o aplicativo já possui o arquivo SQLite e não precisa
-    subir a API HTTP. Ela compartilha a mesma camada de consulta da API pública,
-    mantendo filtros, ordenação e semântica de busca consistentes entre os dois
-    modos de consumo.
-    """
+    """Fachada tipada e somente leitura para consultar um snapshot local."""
 
     def __init__(self, database: str | Path = "suzano-aberta.sqlite3") -> None:
         self.database = Path(database)
@@ -90,6 +91,51 @@ class SuzanoIndex:
 
     def record(self, record_id: str) -> PublicRecord | None:
         return self._repository.get(record_id)
+
+    def record_at(self, record_id: str, at: datetime) -> PublicRecord | None:
+        return self._repository.record_at(record_id, at)
+
+    def history(
+        self,
+        record_id: str,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[RecordVersion], int]:
+        return self._repository.record_history(record_id, limit=limit, offset=offset)
+
+    def diff(
+        self,
+        start: datetime,
+        end: datetime,
+        *,
+        kind: str | None = None,
+        limit: int = 500,
+        offset: int = 0,
+    ) -> TemporalDiff:
+        return self._repository.temporal_diff(
+            start,
+            end,
+            kind=kind,
+            limit=limit,
+            offset=offset,
+        )
+
+    def quality(self) -> ContractReport:
+        return validate_database_contract(self.database)
+
+    def manifest(self) -> LocalManifest:
+        sidecar = manifest_path_for(self.database)
+        if sidecar.exists():
+            current = load_manifest(sidecar)
+        else:
+            current, report = build_snapshot_manifest(self.database)
+            if not report.ok:
+                raise ValueError("O snapshot local não atende ao contrato de dados.")
+        return LocalManifest(
+            manifest=current,
+            verification=verify_manifest(self.database, current),
+        )
 
     def records(
         self,
@@ -258,6 +304,7 @@ class SuzanoIndex:
             first_seen=first_seen if isinstance(first_seen, str) else None,
             last_seen=last_seen if isinstance(last_seen, str) else None,
             fts_enabled=cast(bool, raw["fts_enabled"]),
+            temporal_enabled=cast(bool, raw.get("temporal_enabled", False)),
             database_bytes=cast(int, raw["database_bytes"]),
             sqlite_version=str(raw["sqlite_version"]),
             dataset_version=self._repository.dataset_version(),
