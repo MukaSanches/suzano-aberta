@@ -47,7 +47,7 @@ function tokenCoverage(value, tokens) {
   if (!terms.length) return 0;
   let hits = 0;
   for (const token of tokens) {
-    if (terms.some(term => term.startsWith(token))) hits += 1;
+    if (terms.some(term => term === token || term.startsWith(`${token}-`))) hits += 1;
   }
   return hits / tokens.length;
 }
@@ -56,7 +56,7 @@ function minTokenSpan(value, tokens) {
   if (!tokens.length) return Number.POSITIVE_INFINITY;
   const terms = words(value);
   if (!terms.length) return Number.POSITIVE_INFINITY;
-  const matched = terms.map(term => tokens.findIndex(token => term.startsWith(token)));
+  const matched = terms.map(term => tokens.findIndex(token => term === token || term.startsWith(`${token}-`)));
   const counts = Array(tokens.length).fill(0);
   let covered = 0;
   let left = 0;
@@ -115,10 +115,12 @@ function relevanceScore(row, clean) {
   const tokens = queryTokens(clean);
   const title = normalize(row?.[2]);
   const summary = normalize(row?.[8]);
+  const evidence = normalize(row?.[11]);
   const source = normalize(row?.[5]);
   const combined = `${title} ${summary}`.trim();
   const titleCoverage = tokenCoverage(title, tokens);
   const summaryCoverage = tokenCoverage(summary, tokens);
+  const evidenceCoverage = tokenCoverage(evidence, tokens);
   const combinedCoverage = tokenCoverage(combined, tokens);
   const span = minTokenSpan(combined, tokens);
   let score = 0;
@@ -126,11 +128,13 @@ function relevanceScore(row, clean) {
   if (title === clean) score += 900;
   else if (title.includes(clean)) score += 620;
   if (summary.includes(clean)) score += 360;
+  if (evidence.includes(clean)) score += 210;
   score += Math.round(titleCoverage * 320);
   score += Math.round(summaryCoverage * 170);
+  score += Math.round(evidenceCoverage * 95);
   if (combinedCoverage === 1) score += 180;
   if (Number.isFinite(span)) score += Math.max(0, 150 - (span - 1) * 10);
-  if (tokens.some(token => source.split(" ").some(term => term.startsWith(token)))) score += 8;
+  if (tokens.some(token => source.split(" ").some(term => term === token || term.startsWith(`${token}-`)))) score += 8;
   if (!LOW_SIGNAL_KINDS.has(String(row?.[1] || ""))) score += 35;
   score -= boilerplatePenalty(row);
   return score;
@@ -145,14 +149,29 @@ function contextualSummary(value, clean, radius = 190) {
   let index = phrase ? haystack.indexOf(phrase) : -1;
   if (index < 0) {
     for (const token of tokens) {
-      index = haystack.indexOf(token);
-      if (index >= 0) break;
+      const expression = new RegExp(`(^|[^a-z0-9])${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i");
+      const match = expression.exec(haystack);
+      if (match) {
+        index = match.index + match[1].length;
+        break;
+      }
     }
   }
   if (index < 0) return text;
   const start = Math.max(0, index - radius);
   const end = Math.min(text.length, index + Math.max(phrase.length, 24) + radius);
   return `${start > 0 ? "…" : ""}${text.slice(start, end).trim()}${end < text.length ? "…" : ""}`;
+}
+
+function contextQuality(value, clean) {
+  if (!value || !clean) return 0;
+  const normalized = normalize(value);
+  const tokens = queryTokens(clean);
+  let score = Math.round(tokenCoverage(normalized, tokens) * 100);
+  if (normalized.includes(clean)) score += 200;
+  const span = minTokenSpan(normalized, tokens);
+  if (Number.isFinite(span)) score += Math.max(0, 80 - span * 4);
+  return score;
 }
 
 async function fetchJsonGzip(url) {
@@ -196,6 +215,12 @@ function prefixMatches(lexicon, token, limit = 40) {
   return out;
 }
 
+function tokenMatchesForQuery(lexicon, token, limit = 24) {
+  const start = lowerBound(lexicon, token);
+  if (lexicon[start] === token) return [token];
+  return prefixMatches(lexicon, token, limit);
+}
+
 function shardFor(token) {
   const a = token.charCodeAt(0) || 0;
   const b = token.charCodeAt(1) || 0;
@@ -227,10 +252,13 @@ function intersectSets(sets) {
 }
 
 function recordObject(row, clean = "") {
+  const rawSummary = String(row[8] || "");
+  const evidence = String(row[11] || "");
+  const context = contextQuality(evidence, clean) > contextQuality(rawSummary, clean) ? evidence : rawSummary;
   return {
     id: row[0], kind: row[1], title: row[2], date: row[3], year: row[4],
     source_name: row[5], source_url: row[6], last_seen: row[7],
-    summary: contextualSummary(row[8] || "", clean),
+    summary: contextualSummary(context || rawSummary, clean),
     effective_date: row[9] || "", date_basis: row[10] || "observed"
   };
 }
@@ -278,7 +306,7 @@ async function matchingIds(query, records) {
   const lexicon = await getLexicon();
   const sets = [];
   for (const queryToken of tokens) {
-    const tokenMatches = prefixMatches(lexicon, queryToken);
+    const tokenMatches = tokenMatchesForQuery(lexicon, queryToken);
     if (!tokenMatches.length) return { clean, ids: [] };
     const byShard = new Map();
     for (const token of tokenMatches) {
