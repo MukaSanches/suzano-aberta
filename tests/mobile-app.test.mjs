@@ -35,3 +35,20 @@ test('android shell is remote-first and has an offline fallback', async () => {
   assert.match(java, /MIXED_CONTENT_NEVER_ALLOW/);
   assert.match(java, /setAcceptThirdPartyCookies\(webView, false\)/);
 });
+
+test('ios shell is remote-first, restricts the trusted host and has a bundled fallback', async () => {
+  const swift = await read('mobile/ios/SuzanoAberta/WebAppView.swift');
+  assert.match(swift, /https:\/\/mukasanches\.github\.io\/suzano-aberta\/app\//);
+  assert.match(swift, /trustedHost = "mukasanches\.github\.io"/);
+  assert.match(swift, /Bundle\.main\.url\(forResource: "index", withExtension: "html", subdirectory: "www"\)/);
+  assert.match(swift, /loadFileURL/);
+  assert.match(swift, /UIApplication\.shared\.open/);
+});
+
+test('ios project bundles the canonical web app instead of forking the mobile UI', async () => {
+  const project = await read('mobile/ios/project.yml');
+  assert.match(project, /\.\.\/\.\.\/web\/app/);
+  assert.match(project, /type: folder/);
+  assert.match(project, /buildPhase: resources/);
+  assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER: br\.com\.suzanoaberta\.app/);
+});
