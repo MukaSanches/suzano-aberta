@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from hypothesis import given, settings, strategies as st
 
@@ -23,14 +23,15 @@ def test_canonical_entity_id_is_case_insensitive(value: str) -> None:
 
 @settings(max_examples=80, deadline=None)
 @given(st.binary(max_size=4096))
-def test_content_addressed_store_is_deterministic(tmp_path: Path, payload: bytes) -> None:
-    store = ContentAddressedStore(tmp_path / "objects")
-    first = store.put_bytes(payload)
-    second = store.put_bytes(payload)
+def test_content_addressed_store_is_deterministic(payload: bytes) -> None:
+    with TemporaryDirectory() as temp_dir:
+        store = ContentAddressedStore(temp_dir)
+        first = store.put_bytes(payload)
+        second = store.put_bytes(payload)
 
-    assert first.sha256 == second.sha256
-    assert first.path == second.path
-    assert store.verify(first.sha256)
+        assert first.sha256 == second.sha256
+        assert first.path == second.path
+        assert store.verify(first.sha256)
 
 
 @settings(max_examples=80, deadline=None)
