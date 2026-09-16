@@ -19,8 +19,12 @@ async function localFetch(url) {
   return new Response(fs.readFileSync(candidate), { status: 200 });
 }
 
+const workerGlobal = {
+  postMessage() {},
+  DecompressionStream,
+};
 const context = vm.createContext({
-  self: { postMessage() {} },
+  self: workerGlobal,
   console,
   fetch: localFetch,
   Response,
