@@ -1,13 +1,14 @@
 {
+  "id": "./",
   "name": "Suzano Aberta",
   "short_name": "Suzano Aberta",
-  "description": "Informação pública, rastreável e aberta sobre Suzano, SP.",
+  "description": "Pesquise informação pública relacionada a Suzano com fonte, cronologia e rastreabilidade.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#102A43",
+  "background_color": "#f6f9fb",
+  "theme_color": "#081f33",
   "icons": [
     {"src": "./assets/mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
   ]
