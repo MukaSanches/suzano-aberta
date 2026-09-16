@@ -106,6 +106,18 @@ def inspect_page(path: Path) -> None:
             fail(f"{path}: coluna de resultados explícita ausente")
         if "data-explore-form" not in text:
             fail(f"{path}: formulário pesquisável ausente")
+    if path.name == "legislacao.html":
+        required_markers = (
+            'data-legislation-form',
+            'data-default-kind="lei"',
+            'data-default-sort="date_desc"',
+            '<option value="lei" selected>Leis</option>',
+            '<option value="date_desc" selected>Mais recentes primeiro</option>',
+            'data-kind-shortcut="lei"',
+        )
+        for marker in required_markers:
+            if marker not in text:
+                fail(f"{path}: contrato latest-first ausente: {marker}")
     if "javascript:" in text.casefold():
         fail(f"{path}: javascript: inline não permitido")
     if re.search(r"\son[a-z]+\s*=", text, re.I):
@@ -223,8 +235,8 @@ def validate_service_worker() -> None:
     text = (ROOT / "sw.js").read_text(encoding="utf-8")
     if "suzano-aberta-shell-v5" not in text:
         fail("service worker perdeu marcador de compatibilidade v5")
-    if 'const CACHE = "suzano-aberta-shell-v8"' not in text:
-        fail("service worker não invalida o cache para o portal v7")
+    if 'const CACHE = "suzano-aberta-shell-v9"' not in text:
+        fail("service worker não invalida o cache após a correção da legislação")
     for asset in ("portal-v5.css", "portal-v5.js", "portal-v7.css", "portal-v7.js"):
         if asset not in text:
             fail(f"service worker não inclui {asset}")
@@ -268,7 +280,7 @@ def main() -> None:
     validate_service_worker()
     validate_generated_data_api()
     validate_portal_data()
-    print("Portal v7, HTML, PWA, busca, links oficiais, detalhes, relações e Data API validados.")
+    print("Portal v7, HTML, PWA, legislação latest-first, busca, detalhes, relações e Data API validados.")
 
 
 if __name__ == "__main__":

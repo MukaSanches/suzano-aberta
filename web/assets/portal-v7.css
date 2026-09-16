@@ -1,21 +1,17 @@
 /* Suzano Aberta Portal v7 — busca pública clara, responsiva e previsível.
  * Referências de UX: Padrão Digital de Governo (Brasil), GOV.UK, USWDS e Canada.ca.
- * Esta camada é progressiva: corrige composição, reflow e leitura sem substituir o núcleo do portal.
+ * A lateral usa rolagem própria em desktop para que todos os filtros permaneçam alcançáveis.
  */
 
 .search-layout-v7 {
-  grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
-  gap: clamp(1.35rem, 3vw, 2.7rem);
+  grid-template-columns: minmax(285px, 350px) minmax(0, 1fr);
+  gap: clamp(1.35rem, 3vw, 2.8rem);
   align-items: start;
 }
 
 .search-layout-v7 > .filters {
   grid-column: 1;
   min-width: 0;
-  max-height: none !important;
-  overflow: visible !important;
-  overscroll-behavior: auto !important;
-  scrollbar-gutter: auto !important;
 }
 
 .search-layout-v7 > [data-results-column] {
@@ -98,6 +94,10 @@
 
 .search-filter-toggle[aria-expanded="true"]::after { content: "−"; }
 
+.search-layout-v7 .filters .field {
+  margin-bottom: 1rem;
+}
+
 .search-layout-v7 .filters .field label {
   color: var(--ink);
   font-size: .9rem;
@@ -122,6 +122,12 @@
 .search-layout-v7 .filters input:focus-visible,
 .search-layout-v7 .filters select:focus-visible {
   border-color: var(--ink);
+}
+
+.search-layout-v7 .filters .search-help {
+  margin-top: .35rem;
+  font-size: .78rem;
+  line-height: 1.42;
 }
 
 .search-layout-v7 [data-results] .result-list {
@@ -158,8 +164,29 @@
 }
 
 .search-layout-v7 [data-results] .result-actions {
-  padding-top: .35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem 1rem;
+  align-items: center;
+  padding-top: .7rem;
   border-top: 1px solid #edf2f5;
+}
+
+.search-layout-v7 [data-results] .result-actions [data-detail-link] {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  padding: .48rem .72rem;
+  border-radius: 9px;
+  background: #edf8f4;
+  color: var(--green-dark);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.search-layout-v7 [data-results] .result-actions [data-detail-link]:hover {
+  background: #dff2eb;
+  text-decoration: underline;
 }
 
 .search-layout-v7 .pagination {
@@ -174,7 +201,7 @@
 }
 
 .search-result-heading {
-  max-width: 20ch;
+  max-width: 24ch;
   text-wrap: balance;
 }
 
@@ -187,11 +214,75 @@
 
 .search-exact-note strong { color: var(--ink); }
 
-/* Reflow: nenhum painel pode cobrir resultados em zoom alto ou janelas estreitas. */
+.legislation-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  margin: 0 0 1rem;
+  padding: .35rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f7fafb;
+}
+
+.legislation-switcher a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  padding: .55rem .8rem;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: .86rem;
+  font-weight: 820;
+  text-decoration: none;
+}
+
+.legislation-switcher a:hover {
+  background: #eef5f3;
+}
+
+.legislation-switcher a[aria-current="page"] {
+  background: #dff2eb;
+  color: var(--green-dark);
+  box-shadow: inset 0 0 0 1px #b8dfd0;
+}
+
+.legislation-results-head .result-count {
+  margin-top: .55rem;
+}
+
+/* Desktop: o filtro permanece visível, mas rola por dentro quando excede a viewport. */
 @media (min-width: 901px) {
   .search-layout-v7 > .filters {
     position: sticky;
-    top: calc(var(--header-offset) + 1rem);
+    top: calc(var(--header-offset) + .75rem);
+    max-height: calc(100dvh - var(--header-offset) - 1.5rem) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    scrollbar-gutter: stable !important;
+    padding-right: .75rem !important;
+    scroll-padding-bottom: 7rem;
+  }
+
+  .search-layout-v7 > .filters::-webkit-scrollbar { width: 10px; }
+  .search-layout-v7 > .filters::-webkit-scrollbar-track { background: transparent; }
+  .search-layout-v7 > .filters::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: #9eb2be;
+    background-clip: padding-box;
+  }
+
+  .search-layout-v7 > .filters .filter-actions {
+    position: sticky;
+    bottom: -.05rem;
+    z-index: 4;
+    margin: 1rem -.25rem 0;
+    padding: .75rem .25rem .25rem;
+    border-top: 1px solid #dce6eb;
+    background: linear-gradient(to bottom, rgba(255,255,255,.92), #fff 34%);
+    backdrop-filter: blur(8px);
   }
 }
 
@@ -211,6 +302,8 @@
 
   .search-layout-v7 > .filters {
     position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
     margin: 0;
   }
 
@@ -222,6 +315,14 @@
   }
 
   .search-query-summary a { justify-self: start; }
+
+  .legislation-switcher {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .legislation-switcher a { white-space: nowrap; }
 }
 
 @media (max-width: 620px) {
