@@ -162,12 +162,16 @@ class Line11StatusService:
         now = float(self.clock())
         with self.lock:
             if self.fresh and now - self.fresh.at < self.settings.transit_cache_seconds:
-                out = copy.deepcopy(self.fresh.value); out["cache"] = {"state": "hit", "age_seconds": int(now - self.fresh.at)}; return out
+                out = copy.deepcopy(self.fresh.value)
+                out["cache"] = {"state": "hit", "age_seconds": int(now - self.fresh.at)}
+                return out
         with self.refresh_lock:
             now = float(self.clock())
             with self.lock:
                 if self.fresh and now - self.fresh.at < self.settings.transit_cache_seconds:
-                    out = copy.deepcopy(self.fresh.value); out["cache"] = {"state": "hit", "age_seconds": int(now - self.fresh.at)}; return out
+                    out = copy.deepcopy(self.fresh.value)
+                    out["cache"] = {"state": "hit", "age_seconds": int(now - self.fresh.at)}
+                    return out
             return self._refresh(now)
 
     def _refresh(self, now: float) -> dict[str, Any]:
@@ -199,7 +203,9 @@ class Line11StatusService:
         with self.lock:
             stale = self.last_good
         if stale and now - stale.at <= self.settings.transit_stale_seconds:
-            out = copy.deepcopy(stale.value); out.update({"availability": "stale", "stale": True, "checked_at": _iso(_now()), "source_errors": errors, "cache": {"state": "stale", "age_seconds": int(now - stale.at)}}); return out
+            out = copy.deepcopy(stale.value)
+            out.update({"availability": "stale", "stale": True, "checked_at": _iso(_now()), "source_errors": errors, "cache": {"state": "stale", "age_seconds": int(now - stale.at)}})
+            return out
         return {"line": LINE, "availability": "unavailable", "stale": False, "status": "Dados em tempo real indisponíveis", "classification": "indisponivel", "operation_normal": False, "occurrence": None, "affected_segment": None, "reason": None, "source_updated_at": None, "checked_at": _iso(_now()), "operator": None, "focus_stations": list(STATIONS), "source": None, "source_errors": errors, "verified_sources": copy.deepcopy(list(VERIFIED_SOURCES)), "cache": {"state": "empty", "age_seconds": 0}}
 
     @staticmethod
@@ -212,7 +218,8 @@ class Line11StatusService:
         with self._client() as client:
             for url in CPTM_STATUS_URLS:
                 try:
-                    response = client.get(url); response.raise_for_status()
+                    response = client.get(url)
+                    response.raise_for_status()
                     parsed = self._html(response.text, "CPTM — Situação das Linhas", str(response.url), "cptm-status")
                     if parsed:
                         return parsed
@@ -234,7 +241,8 @@ class Line11StatusService:
 
     def _artesp_public(self) -> dict[str, Any]:
         with self._client() as client:
-            response = client.get(ARTESP_PUBLIC_STATUS_URL); response.raise_for_status()
+            response = client.get(ARTESP_PUBLIC_STATUS_URL)
+            response.raise_for_status()
         parsed = self._html(response.text, "ARTESP — Status das Linhas", str(response.url), "artesp-status-publico")
         if not parsed:
             raise TransitSourceUnavailable("A página pública da ARTESP não expôs a Linha 11 no conteúdo retornado.")
@@ -244,7 +252,8 @@ class Line11StatusService:
         assert self.settings.artesp_api_key
         headers = {"Authorization": f"Api-Key {self.settings.artesp_api_key}"}
         with self._client() as client:
-            response = client.get(ARTESP_STATUS_URL, headers=headers); response.raise_for_status()
+            response = client.get(ARTESP_STATUS_URL, headers=headers)
+            response.raise_for_status()
             found = _line11(response.json())
             if not found:
                 raise TransitSourceUnavailable("A API Trilhos respondeu, mas a Linha 11 não integra o escopo retornado.")
@@ -256,7 +265,8 @@ class Line11StatusService:
             out: dict[str, Any] = {"line": str(line.get("nome") or LINE), "status": status, "classification": str(status_obj.get("classificacao") or "").strip() or None, "operation_normal": bool(status_obj.get("operacao_normal")) if "operacao_normal" in status_obj else _normal(status), "occurrence": None, "affected_segment": None, "reason": None, "source_updated_at": _iso(_dt(status_obj.get("atualizado_em"))), "operator": operator, "source": _source("artesp-api-trilhos", "ARTESP — API Trilhos", ARTESP_STATUS_URL, "status_regulatorio", structured=True, requires_key=True)}
             if not out["operation_normal"]:
                 today = _now().date().isoformat()
-                occurrence = client.get(ARTESP_OCCURRENCES_URL, headers=headers, params={"data_inicio": today, "data_fim": today}); occurrence.raise_for_status()
+                occurrence = client.get(ARTESP_OCCURRENCES_URL, headers=headers, params={"data_inicio": today, "data_fim": today})
+                occurrence.raise_for_status()
                 extra = self._latest_occurrence(occurrence.json())
                 if extra:
                     out.update(extra)
@@ -268,7 +278,8 @@ class Line11StatusService:
         if not items:
             return None
         def stamp(item: dict[str, Any]) -> float:
-            parsed = _dt(item.get("data_hora") or item.get("timestamp") or item.get("atualizado_em")); return parsed.timestamp() if parsed else 0.0
+            parsed = _dt(item.get("data_hora") or item.get("timestamp") or item.get("atualizado_em"))
+            return parsed.timestamp() if parsed else 0.0
         item = max(items, key=stamp)
         description = str(item.get("descricao") or item.get("situacao") or "").strip()
         return {"occurrence": {"description": description or None, "occurred_at": _iso(_dt(item.get("data_hora") or item.get("timestamp"))), "status": str(item.get("situacao") or "").strip() or None}, "affected_segment": _segment(description), "reason": description or None}
@@ -279,7 +290,8 @@ class Line11StatusService:
         if not match:
             return None
         status = re.sub(r"\s+", " ", match.group(1)).strip()
-        updated_match = UPDATED_RE.search(text); updated = _dt(updated_match.group(1)) if updated_match else None
+        updated_match = UPDATED_RE.search(text)
+        updated = _dt(updated_match.group(1)) if updated_match else None
         stale = bool(updated and max(0.0, (_now() - updated).total_seconds()) > self.settings.transit_stale_seconds)
         return {"line": LINE, "status": status, "classification": "operacional" if _normal(status) else "alteracao", "operation_normal": _normal(status), "occurrence": None, "affected_segment": None, "reason": None, "source_updated_at": _iso(updated), "operator": None, "_source_stale": stale, "source": _source(source_id, source_name, source_url, "status_operacional" if source_id.startswith("cptm") else "status_regulatorio_fallback", structured=False)}
 
