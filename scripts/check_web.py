@@ -21,7 +21,8 @@ PAGES = [
     "acessibilidade.html",
     "404.html",
 ]
-V5_PAGES = {"explorar.html", "contratacoes.html"}
+V5_PAGES = {"explorar.html", "legislacao.html", "contratacoes.html"}
+V7_SEARCH_PAGES = {"explorar.html", "legislacao.html"}
 
 
 class Inspector(HTMLParser):
@@ -96,6 +97,15 @@ def inspect_page(path: Path) -> None:
             fail(f"{path}: camada corretiva portal-v5.css ausente")
         if "./assets/portal-v5.js" not in parser.scripts:
             fail(f"{path}: camada corretiva portal-v5.js ausente")
+    if path.name in V7_SEARCH_PAGES:
+        if "./assets/portal-v7.css" not in parser.stylesheets:
+            fail(f"{path}: camada de busca portal-v7.css ausente")
+        if "./assets/portal-v7.js" not in parser.scripts:
+            fail(f"{path}: camada de busca portal-v7.js ausente")
+        if "data-results-column" not in text:
+            fail(f"{path}: coluna de resultados explícita ausente")
+        if "data-explore-form" not in text:
+            fail(f"{path}: formulário pesquisável ausente")
     if "javascript:" in text.casefold():
         fail(f"{path}: javascript: inline não permitido")
     if re.search(r"\son[a-z]+\s*=", text, re.I):
@@ -212,8 +222,10 @@ def validate_manifest() -> None:
 def validate_service_worker() -> None:
     text = (ROOT / "sw.js").read_text(encoding="utf-8")
     if "suzano-aberta-shell-v5" not in text:
-        fail("service worker não usa cache v5")
-    for asset in ("portal-v5.css", "portal-v5.js"):
+        fail("service worker perdeu marcador de compatibilidade v5")
+    if 'const CACHE = "suzano-aberta-shell-v8"' not in text:
+        fail("service worker não invalida o cache para o portal v7")
+    for asset in ("portal-v5.css", "portal-v5.js", "portal-v7.css", "portal-v7.js"):
         if asset not in text:
             fail(f"service worker não inclui {asset}")
 
@@ -235,11 +247,15 @@ def main() -> None:
         ROOT / "assets" / "portal-v3.css",
         ROOT / "assets" / "portal-v4.css",
         ROOT / "assets" / "portal-v5.css",
+        ROOT / "assets" / "portal-v6.css",
+        ROOT / "assets" / "portal-v7.css",
         ROOT / "assets" / "app.js",
         ROOT / "assets" / "portal-v2.js",
         ROOT / "assets" / "portal-v3.js",
         ROOT / "assets" / "portal-v4.js",
         ROOT / "assets" / "portal-v5.js",
+        ROOT / "assets" / "portal-v6.js",
+        ROOT / "assets" / "portal-v7.js",
         ROOT / "assets" / "search-worker.js",
         ROOT / "manifest.webmanifest",
         ROOT / "sw.js",
@@ -252,7 +268,7 @@ def main() -> None:
     validate_service_worker()
     validate_generated_data_api()
     validate_portal_data()
-    print("Portal v5, HTML, PWA, links oficiais, detalhes, relações e Data API validados.")
+    print("Portal v7, HTML, PWA, busca, links oficiais, detalhes, relações e Data API validados.")
 
 
 if __name__ == "__main__":
