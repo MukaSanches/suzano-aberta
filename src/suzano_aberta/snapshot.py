@@ -44,9 +44,7 @@ def snapshot_lock_path(destination: str | Path) -> Path:
 def _download(url: str, destination: Path, *, timeout: float) -> str:
     digest = hashlib.sha256()
     with httpx.stream(
-        "GET",
-        url,
-        follow_redirects=True,
+        "GET", url, follow_redirects=True,
         timeout=httpx.Timeout(timeout, connect=min(timeout, 15.0)),
         headers={"User-Agent": DEFAULT_USER_AGENT},
     ) as response:
@@ -63,8 +61,7 @@ def _download(url: str, destination: Path, *, timeout: float) -> str:
 def _fetch_remote_checksum(url: str, *, timeout: float) -> str | None:
     try:
         response = httpx.get(
-            f"{url}.sha256",
-            follow_redirects=True,
+            f"{url}.sha256", follow_redirects=True,
             timeout=httpx.Timeout(min(timeout, 30.0), connect=min(timeout, 15.0)),
             headers={"User-Agent": DEFAULT_USER_AGENT},
         )
@@ -78,8 +75,7 @@ def _fetch_remote_checksum(url: str, *, timeout: float) -> str | None:
 def _fetch_remote_manifest(url: str, *, timeout: float) -> SnapshotManifest | None:
     try:
         response = httpx.get(
-            url,
-            follow_redirects=True,
+            url, follow_redirects=True,
             timeout=httpx.Timeout(min(timeout, 30.0), connect=min(timeout, 15.0)),
             headers={"User-Agent": DEFAULT_USER_AGENT},
         )
@@ -92,9 +88,7 @@ def _fetch_remote_manifest(url: str, *, timeout: float) -> SnapshotManifest | No
 
 
 def _validate_database(
-    path: Path,
-    *,
-    min_records: int = 1,
+    path: Path, *, min_records: int = 1,
     contract: DataContract = DEFAULT_CONTRACT,
     previous_records: int | None = None,
 ) -> int:
@@ -114,9 +108,7 @@ def _validate_database(
             row = connection.execute("SELECT COUNT(*) FROM records WHERE active=1").fetchone()
             count = int(row[0]) if row is not None else 0
             if count < min_records:
-                raise SnapshotError(
-                    f"Snapshot recusado por cobertura insuficiente: {count} < {min_records}."
-                )
+                raise SnapshotError(f"Snapshot recusado por cobertura insuficiente: {count} < {min_records}.")
             fts_table = connection.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='records_fts'"
             ).fetchone()
@@ -124,9 +116,7 @@ def _validate_database(
                 fts_row = connection.execute("SELECT COUNT(*) FROM records_fts").fetchone()
                 fts_count = int(fts_row[0]) if fts_row is not None else 0
                 if fts_count != count:
-                    raise SnapshotError(
-                        f"Índice FTS inconsistente no snapshot: {fts_count} != {count}."
-                    )
+                    raise SnapshotError(f"Índice FTS inconsistente no snapshot: {fts_count} != {count}.")
         finally:
             connection.close()
     except sqlite3.DatabaseError as exc:
@@ -184,12 +174,7 @@ def _release_sync_lock(path: Path) -> None:
 
 
 def _wait_for_other_sync(
-    target: Path,
-    lock: Path,
-    *,
-    min_records: int,
-    timeout: float,
-    contract: DataContract,
+    target: Path, lock: Path, *, min_records: int, timeout: float, contract: DataContract,
 ) -> int:
     deadline = time.monotonic() + min(max(timeout, 1.0), 30.0)
     while lock.exists() and time.monotonic() < deadline:
@@ -222,7 +207,12 @@ def sync_latest_snapshot(
     min_records: int = 1,
     contract: DataContract = DEFAULT_CONTRACT,
 ) -> int:
-    """Baixa, valida e instala atomicamente o índice público mais recente."""
+    """Baixa, valida e instala atomicamente o índice público mais recente.
+
+    O release oficial usa automaticamente seu manifesto verificável. URLs
+    customizadas preservam o comportamento histórico e só consultam manifesto
+    quando ``manifest_url`` for fornecido explicitamente.
+    """
     if min_records < 1:
         raise ValueError("min_records deve ser maior ou igual a 1")
 
@@ -235,13 +225,7 @@ def sync_latest_snapshot(
     previous_records = _local_record_count(target)
 
     if not _acquire_sync_lock(lock, stale_seconds=stale_seconds):
-        return _wait_for_other_sync(
-            target,
-            lock,
-            min_records=min_records,
-            timeout=timeout,
-            contract=contract,
-        )
+        return _wait_for_other_sync(target, lock, min_records=min_records, timeout=timeout, contract=contract)
 
     try:
         remote_checksum = _fetch_remote_checksum(url, timeout=timeout)
@@ -254,21 +238,20 @@ def sync_latest_snapshot(
             if local_checksum.casefold() == remote_checksum.casefold():
                 try:
                     return _validate_database(
-                        target,
-                        min_records=min_records,
-                        contract=contract,
+                        target, min_records=min_records, contract=contract,
                         previous_records=previous_records,
                     )
                 except SnapshotError:
                     pass
 
         resolved_manifest_url = manifest_url
-        if resolved_manifest_url is None:
-            if url == LATEST_SNAPSHOT_URL:
-                resolved_manifest_url = LATEST_MANIFEST_URL
-            else:
-                resolved_manifest_url = url.rsplit("/", 1)[0] + "/suzano-aberta.manifest.json"
-        remote_manifest = _fetch_remote_manifest(resolved_manifest_url, timeout=timeout)
+        if resolved_manifest_url is None and url == LATEST_SNAPSHOT_URL:
+            resolved_manifest_url = LATEST_MANIFEST_URL
+        remote_manifest = (
+            _fetch_remote_manifest(resolved_manifest_url, timeout=timeout)
+            if resolved_manifest_url is not None
+            else None
+        )
 
         with tempfile.TemporaryDirectory(dir=target.parent) as temp_dir:
             temp_root = Path(temp_dir)
@@ -294,9 +277,7 @@ def sync_latest_snapshot(
                 raise SnapshotError("Snapshot compactado inválido.") from exc
 
             count = _validate_database(
-                extracted,
-                min_records=min_records,
-                contract=contract,
+                extracted, min_records=min_records, contract=contract,
                 previous_records=previous_records,
             )
             if remote_manifest is not None:
