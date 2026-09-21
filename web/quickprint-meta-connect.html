@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Quick Print OS • Conectar WhatsApp à Meta</title>
+  <style>
+    :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#0b1220;color:#f4f7ff}main{max-width:620px;margin:0 auto;padding:28px 18px}.card{background:#121c31;border:1px solid #293958;border-radius:22px;padding:22px;box-shadow:0 18px 50px #0006}h1{font-size:1.6rem;margin:0 0 8px}.sub{color:#aab6d0;line-height:1.55;margin:0 0 18px}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#0c2e23;color:#7ee2b8;font-size:.78rem;font-weight:700;margin-bottom:14px}button{width:100%;border:0;border-radius:13px;padding:15px;font-weight:800;font-size:1rem;background:#1877f2;color:#fff;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.status{margin-top:14px;padding:13px;border-radius:12px;background:#0b1528;color:#c8d2e8;line-height:1.4}.warn{color:#f4cc75}small{display:block;color:#8290ad;line-height:1.5;margin-top:16px}code{word-break:break-all}</style>
+</head>
+<body>
+<div id="fb-root"></div>
+<main><div class="card">
+  <div class="badge">Quick Print OS • Meta Embedded Signup</div>
+  <h1>Conectar WhatsApp à Meta</h1>
+  <p class="sub">Entre na Meta e escolha ou crie a conta do WhatsApp Business. Ao concluir, você volta automaticamente ao Quick Print OS.</p>
+  <button id="connect" disabled>Carregando autenticação da Meta…</button>
+  <div id="status" class="status">Validando sessão segura…</div>
+  <small>Esta página não recebe App Secret e não armazena access token. Ela usa o JavaScript SDK oficial da Meta e devolve somente o resultado da autorização ao aplicativo.</small>
+</div></main>
+<script>
+(() => {
+  'use strict';
+  const qs = new URLSearchParams(location.search);
+  const appId = (qs.get('app_id') || '').replace(/\D/g,'');
+  const configId = (qs.get('config_id') || '').replace(/\D/g,'');
+  const state = (qs.get('state') || '').trim();
+  const coexistence = qs.get('coexistence') !== '0';
+  const statusEl = document.getElementById('status');
+  const button = document.getElementById('connect');
+  let authCode = '';
+  let authToken = '';
+  let sessionInfo = null;
+  let finished = false;
+
+  function setStatus(text, warn=false){ statusEl.textContent=text; statusEl.classList.toggle('warn',warn); }
+  function valid(){ return /^\d{5,32}$/.test(appId) && /^\d{5,64}$/.test(configId) && /^[A-Za-z0-9_-]{20,180}$/.test(state); }
+  function back(params){
+    if(finished) return;
+    finished=true;
+    const out = new URLSearchParams({state, ...params});
+    location.href='quickprintos://meta-whatsapp-auth?' + out.toString();
+  }
+  function maybeFinish(){
+    if(finished || !sessionInfo || (!authCode && !authToken)) return;
+    setStatus('Autorização concluída. Voltando ao Quick Print OS…');
+    const params={status:'success'};
+    if(authCode) params.code=authCode;
+    else params.access_token=authToken;
+    if(sessionInfo.waba_id) params.waba_id=String(sessionInfo.waba_id);
+    if(sessionInfo.phone_number_id) params.phone_number_id=String(sessionInfo.phone_number_id);
+    if(sessionInfo.business_id) params.business_id=String(sessionInfo.business_id);
+    back(params);
+  }
+
+  if(!valid()){
+    setStatus('Sessão inválida. Volte ao Quick Print OS e toque em “Conectar com Meta” novamente.', true);
+    return;
+  }
+
+  window.addEventListener('message', event => {
+    const allowed = new Set(['https://www.facebook.com','https://web.facebook.com','https://business.facebook.com']);
+    if(!allowed.has(event.origin)) return;
+    try{
+      const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      if(!data || data.type !== 'WA_EMBEDDED_SIGNUP') return;
+      if(data.event === 'FINISH' || data.event === 'FINISH_ONLY_WABA'){
+        sessionInfo = data.data || {};
+        setStatus('Conta WhatsApp autorizada. Finalizando…');
+        maybeFinish();
+      } else if(data.event === 'CANCEL'){
+        back({status:'cancelled'});
+      } else if(data.event === 'ERROR'){
+        back({status:'error',message:String(data?.data?.error_message || 'Erro no Embedded Signup').slice(0,240)});
+      }
+    }catch(_){ }
+  });
+
+  window.fbAsyncInit = function(){
+    FB.init({appId, cookie:true, xfbml:true, version:'v26.0'});
+    button.disabled=false;
+    button.textContent='Entrar com Meta e conectar WhatsApp';
+    setStatus('Pronto. Toque no botão para autenticar na Meta.');
+  };
+
+  button.addEventListener('click', () => {
+    button.disabled=true;
+    setStatus('Abrindo o fluxo oficial da Meta…');
+    const extras={setup:{}};
+    if(coexistence) extras.featureType='whatsapp_business_app_onboarding';
+    FB.login(response => {
+      button.disabled=false;
+      if(response && response.authResponse){
+        authCode = response.authResponse.code || '';
+        authToken = response.authResponse.accessToken || '';
+        maybeFinish();
+      } else {
+        setStatus('Login cancelado ou autorização não concluída.', true);
+      }
+    },{
+      config_id:configId,
+      auth_type:'rerequest',
+      response_type:'code',
+      override_default_response_type:true,
+      extras
+    });
+  });
+})();
+</script>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/pt_BR/sdk.js"></script>
+</body>
+</html>
